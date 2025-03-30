@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Work Order</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" href="images/storage.png" sizes="32x32">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+
+<body>
+
+
+  <div class="container-fluid">
+    <div class="row">
+      <div class="desktop-sidebar col-lg-2 col-12 d-none d-lg-block">
+        <%- include('sidebar') %>
+      </div>
+
+      <%- include('sidebarMobile') %>
+
+        <div class="col-lg-10 col-12">
+          <h2 class="text-center p-4">
+            จัดการใบงาน
+            <img src="images/completed-task.png" alt="logo" class="img-fluid"
+              style="max-width: 40px; vertical-align: middle" />
+          </h2>
+  
+  
+          <div class="container-fluid">
+            <div class="p-3">
+              <div class="row mb-1">
+                <div class="col-lg-3 col-12 mx-auto p-1">
+                  <form method="get" action="/workorder">
+                    <input type="text" name="search" class="form-control" value="<%= searchQuery || '' %>"
+                      placeholder="กรอก RP number หรือ ชื่อ" />
+                </div>
+                <div class="col-lg-3 col-6 mx-auto p-1">
+                  <select name="statusFilter" class="form-select">
+                    <option value="">-- เลือก Work Status --</option>
+                    <option value="Pending" <%= statusFilter === 'Pending' ? 'selected' : '' %>>Pending</option>
+                    <option value="Finish" <%= statusFilter === 'Finish' ? 'selected' : '' %>>Finish</option>
+                  </select>
+                </div>
+                <div class="col-lg-6 col-6 mx-auto p-1">
+                  <button type="submit" class="btn btn-success">ค้นหา</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+  
+            <!-- ใช้ table-responsive เพื่อให้ตารางสามารถ scroll ได้ในขนาดจอเล็ก -->
+            <div class="table-responsive">
+              <% if (transactions.length === 0) { %>
+                <div class="alert alert-warning text-center" role="alert">
+                  ไม่พบข้อมูลที่ตรงกับคำค้นหา
+                </div>
+              <% } else { %>
+                <table class="table table-bordered table-hover">
+                  <thead class="table-dark">
+                    <tr>
+                      <th class="col-1 align-middle">#</th>
+                      <th class="col-2 align-middle">Request ID</th>
+                      <th class="col-2 text-center align-middle">Requester Name</th>
+                      <th class="col-2 text-center align-middle">Last transaction</th>
+                      <th class="col-2 text-center align-middle">Work Status</th>
+                      <th class="col-2 text-center align-middle">Transaction Count</th>
+                      <th class="text-center align-middle">Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% transactions.forEach((transaction, index) => { %>
+                      <tr>
+                        <td><%= index + 1 %></td>
+                        <td><%= transaction._id %></td> <!-- Request ID -->
+                        <td class="text-center"><%= transaction.requesterName %></td>
+                        <td class="text-center">
+                          <%= new Date(transaction.createdAt).toLocaleString('en-GB', { 
+                            day: '2-digit', month: 'short', year: 'numeric', 
+                            hour: '2-digit', minute: '2-digit', 
+                          }) %>
+                        </td>
+                        <td class="text-center">
+                          <% if (transaction.workStatus) { %>
+                            <span class="badge bg-<%= transaction.workStatus === 'Finish' ? 'success' : 'secondary' %>">
+                              <%= transaction.workStatus %>
+                            </span>
+                          <% } %>
+                        </td>
+                        <td class="text-center"><%= transaction.transactionCount %></td>
+                        <td class="text-center">
+                          <a href="/workorder/<%= encodeURIComponent(transaction._id) %>" 
+                            class="btn btn-outline-dark btn-sm">View</a>
+                        </td>
+                      </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              <% } %>
+            </div>
+            
+  
+          </div>
+        </div>
+    </div>
+  </div>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js">
+  </script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const searchInput = document.querySelector("input[name='search']");
+    const statusFilter = document.querySelector("select[name='statusFilter']");
+
+    // ดึงค่าจาก sessionStorage
+    const savedSearchQuery = sessionStorage.getItem("searchQuery") || "";
+    const savedStatusFilter = sessionStorage.getItem("statusFilter") || "";
+
+    // ถ้ามีค่าที่เคยค้นหา ให้เปลี่ยน URL แล้วรีโหลดผลลัพธ์ทันที
+    if (savedSearchQuery || savedStatusFilter) {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (!urlParams.get("search") && !urlParams.get("statusFilter")) {
+        urlParams.set("search", savedSearchQuery);
+        urlParams.set("statusFilter", savedStatusFilter);
+        window.location.href = `/workorder?${urlParams.toString()}`; 
+      }
+    }
+
+    // ตั้งค่าให้ input มีค่าที่เคยค้นหา
+    searchInput.value = savedSearchQuery;
+    statusFilter.value = savedStatusFilter;
+
+    // บันทึกค่าลง sessionStorage เมื่อมีการเปลี่ยนแปลง
+    searchInput.addEventListener("input", () => {
+      sessionStorage.setItem("searchQuery", searchInput.value);
+    });
+    statusFilter.addEventListener("change", () => {
+      sessionStorage.setItem("statusFilter", statusFilter.value);
+    });
+  });
+</script>
+
+
+
+</body>
+
+</html>

@@ -1,0 +1,53 @@
+<a href="/"><h4 href="/"class="text-light ms-2 text-center">
+    Inventory
+    <img src="images/storage.png" alt="logo" class="img-fluid" style="max-width: 40px; vertical-align: middle;">
+</h4></a>
+<a href="/"><i class="fa-solid fa-house me-2"></i>Home</a>
+<a href="/trans-out" class="text-wrap"><i class="fa-solid fa-right-from-bracket me-2"></i>บันทึกการ จ่ายออก</a>
+<a href="/trans-in" class="text-wrap"><i class="fa-solid fa-right-to-bracket me-2"></i>บันทึกการ รับเข้า</a>
+<a href="/transaction" class="text-wrap"><i class="fa-solid fa-right-left me-2"></i>ประวัติการ เบิก-คืน Parts</a>
+<a href="/onhand"><i class="fa-solid fa-warehouse me-2"></i>Parts คงเหลือ</a>
+
+<div class="dropdown dropend custom-dropdown">
+    <a href="#" class="btn dropdown-toggle text-start text-wrap" 
+       data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="fa-solid fa-screwdriver-wrench me-1"></i>
+        <span class="d-inline-block text-break">จัดการข้อมูล Parts</span>
+    </a>
+    <ul class="dropdown-menu dropdown-menu-start" aria-labelledby="dropdownMenuLink">
+        <li><a class="dropdown-item ps-3" href="/add-product">เพิ่ม Parts</a></li>
+        <li><a class="dropdown-item ps-3" href="/edit-product">แก้ไข / ลบ Parts</a></li>
+    </ul>
+</div>
+
+<a href="/workorder"><i class="fa-solid fa-clipboard-check me-2"></i>จัดการใบงาน</a>
+
+<!-- <div>
+    <% if (user) { %>
+        <a href="/logout" class="text-wrap text-danger">
+            <i class="fa-solid fa-right-from-bracket me-2"></i>ออกจากระบบ
+        </a>
+    <% } %>
+</div> -->
+
+
+<div class="text-center mt-2">
+    <% if (user) { %>
+        <button type="button" class="btn btn-danger" onclick="logoutUser()">
+            <i class="fa-solid fa-right-from-bracket me-2"></i> ออกจากระบบ
+        </button>
+    <% } %>
+</div>
+
+
+  
+
+
+
+
+
+<script>
+    function logoutUser() {
+        window.location.href = "/logout"; 
+    }
+</script>

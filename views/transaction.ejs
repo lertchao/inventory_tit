@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trasaction History</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" href="images/storage.png" sizes="32x32">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Desktop Sidebar -->
+    <div class="desktop-sidebar col-lg-2 col-12 d-none d-lg-block">
+      <%- include('sidebar') %>
+    </div>
+
+    <!-- Mobile Sidebar -->
+    <%- include('sidebarMobile') %>
+
+    <!-- Main Content Area -->
+    <div class="col-lg-10 col-12">
+      <h2 class="text-center p-4">
+        ประวัติการเบิกและคืน Parts
+        <img src="images/transaction-history.png" alt="logo" class="img-fluid"
+          style="max-width: 40px; vertical-align: middle" />
+      </h2>
+
+      <div class="container-fluid">
+        <div class="p-3">
+          <div class="row mb-1">
+            <div class="col-lg-3 col-12 p-1">
+              <form method="get" action="">
+                <input type="text" name="search" class="form-control" value="<%= searchQuery || '' %>"
+                  placeholder="กรอก SKU เพื่อค้นหา" />
+            </div>
+            <div class="col-lg-3 col-12 p-1">
+              <button type="submit" class="btn btn-success">ค้นหา</button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- แสดงข้อมูล -->
+        <% if (products.length===0) { %>
+          <div class="alert alert-warning" role="alert">
+            ไม่มีข้อมูล Transaction ที่มี SKU นี้ในระบบ
+          </div>
+        <% } else { %>
+          <!-- เพิ่ม table-responsive ที่นี่ -->
+          <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+              <thead class="table-dark">
+                <tr>
+                  <th>#</th>
+                  <th class="align-middle">SKU</th>
+                  <th class="align-middle">Description</th>
+                  <th class="align-middle text-center col-1">Quantity</th>
+                  <th class="align-middle text-center">Transaction Type</th>
+                  <th class="align-middle text-center col-1">Remaining Quantity</th>
+                  <th class="align-middle text-center">Requester Name</th>
+                  <th class="align-middle">Request ID</th>
+                  <th data-column="createdAt" data-sort-order="asc" class="align-middle">
+                    Created At <i class="fa fa-sort"></i>
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <% products.forEach((transaction, index)=> { %>
+                  <% transaction.products.forEach((product, productIndex)=> { %>
+                    <tr>
+                      <!-- แสดงลำดับที่เฉพาะแถวแรกของ transaction -->
+                      <td>
+                        <% if (productIndex === 0) { %>
+                          <%= index + 1 %>
+                        <% } %>
+                      </td>
+                      <td><%= product.sku %></td>
+                      <td><%= product.description || "N/A" %></td>
+                      <td class="text-center"><%= product.quantity %></td>
+                      <td class="text-center">
+                        <% if (transaction.transactionType === "IN") { %>
+                          <span class="badge in-badge">In</span>
+                        <% } else if (transaction.transactionType === "OUT") { %>
+                          <span class="badge out-badge">Out</span>
+                        <% } else { %>
+                          <span class="badge bg-secondary">Unknown</span>
+                        <% } %>
+                      </td>
+                      <td class="text-center"><%= product.remaining %></td>
+                      <td class="text-center"><%= transaction.requesterName %></td>
+                      <td><%= transaction.requestId %></td>
+                      <td data-datetime="<%= transaction.createdAt %>">
+                        <%= new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric',
+                          hour: '2-digit', minute: '2-digit' }).format(new Date(transaction.createdAt)) %>
+                      </td>
+                    </tr>
+                  <% }); %>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script src="js/transaction.js"></script>
+
+</body>
+</html>

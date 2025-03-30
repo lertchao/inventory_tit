@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>On Hand</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" href="images/storage.png" sizes="32x32">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+
+<div class="container-fluid">
+
+    <div class="row">
+        <div class="desktop-sidebar col-lg-2 col-12 d-none d-lg-block">
+            <%- include('sidebar') %>
+        </div>
+        <%- include('sidebarMobile') %>
+
+            <div class="col-lg-10 col-12">
+
+                <h2 class="text-center p-4">
+                    Parts คงเหลือ
+                    <img src="images/procurement.png" alt="logo" class="img-fluid"
+                        style="max-width: 40px; vertical-align: middle" />
+                </h2>
+
+                <div class="container-fluid">
+                    <div class="p-3">
+                        <div class="row">
+                            <div class="col-lg-6 col-12 mx-auto">
+                                <form method="get" action="/onhand" class="d-flex">
+                                    <input type="text" name="search" class="form-control me-2" value="<%= search %>"
+                                        placeholder="กรอก SKU หรือ Description เพื่อค้นหา" />
+                                    <button type="submit" class="btn btn-success  w-sm-auto">ค้นหา</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                
+
+
+                <div class="row">
+                    <% if (products.length> 0) { %>
+                        <% products.forEach(product=> { %>
+                            <div class="col-md-4 product-card mb-4">
+                                <div class="card h-100 card-hover">
+                                    <a>
+                                        <img class="card-img-top img-fluid fixed-size" src="<%= product.image %>"
+                                            alt="">
+                                    </a>
+                                    <div class="card-body">
+                                        <h5 class="card-title text-center pb-3">
+                                            <%= product.sku %>
+                                        </h5>
+                                        <p class="card-text">Description: <%= product.description %>
+                                        </p>
+                                        <p class="card-text">Cost: <%= new Intl.NumberFormat().format(product.cost) %>
+                                        </p>
+                                        <p
+                                            class="card-text text-end <%= product.quantity <= 0 ? 'text-danger' : 'text-dark' %>">
+                                            Quantity: <%= product.quantity %>
+                                        </p>
+
+                                    </div>
+                                </div>
+                            </div>
+                            <% }) %>
+                                <% } else { %>
+                                    <div>
+                                        <div class="alert alert-warning text-center" role="alert">
+                                            ไม่พบข้อมูลที่ตรงกับคำค้นหา
+                                        </div>
+                                    <% } %>
+                </div>
+
+            </div>
+
+
+    </div>
+
+</div>
+</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>
