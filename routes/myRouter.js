@@ -665,7 +665,7 @@ router.post('/add_trans-in', authMiddleware, async (req, res) => {
 
 
 
-  router.post("/add_trans-out", authMiddleware, async (req, res) => {
+router.post("/add_trans-out", authMiddleware, async (req, res) => {
   try {
     const { name, repair, products, workStatus, storeId } = req.body;
 
@@ -676,6 +676,38 @@ router.post('/add_trans-in', authMiddleware, async (req, res) => {
     const store = await Store.findOne({ storeId: storeId });
     if (!store) {
       return res.status(404).json({ error: "ไม่พบข้อมูลสาขาที่ระบุ" });
+    }
+
+    // ตรวจสอบจำนวนสินค้าทั้งหมดก่อน
+    const insufficientStock = [];
+    for (const item of products) {
+      const product = await Product.findOne({ sku: item.sku });
+
+      if (!product) {
+        return res.status(404).json({ error: `ไม่พบสินค้า SKU: ${item.sku}` });
+      }
+
+      if ((product.quantity || 0) < item.quantity) {
+        insufficientStock.push({ sku: item.sku, available: product.quantity || 0 });
+      }
+    }
+
+    if (insufficientStock.length > 0) {
+      const alertMessage = insufficientStock.map(item => `SKU: ${item.sku} คงเหลือ: ${item.available}`).join("<br>");
+      return res.status(400).json({
+        error: "สินค้าบางรายการมีจำนวนไม่เพียงพอ",
+        insufficientStock,
+        alert: `สินค้าบางรายการมีจำนวนไม่เพียงพอ<br>${alertMessage}`
+      });
+    }
+    
+    
+
+    // หักลบจำนวนสินค้าเมื่อแน่ใจว่ามีเพียงพอทุก SKU
+    for (const item of products) {
+      const product = await Product.findOne({ sku: item.sku });
+      product.quantity -= item.quantity;
+      await product.save();
     }
 
     const newTransaction = new Transaction({
@@ -690,23 +722,6 @@ router.post('/add_trans-in', authMiddleware, async (req, res) => {
       })),
     });
 
-    for (const item of products) {
-      const product = await Product.findOne({ sku: item.sku });
-
-      if (!product) {
-        return res.status(404).json({ error: `ไม่พบสินค้า SKU: ${item.sku}` });
-      }
-
-      if ((product.quantity || 0) < item.quantity) {
-        return res.status(400).json({
-          error: `สินค้า SKU: ${item.sku} มีจำนวนไม่เพียงพอ (คงเหลือ: ${product.quantity || 0})`,
-        });
-      }
-
-      product.quantity -= item.quantity;
-      await product.save();
-    }
-
     await newTransaction.save();
 
     res.status(200).json({ message: "บันทึกข้อมูลสำเร็จ", transaction: newTransaction });
@@ -715,6 +730,9 @@ router.post('/add_trans-in', authMiddleware, async (req, res) => {
     res.status(500).json({ error: "เกิดข้อผิดพลาดในการบันทึกข้อมูล" });
   }
 });
+
+
+
   
 
 router.get('/edit-product', authMiddleware, (req, res) => {

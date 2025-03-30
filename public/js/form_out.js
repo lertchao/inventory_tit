@@ -158,59 +158,67 @@ repairInput.addEventListener('input', async function () {
 
 
   // เมื่อกดปุ่ม submit
-  document.querySelector("form").addEventListener("submit", async function (event) {
-    event.preventDefault();
-  
-    const alertContainer = document.getElementById("alert-container");
-    const name = document.querySelector('[name="name"]').value.trim();
-    const repair = document.querySelector('[name="repair"]').value.trim();
-    const workStatus = document.querySelector('[name="workStatus"]').value.trim();
-    const storeId = document.querySelector('[name="storeId"]').value.trim(); // เพิ่ม storeId
-  
-    if (!name || !repair || !workStatus || !storeId) {
+document.querySelector("form").addEventListener("submit", async function (event) {
+  event.preventDefault();
+
+  const alertContainer = document.getElementById("alert-container");
+  const name = document.querySelector('[name="name"]').value.trim();
+  const repair = document.querySelector('[name="repair"]').value.trim();
+  const workStatus = document.querySelector('[name="workStatus"]').value.trim();
+  const storeId = document.querySelector('[name="storeId"]').value.trim(); // เพิ่ม storeId
+
+  if (!name || !repair || !workStatus || !storeId) {
+    alertContainer.innerHTML = `
+      <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <strong>แจ้งเตือน!</strong> กรุณากรอกข้อมูลให้ครบถ้วน.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>`;
+    return;
+  }
+
+  const products = Array.from(document.querySelectorAll("table tbody tr")).map((row) => ({
+    sku: row.querySelector(".sku-input").value.trim(),
+    description: row.querySelector(".description-cell").textContent,
+    quantity: parseInt(row.querySelector('[name="quantity"]').value, 10),
+    cost: parseFloat(row.querySelector(".cost-cell").textContent.replace(/,/g, "")) || 0,
+  }));
+
+  try {
+    const response = await fetch("/add_trans-out", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, repair, workStatus, products, storeId }), // ส่ง storeId
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
       alertContainer.innerHTML = `
-        <div class="alert alert-warning alert-dismissible fade show" role="alert">
-          <strong>แจ้งเตือน!</strong> กรุณากรอกข้อมูลให้ครบถ้วน.
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          <strong>สำเร็จ!</strong> บันทึกข้อมูลเรียบร้อยแล้ว.
           <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>`;
-      return;
-    }
-  
-    const products = Array.from(document.querySelectorAll("table tbody tr")).map((row) => ({
-      sku: row.querySelector(".sku-input").value.trim(),
-      description: row.querySelector(".description-cell").textContent,
-      quantity: parseInt(row.querySelector('[name="quantity"]').value, 10),
-      cost: parseFloat(row.querySelector(".cost-cell").textContent.replace(/,/g, "")) || 0,
-    }));
-  
-    try {
-      const response = await fetch("/add_trans-out", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, repair, workStatus, products, storeId }), // ส่ง storeId
-      });
-  
-      const data = await response.json();
-  
-      if (response.ok) {
+
+      setTimeout(() => window.location.reload(), 2500);
+    } else {
+      if (data.alert) {
         alertContainer.innerHTML = `
-          <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <strong>สำเร็จ!</strong> บันทึกข้อมูลเรียบร้อยแล้ว.
+          <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <strong>ผิดพลาด!</strong> ${data.alert}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
           </div>`;
-  
-        setTimeout(() => window.location.reload(), 2500);
       } else {
         throw new Error(data.error || "ไม่สามารถบันทึกข้อมูลได้");
       }
-    } catch (error) {
-      console.error("Error:", error);
-      alertContainer.innerHTML = `
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-          <strong>ผิดพลาด!</strong> ${error.message}
-          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>`;
     }
-  });
+  } catch (error) {
+    console.error("Error:", error);
+    alertContainer.innerHTML = `
+      <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>ผิดพลาด!</strong> ${error.message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>`;
+  }
+});
   
 });
