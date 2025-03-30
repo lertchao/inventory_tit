@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" href="images/storage.png" sizes="32x32">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+
+<body>
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="desktop-sidebar col-lg-2 col-12 d-none d-lg-block">
+                <%- include('sidebar') %>
+            </div>
+            <%- include('sidebarMobile') %>
+
+                <div class="col-lg-10 col-12">
+                    <div class="container">
+                        <h2 class="m-3 section-title">Login</h2>                    
+                                <form action="/login" method="POST">
+                                    <div class="row">
+                                        <input type="hidden" name="returnUrl" value="<%= returnUrl %>">
+                                        <div class="mb-3 col-md-4 col-sm-12">
+                                            <input type="text" name="username" placeholder="ชื่อผู้ใช้"
+                                                class="form-control" required>
+                                        </div>
+                                        <div class="mb-3 col-md-4 col-sm-12">
+                                            <input type="password" name="password" placeholder="รหัสผ่าน"
+                                                class="form-control" required>
+                                        </div>
+
+                                        <div class="mb-3 col-md-4 col-sm-12">
+                                            <button type="submit"
+                                                class="btn btn-success  w-sm-auto">เข้าสู่ระบบ</button>
+                                        </div>
+
+                                        <div class="mb-3 col-sm-12 text-center d-flex justify-content-center">
+                                            <% if (message) { %>
+                                                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                                    <%= message %>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                                </div>
+                                            <% } %>   
+                                        </div>
+
+                                    </div>
+
+                                </form>
+                    </div>
+                </div>
+        </div>
+    </div>
+
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+
+
+
+
+</body>
+
+</html>

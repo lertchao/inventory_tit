@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Parts</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" href="images/storage.png" sizes="32x32">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    
+
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="desktop-sidebar col-lg-2 col-12 d-none d-lg-block">
+            <%- include('sidebar') %>
+        </div>
+        <%- include('sidebarMobile') %>
+            <div class="col-lg-10 col-12">
+
+                <h2 class="text-warning text-center p-4">แก้ไข Part <img src="images/goods.png" alt="logo" class="img-fluid"
+                        style="max-width: 40px; vertical-align: middle;"></h2>
+
+
+                <form method="POST" action="/update" enctype="multipart/form-data">
+                    <div class="row justify-content-center">
+                        <input type="hidden" value="<%= product._id %>" name="update_id">
+
+                        <div class="mb-3 col-md-3 col-sm-12">
+                            <label class="form-label">SKU</label>
+                            <input type="text" class="form-control" placeholder="กรุณากรอก SKU" name="sku" value="<%= product.sku %>">
+                        </div>
+
+                        <div class="mb-3 col-md-3 col-sm-12">
+                            <label class="form-label">Description</label>
+                            <input type="text" class="form-control" placeholder="กรุณากรอก Description" name="description"
+                            value="<%= product.description %>">
+                        </div>
+
+                        <div class="mb-3 col-md-3 col-sm-12">
+                            <label class="form-label">Cost Price</label>
+                            <input type="text" class="form-control" placeholder="กรุณากรอก Cost Price" name="cost"
+                            value="<%= product.cost %>" oninput="sanitizeInput(this)">
+                        </div>
+
+                        <div class="mb-3 col-md-5 col-sm-12">
+                            <label class="form-label">อัปโหลดรูปภาพใหม่</label>
+                            <input class="form-control" type="file" name="image">
+                        </div>
+
+
+                        <div class="mb-3 col-md-4 col-sm-12">
+                            <label class="form-label">Type Parts</label>
+                            <select class="form-select text-center" name="typeparts" required>
+                                <option value="" <%= !product.typeparts || (product.typeparts !== 'CM' && product.typeparts !== 'PM') ? 'selected' : '' %>>-- กรุณาเลือก --</option>
+                                <option value="CM" <%= product.typeparts === 'CM' ? 'selected' : '' %>>CM</option>
+                                <option value="PM" <%= product.typeparts === 'PM' ? 'selected' : '' %>>PM</option>
+                            </select>
+                        </div>
+
+
+
+                        <!-- แสดงรูปเดิม -->
+                        <% if (product.image) { %>
+                            <div class="mb-3 col-md-8 col-sm-12 text-center">
+                                <label class="form-label">รูปภาพปัจจุบัน</label><br>
+                                <img src="<%= product.image %>" alt="Product Image" class="img-fluid" style="max-width: 200px;">
+                            </div>
+                        <% } %>
+                        
+
+                    </div>
+
+                    <div class="row justify-content-center text-center">
+                        <div class="col-auto">
+                            <a class="btn btn-secondary mt-3" href="/edit-product">กลับหน้าจัดการฐานข้อมูล</a>
+                        </div>
+                        <div class="col-4">
+                            <button type="submit" class="btn btn-success mt-3 text-end">อัพเดทข้อมูล</button>
+                        </div>
+                    </div>
+
+                </form>
+
+
+            <div class="container mt-5 col-md-9 justify-content-center">
+                <% if (typeof message !== 'undefined') { %>
+                    <% if (message === 'success') { %>
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            อัพเดทข้อมูลสำเร็จ!
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    <% } else if (message === 'error') { %>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            เกิดข้อผิดพลาดในการอัพเดทข้อมูล กรุณาลองอีกครั้ง
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    <% } %>
+                <% } %>   
+
+            </div>
+                
+                        
+            </div>
+    </div>
+</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // ซ่อน Alert หลังจาก 5 วินาที
+        setTimeout(() => {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => alert.classList.remove('show'));
+        }, 5000);
+    </script>
+    
+    <script>
+        function sanitizeInput(input) {
+            // ลบเครื่องหมาย , ออกจากค่าที่กรอก
+            input.value = input.value.replace(/,/g, '');
+        }
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,131 @@
+@font-face {
+    font-family: kanit;
+    src: url(../Kanit/Kanit-Regular.ttf);
+}
+
+* {
+    font-family: kanit;
+}
+
+/* Custom Sidebar for Desktop */
+.desktop-sidebar {
+    background-color: #343a40;
+    color: white;
+    padding: 15px;
+    min-height: 100vh;
+}
+
+
+/* Sidebar Links */
+.desktop-sidebar a {
+    color: white;
+    text-decoration: none;
+    padding: 10px 0;
+    display: block;
+    font-size: clamp(16px, 1vw, 20px);
+}
+
+
+.desktop-sidebar a:hover {
+    background-color: #495057;
+    color: #f8f9fa;
+}
+
+.onhand-sidebar a:hover {
+    background-color: #495057;
+    color: #f8f9fa;
+}
+
+/* Customize Offcanvas */
+.offcanvas-menu {
+    background-color: #343a40;
+    color: white;
+}
+
+/* Style for Offcanvas Menu Links */
+.offcanvas-menu a {
+    color: white;
+    text-decoration: none;
+    padding: 10px 15px;
+    display: block;
+}
+
+.offcanvas-menu a:hover {
+    background-color: #495057;
+    color: #f8f9fa;
+}
+
+.custom-dropdown .dropdown-menu {
+    background-color: #596167; /* เปลี่ยนสีพื้นหลัง */
+}
+
+.custom-dropdown .dropdown-item {
+    color: white; /* สีข้อความในรายการ */
+}
+
+.custom-dropdown .dropdown-item:hover {
+    background-color: #495057; /* สีพื้นหลังเมื่อ hover */
+}
+
+.fixed-size {
+    width: 100%;      /* ให้ภาพเต็มความกว้างของคอนเทนเนอร์ */
+    height: 250px;    /* ความสูงที่ต้องการ */
+    object-fit: contain; /* ครอบภาพให้พอดีกับกรอบและรักษาสัดส่วน */
+    border-radius: 5px; /* ทำมุมโค้งเล็กน้อย (ถ้าต้องการ) */
+  }
+
+
+.card-hover {
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.card-hover:hover {
+    transform: scale(1.05);
+    /* ขยายการ์ดเล็กน้อย */
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    /* เพิ่มเงา */
+}
+
+.remove-row {
+    display: none;
+  }
+
+.form_in{
+    background-color: #EFF3EA;
+}
+
+.form_out{
+    background-color: #F8EDE3;
+    
+}
+
+.in-badge {
+    background-color: #8CBA51;
+    color: white;
+  }
+
+.out-badge {
+    background-color: #F68787;
+    color: white;
+}
+
+.section-title {
+    font-size: clamp(1.2rem, 2vw, 2rem);
+    font-weight: bold;
+    color: #2c3e50;
+    position: relative;
+    display: inline-block;
+    padding-bottom: 5px;
+    margin-bottom: 20px;
+}
+
+.section-title {
+    font-size: clamp(1.2rem, 2vw, 2rem);
+    font-weight: bold;
+    color: #2c3e50;
+    border-left: 5px solid #b2bec3;
+    padding-left: 15px;
+}
+
+
+
