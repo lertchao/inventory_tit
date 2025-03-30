@@ -731,43 +731,36 @@ router.post("/add_trans-out", authMiddleware, async (req, res) => {
   }
 });
 
-
-
   
 
 router.get('/edit-product', authMiddleware, (req, res) => {
-    const searchQuery = req.query.search || ''; // รับค่าที่ผู้ใช้กรอกมา (ถ้ามี)
+  const searchQuery = req.query.search || ''; // รับค่าที่ผู้ใช้กรอกมา (ถ้ามี)
 
-    // สร้างเงื่อนไขการค้นหาสำหรับ sku และ description
-    const searchCondition = {
-        $or: [
-            { sku: { $regex: searchQuery, $options: 'i' } }, 
-            { description: { $regex: searchQuery, $options: 'i' } }
-        ]
-    };
+  // สร้างเงื่อนไขการค้นหาสำหรับ sku และ description
+  const searchCondition = {
+      $or: [
+          { sku: { $regex: searchQuery, $options: 'i' } }, 
+          { description: { $regex: searchQuery, $options: 'i' } }
+      ]
+  };
 
-    Product.find(searchQuery ? searchCondition : {}).exec((err, products) => {
-        if (err) {
-            console.error('Error fetching products:', err);
-            return res.status(500).send('Internal Server Error');
-        }
+  Product.find(searchQuery ? searchCondition : {}).sort({ sku: 1 }).exec((err, products) => { 
+      // เพิ่ม `.sort({ sku: 1 })` เพื่อเรียง SKU จาก A-Z
+      if (err) {
+          console.error('Error fetching products:', err);
+          return res.status(500).send('Internal Server Error');
+      }
 
-        // ส่งข้อมูลไปยัง view พร้อมกับข้อมูล products และ search query
-        res.render('edit-product', { products: products, search: searchQuery });
-    });
+      // ส่งข้อมูลไปยัง view พร้อมกับข้อมูล products และ search query
+      res.render('edit-product', { products: products, search: searchQuery });
+  });
 });
+
 
 router.get('/add-product', authMiddleware, (req, res) => {
     res.render('add-product', { success: null, error: null }); 
 });
 
-// router.get('/:id',(req,res)=>{
-//     const product_id = req.params.id
-//     console.log(product_id);
-//     Product.findOne({_id:product_id}).exec((err,doc)=>{
-//         res.render('product',{product:doc})
-//     })
-// })  
 
 
 router.post("/add", upload.single("image"), async (req, res) => {
