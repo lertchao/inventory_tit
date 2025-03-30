@@ -8,7 +8,7 @@ const MongoStore = require("connect-mongo");
 
 
 // เชื่อมต่อฐานข้อมูล MongoDB
-const dbUrl = 'mongodb://localhost:27017/Database'; // URL ของฐานข้อมูล
+const dbUrl = 'mongodb+srv://64230092:1234@cluster0.pglvr.mongodb.net/Database'; // URL ของฐานข้อมูล
 mongoose.connect(dbUrl, {
     useNewUrlParser: true,
     useUnifiedTopology: true
