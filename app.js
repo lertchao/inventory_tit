@@ -7,8 +7,7 @@ const session = require("express-session");
 const MongoStore = require("connect-mongo");
 
 
-// เชื่อมต่อฐานข้อมูล MongoDB
-const dbUrl = 'mongodb+srv://64230092:1234@cluster0.pglvr.mongodb.net/Database'; // URL ของฐานข้อมูล
+const dbUrl = 'mongodb://localhost:27017/Database'; 
 mongoose.connect(dbUrl, {
     useNewUrlParser: true,
     useUnifiedTopology: true
@@ -36,7 +35,7 @@ app.use(
   );
 
 app.use((req, res, next) => {
-  res.locals.user = req.session.user || null; // ให้ตัวแปร `user` ใช้งานได้ทุกหน้า
+  res.locals.user = req.session.user || null; 
   next();
 });
 
