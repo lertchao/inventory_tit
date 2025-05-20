@@ -6,6 +6,8 @@ const app = express()
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
 
+//mongodb+srv://64230092:1234@cluster0.pglvr.mongodb.net/
+//mongodb://localhost:27017/Database
 
 const dbUrl = 'mongodb://localhost:27017/Database'; 
 mongoose.connect(dbUrl, {
@@ -19,20 +21,20 @@ mongoose.connect(dbUrl, {
 
 // ตั้งค่า session
 app.use(
-    session({
-      secret: "your_secret_key",
-      resave: false,
-      saveUninitialized: false,
-      store: MongoStore.create({
-        mongoUrl: dbUrl, 
-        collectionName: "sessions",
-      }),
-      cookie: {
-        maxAge: 1000 * 60 * 60, // อายุ session 1 ชั่วโมง
-        httpOnly: true,
-      },
-    })
-  );
+  session({
+    secret: "your_secret_key",
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: dbUrl,
+      collectionName: "sessions",
+    }),
+    cookie: {
+      maxAge: 1000 * 60 * 60, // อายุ session 1 ชั่วโมง
+      httpOnly: true,
+    },
+  })
+);
 
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null; 

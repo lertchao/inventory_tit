@@ -21,16 +21,33 @@
             </div>
             <%- include('sidebarMobile') %>
 
-                
-                <!-- กราฟ pending -->
+
                 <div class="col-lg-10 col-12">
-                    <h3 class="m-3 section-title">Dashboard</h3>
+                    <h3 class="m-3 section-title">Pending Work</h3>
                     <canvas id="pendingWorkChart"></canvas>
-                
-                    <!-- 🟢 ตารางแสดงข้อมูล Pending Work ตาม requestID -->
-                    <h3 class="m-3 section-title">Pending Work Details</h3>
-                    <% if (pendingWorkOrdersTable.length > 0) { %>
-                        <table class="table table-bordered table-striped">
+
+
+                    <!-- <h3 class="mt-5 m-3 section-title">Pending Work</h3> -->
+
+                    <div class="mb-3 d-flex justify-content-between align-items-end">
+                        <div class="col-6">
+                            <input type="text" id="requesterSearch" class="form-control"
+                                placeholder="Search by Name...">
+                        </div>
+
+                        <div>
+                            <label class="form-label d-block invisible">Export</label>
+                            <button class="btn btn-success"
+                                onclick="exportTableToExcel('pendingTable', 'Pending_Work_Report')">
+                                📤 Export to Excel
+                            </button>
+                        </div>
+                    </div>
+
+
+
+                    <% if (pendingWorkOrdersTable.length> 0) { %>
+                        <table id="pendingTable" class="table table-bordered table-striped">
                             <thead class="table-dark">
                                 <tr>
                                     <th>Request ID</th>
@@ -40,64 +57,168 @@
                                     <!-- <th class="text-center">Total Pending Cost (CM)</th>
                                     <th class="text-center">Total Pending Cost (PM)</th> -->
                                     <th class="text-center">Total Cost</th>
+                                    <th class="text-center">Issue Date</th>
+                                    <th class="text-center">Pending (Days)</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <% pendingWorkOrdersTable.forEach(order => { %>
+                                <% pendingWorkOrdersTable.forEach(order=> { %>
                                     <tr>
-                                        <td><%= order._id.requestId %></td>
-                                        <td class="text-center"><%= order._id.requesterName %></td>
-                                        <td class="text-center"><%= order._id.storeId || '-' %></td>
-                                        <td class="text-center"><%= order._id.storename || 'N/A' %></td>
-                                        <td class="text-center">฿ <%= order.totalCombinedCost.toLocaleString() %></td>
+                                        <td>
+                                            <%= order._id.requestId %>
+                                        </td>
+                                        <td class="text-center">
+                                            <%= order._id.requesterName %>
+                                        </td>
+                                        <td class="text-center">
+                                            <%= order._id.storeId ? String(order._id.storeId).padStart(3, '0' ) : '-' %>
+                                        </td>
+                                        <td class="text-center">
+                                            <%= order._id.storename || 'N/A' %>
+                                        </td>
+                                        <td class="text-center">
+                                            <%= order.totalCombinedCost.toLocaleString('en-US', { minimumFractionDigits:
+                                                2, maximumFractionDigits: 2 }) %>
+
+                                        </td>
+                                        <td class="text-center">
+                                            <%= new Date(order.latestTransactionDate).toLocaleDateString('en-GB', {
+                                                year: 'numeric' , month: 'short' , day: 'numeric' }) %>
+                                        </td>
+                                        <td class="text-center">
+                                            <% if (order.pendingDays !==null) { %>
+                                                <%= order.pendingDays %> Days
+                                                    <% } else { %>
+                                                        -
+                                                        <% } %>
+                                        </td>
                                     </tr>
-                                <% }) %>
+                                    <% }) %>
+
+
                             </tbody>
                         </table>
-                    <% } else { %>
-                        <p class="text-muted">No pending work orders available.</p>
-                    <% } %>
-                    
+                        <% } else { %>
+                            <p class="text-muted">No pending work orders available.</p>
+                            <% } %>
 
 
-                    <div>
-                        <!-- ตารางแสดง Parts Movement วันนี้ -->
-                        <h3 class="m-3 section-title">Parts Movement Today</h3>
-                        <% if (partsMovementToday.length > 0) { %>
-                            <table class="table table-bordered table-striped">
-                                <thead class="table-dark">
-                                    <tr>
-                                        <th>Part ID</th>
-                                        <th>Part Name</th>
-                                        <th class="text-center">Quantity IN</th>
-                                        <th class="text-center">Quantity OUT</th>
-                                        <th class="text-center">Stock On Hand</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="partsMovementTable">
-                                    <% partsMovementToday.forEach(item => { %>
+                            <div class="row text-center g-3 m-3 justify-content-center">
+                                <div class="col-md-3">
+                                    <div class="card shadow-sm border bg-light">
+                                        <div class="card-body">
+                                            <small class="text-muted">SKU ทั้งหมด</small>
+                                            <h4 class="fw-semibold mt-2">
+                                                <%= totalSKUs %>
+                                            </h4>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card shadow-sm border bg-light">
+                                        <div class="card-body">
+                                            <small class="text-muted">สต๊อกทั้งหมด</small>
+                                            <h4 class="fw-semibold mt-2">
+                                                <%= totalStockQty.toLocaleString() %> ชิ้น
+                                            </h4>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <div class="card shadow-sm border bg-light">
+                                      <div class="card-body">
+                                        <small class="text-muted">มูลค่าสต๊อกปัจจุบัน</small>
+                                        <h4 class="fw-semibold mt-2">฿ <%= totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2 }) %></h4>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                            </div>
+
+
+
+                                <div>
+                                    <!-- ตารางแสดง Parts Movement วันนี้ -->
+                                    <h3 class="m-3 section-title">Parts Movement Today</h3>
+                                    <% if (partsMovementToday.length> 0) { %>
+                                        <table class="table table-bordered table-hover text-center">
+                                            <thead class="table-secondary">
+                                                <tr>
+                                                    <th>SKU</th>
+                                                    <th>Description</th>
+                                                    <th class="text-center">Quantity IN</th>
+                                                    <th class="text-center">Quantity OUT</th>
+                                                    <th class="text-center">On Shelf</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="partsMovementTable">
+                                                <% partsMovementToday.forEach(item=> { %>
+                                                    <tr>
+                                                        <td>
+                                                            <%= item._id.partId %>
+                                                        </td>
+                                                        <td>
+                                                            <%= item._id.partName %>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <% if (item.totalIn> 0) { %>
+                                                                <span class="badge in-badge">
+                                                                    <%= item.totalIn %>
+                                                                </span>
+                                                                <% } %>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <% if (item.totalOut> 0) { %>
+                                                                <span class="badge out-badge">
+                                                                    <%= item.totalOut %>
+                                                                </span>
+                                                                <% } %>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <%= item._id.onHand %>
+                                                        </td>
+                                                    </tr>
+                                                    <% }) %>
+                                            </tbody>
+                                        </table>
+                                        <% } %>
+
+
+                                </div>
+
+
+                                <h4 class="m-3 mt-5 section-title">Top 10 SKU Issued Parts This Month</h4>
+
+                                <table class="table table-bordered table-hover text-center">
+                                    <thead class="table-secondary">
                                         <tr>
-                                            <td><%= item._id.partId %></td>
-                                            <td><%= item._id.partName %></td>
-                                            <td class="text-center">
-                                                <% if (item.totalIn > 0) { %>
-                                                    <span class="badge in-badge"><%= item.totalIn %></span>
-                                                <% } %>
-                                            </td>
-                                            <td class="text-center">
-                                                <% if (item.totalOut > 0) { %>
-                                                    <span class="badge out-badge"><%= item.totalOut %></span>
-                                                <% } %>
-                                            </td>
-                                            <td class="text-center"><%= item._id.onHand %></td>
+                                            <th>#</th>
+                                            <th>SKU</th>
+                                            <th>Description</th>
+                                            <th>Total Issued</th>
                                         </tr>
-                                    <% }) %>
-                                </tbody>
-                            </table>
-                        <% } %>
-                        
+                                    </thead>
+                                    <tbody>
+                                        <% top10OutThisMonth.forEach((item, index)=> { %>
+                                            <tr>
+                                                <td>
+                                                    <%= index + 1 %>
+                                                </td>
+                                                <td>
+                                                    <%= item.sku %>
+                                                </td>
+                                                <td class="text-start">
+                                                    <%= item.description %>
+                                                </td>
+                                                <td>
+                                                    <%= item.totalOutQty.toLocaleString() %> ชิ้น
+                                                </td>
+                                            </tr>
+                                            <% }) %>
+                                    </tbody>
+                                </table>
 
-                    </div>
 
                 </div>
 
@@ -119,6 +240,53 @@
     </script>
 
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <script>
+        function exportTableToExcel(tableId, filename = 'Pending_Work_Report') {
+            const table = document.getElementById(tableId);
+            const wb = XLSX.utils.table_to_book(table, { sheet: "Sheet1" });
+            const ws = wb.Sheets["Sheet1"];
+
+            const range = XLSX.utils.decode_range(ws['!ref']);
+
+            const storeIdColIndex = 2;
+            const costColIndex = 4;
+
+            for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+
+                const storeCellAddress = XLSX.utils.encode_cell({ r: R, c: storeIdColIndex });
+                const storeCell = ws[storeCellAddress];
+                if (storeCell && typeof storeCell.v === 'number') {
+                    storeCell.v = storeCell.v.toString().padStart(3, '0');
+                    storeCell.t = 's';
+                }
+
+                const costCellAddress = XLSX.utils.encode_cell({ r: R, c: costColIndex });
+                const costCell = ws[costCellAddress];
+                if (costCell && typeof costCell.v === 'string') {
+                    const numeric = parseFloat(costCell.v.replace(/[^\d.-]/g, '').trim());
+                    if (!isNaN(numeric)) {
+                        costCell.v = numeric;
+                        costCell.t = 'n';
+                        costCell.z = '#,##0.00';
+                    }
+                }
+            }
+
+            XLSX.writeFile(wb, `${filename}.xlsx`);
+        }
+    </script>
+
+    <script>
+        document.getElementById('requesterSearch').addEventListener('input', function () {
+            const search = this.value.toLowerCase();
+            document.querySelectorAll('#pendingTable tbody tr').forEach(row => {
+                const requester = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                row.style.display = requester.includes(search) ? '' : 'none';
+            });
+        });
+    </script>
 
 
 

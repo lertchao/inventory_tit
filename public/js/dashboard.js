@@ -8,6 +8,11 @@ document.addEventListener("DOMContentLoaded", function () {
   const cmPendingCounts = pendingWorkOrders.map((order) => order.cmPendingCount);
   const pmPendingCounts = pendingWorkOrders.map((order) => order.pmPendingCount);
 
+  // รวมข้อมูลทั้งหมดเพื่อใช้ในการหาค่าสูงสุด
+  const allCosts = cmTotalCosts.concat(pmTotalCosts);
+  const maxCost = Math.max(...allCosts);
+  const roundedMax = Math.ceil(maxCost / 5000) * 5000; // ปัดขึ้นใกล้สุดเพื่อใช้เป็น max
+
   // ฟังก์ชันคำนวณขนาดตัวอักษรตามขนาดหน้าจอ
   function getResponsiveFontSize() {
     if (window.innerWidth < 768) return 8; // หน้าจอเล็ก (มือถือ)
@@ -37,7 +42,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 font: () => ({
                   family: "kanit",
                   weight: "normal",
-                  size: getResponsiveFontSize(), // **ปรับขนาดแบบ Dynamic**
+                  size: getResponsiveFontSize(),
                 }),
                 formatter: (value, context) => `🛠️ ${cmPendingCounts[context.dataIndex]} Jobs`,
               },
@@ -48,7 +53,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 font: () => ({
                   family: "kanit",
                   weight: "bold",
-                  size: getResponsiveFontSize(), // **ปรับขนาดแบบ Dynamic**
+                  size: getResponsiveFontSize(),
                 }),
                 formatter: (value) => `฿ ${value.toLocaleString()}`,
                 padding: 10,
@@ -72,7 +77,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 font: () => ({
                   family: "kanit",
                   weight: "normal",
-                  size: getResponsiveFontSize(), // **ปรับขนาดแบบ Dynamic**
+                  size: getResponsiveFontSize(),
                 }),
                 formatter: (value, context) => `🛠️ ${pmPendingCounts[context.dataIndex]} Jobs`,
               },
@@ -83,7 +88,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 font: () => ({
                   family: "kanit",
                   weight: "bold",
-                  size: getResponsiveFontSize(), // **ปรับขนาดแบบ Dynamic**
+                  size: getResponsiveFontSize(),
                 }),
                 formatter: (value) => `฿ ${value.toLocaleString()}`,
                 padding: 10,
@@ -98,18 +103,19 @@ document.addEventListener("DOMContentLoaded", function () {
       scales: {
         y: {
           beginAtZero: true,
+          max: roundedMax, // กำหนด max ตามค่าที่คำนวณได้
           ticks: {
             stepSize: 5000,
             precision: 0,
             font: () => ({
-              size: getResponsiveFontSize(), // **ทำให้ Y-axis Responsive**
+              size: getResponsiveFontSize(),
             }),
           },
         },
         x: {
           ticks: {
             font: () => ({
-              size: getResponsiveFontSize(), // **ทำให้ X-axis Responsive**
+              size: getResponsiveFontSize(),
             }),
           },
         },
@@ -120,7 +126,7 @@ document.addEventListener("DOMContentLoaded", function () {
             font: () => ({
               family: "kanit",
               weight: "bold",
-              size: getResponsiveFontSize(), // **ทำให้ Legend Responsive**
+              size: getResponsiveFontSize(),
             }),
           },
         },
@@ -135,12 +141,11 @@ document.addEventListener("DOMContentLoaded", function () {
     chart.options.scales.x.ticks.font.size = getResponsiveFontSize();
     chart.options.plugins.legend.labels.font.size = getResponsiveFontSize();
 
-    // **อัปเดต datalabels ด้วย**
     chart.data.datasets.forEach((dataset) => {
       dataset.datalabels.labels.title.font.size = getResponsiveFontSize();
       dataset.datalabels.labels.value.font.size = getResponsiveFontSize();
     });
 
-    chart.update(); // **รีเฟรชกราฟ**
+    chart.update(); // รีเฟรชกราฟ
   });
 });

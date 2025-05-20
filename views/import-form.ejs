@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Import Excel</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="images/storage.png" sizes="32x32" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+</head>
+
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <div class="desktop-sidebar col-lg-2 col-12 d-none d-lg-block">
+        <%- include('sidebar') %>
+      </div>
+      <%- include('sidebarMobile') %>
+
+        <div class="col-lg-10 col-12">
+          <div class="container py-4">
+            <h2 class="mb-4 section-title">📥 Import Excel for Add/Update Parts</h2>
+
+            <div class="alert alert-info">
+              <i class="fa-solid fa-circle-info me-2"></i>
+              Please upload an Excel (.xlsx) file with the following columns:
+              <strong>SKU, Description, Type, Cost, Quantity, Image Link</strong>.
+            </div>
+
+            <!-- Excel Upload -->
+            <form id="excelPreviewForm">
+              <div class="mb-3">
+                <label for="excelFile" class="form-label">Select Excel File</label>
+                <input class="form-control" type="file" id="excelFile" accept=".xlsx" required />
+              </div>
+            </form>
+
+            <div id="importAlertContainer" class="container mt-3 col-md-9"></div>
+            
+
+
+            <!-- Sample Format -->
+            <div class="mt-4">
+              <h5>📄 Sample Format :</h5>
+              <div class="table-responsive">
+                <table class="table table-bordered table-striped">
+                  <thead class="table-dark text-center">
+                    <tr>
+                      <th>SKU</th>
+                      <th>Description</th>
+                      <th>Type</th>
+                      <th>Cost</th>
+                      <th>Quantity</th>
+                      <th>Image (optional)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>DM123456</td>
+                      <td>Grinder Assembly</td>
+                      <td class="text-center">CM / PM</td>
+                      <td class="text-end">1234.56</td>
+                      <td class="text-center">10</td>
+                      <td>https://res.cloudinary.com/demo/image/upload/sample.png</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div id="importDetails" class="d-none mt-4">
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Name</label>
+                  <input type="text" id="requesterNameInput" class="form-control" placeholder="Enter Name">
+                </div>
+            
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Remark</label>
+                  <input type="text" id="requestIdInput" class="form-control" placeholder="Enter Remark">
+                </div>
+              </div>
+            </div>
+
+
+            <!-- Preview Table -->
+            <div class="mt-4">
+              <h5>Preview Uploaded Data :</h5>
+              <div class="table-responsive">
+                <table id="previewTable" class="table table-bordered table-striped d-none">
+                  <thead class="table-dark">
+                    <tr>
+                      <th>SKU</th>
+                      <th>Description</th>
+                      <th>Type</th>
+                      <th>Cost</th>
+                      <th>Quantity</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+
+              <div class="mt-3 text-end">
+                <button id="confirmImportBtn" class="btn btn-primary d-none">
+                  <i class="fa-solid fa-check me-1"></i> Confirm Import
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <script>
+    let parsedData = [];
+
+    document.getElementById('excelFile').addEventListener('change', function (e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const data = new Uint8Array(e.target.result);
+    const workbook = XLSX.read(data, { type: 'array' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const jsonArray = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+    parsedData = jsonArray;
+
+    // Render Preview Table
+    const tbody = document.querySelector('#previewTable tbody');
+    tbody.innerHTML = '';
+    jsonArray.forEach(row => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${row.SKU || ''}</td>
+        <td>${row.Description || ''}</td>
+        <td>${row.Type || ''}</td>
+        <td>${row.Cost || ''}</td>
+        <td>${row.Quantity || ''}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById('previewTable').classList.remove('d-none');
+    document.getElementById('confirmImportBtn').classList.remove('d-none');
+    document.getElementById('importDetails').classList.remove('d-none'); // ✅ Show input fields
+  };
+
+  reader.readAsArrayBuffer(file);
+});
+
+
+document.getElementById('confirmImportBtn').addEventListener('click', async () => {
+  if (!parsedData.length) return;
+
+  const alertBox = document.getElementById('importAlertContainer');
+  alertBox.innerHTML = '';
+
+  // ✅ ดึง requesterName และ requestId จาก input
+  const requesterName = document.getElementById('requesterNameInput')?.value.trim();
+  const requestId = document.getElementById('requestIdInput')?.value.trim();
+
+  // ✅ ตรวจสอบว่าผู้ใช้กรอกหรือยัง
+  if (!requesterName || !requestId) {
+    alertBox.innerHTML = `
+      <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        ❗ กรุณากรอกทั้ง Requester Name และ Request ID ก่อนทำการ Import
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    `;
+    setTimeout(() => {
+      alertBox.innerHTML = '';
+    }, 5000);
+    return;
+  }
+
+  try {
+    const res = await fetch('/import-excel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        data: parsedData,
+        requesterName: requesterName,
+        requestId: requestId
+      })
+    });
+
+    const result = await res.json();
+
+    if (result.success) {
+      alertBox.innerHTML = `
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          <strong>บันทึกข้อมูลสำเร็จ!</strong> Import completed successfully!
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      `;
+
+      setTimeout(() => {
+        alertBox.innerHTML = '';
+        document.getElementById('excelPreviewForm').reset();
+        document.getElementById('previewTable').classList.add('d-none');
+        document.getElementById('confirmImportBtn').classList.add('d-none');
+        document.getElementById('importDetails')?.classList.add('d-none');
+        parsedData = [];
+      }, 3000);
+
+    } else {
+      alertBox.innerHTML = `
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+          ❌ Import failed: ${result.message || 'Unknown error'}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      `;
+
+      setTimeout(() => {
+        alertBox.innerHTML = '';
+      }, 3000);
+    }
+  } catch (err) {
+    alertBox.innerHTML = `
+      <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        ❌ Error occurred: ${err.message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    `;
+    setTimeout(() => {
+      alertBox.innerHTML = '';
+    }, 3000);
+  }
+});
+
+
+
+  </script>
+</body>
+
+</html>
