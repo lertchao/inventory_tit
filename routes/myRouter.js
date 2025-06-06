@@ -10,14 +10,14 @@ const bcrypt = require("bcrypt")
 const User = require("../models/user")
 
 
-router.get("/register", (req, res) => {
+router.get("/register",isAuthenticated, isAdmin,(req, res) => {
   res.render("register", {
     message: null,
     success: false
   });
 });
 
-router.post("/register", async (req, res) => {
+router.post("/register",isAuthenticated, isAdmin,async (req, res) => {
   try {
     const { username, password, confirmPassword, role } = req.body;
 
@@ -353,40 +353,62 @@ router.get("/", isAuthenticated, async (req, res) => {
     const now = new Date();
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-
-    const top10OutThisMonth = await Transaction.aggregate([
+    
+    const top10Movement = await Transaction.aggregate([
       {
         $match: {
-          transactionType: "OUT",
           createdAt: { $gte: firstDayOfMonth, $lte: lastDayOfMonth },
-        },
+          workStatus: "Finish"
+        }
       },
       { $unwind: "$products" },
       {
         $group: {
-          _id: "$products.sku",
-          totalOutQty: { $sum: "$products.quantity" },
-        },
+          _id: { sku: "$products.sku", type: "$transactionType" },
+          totalQty: { $sum: "$products.quantity" }
+        }
+      },
+      {
+        $group: {
+          _id: "$_id.sku",
+          inQty: {
+            $sum: {
+              $cond: [{ $eq: ["$_id.type", "IN"] }, "$totalQty", 0]
+            }
+          },
+          outQty: {
+            $sum: {
+              $cond: [{ $eq: ["$_id.type", "OUT"] }, "$totalQty", 0]
+            }
+          }
+        }
+      },
+      {
+        $addFields: {
+          netQty: { $subtract: ["$inQty", "$outQty"] } // รับ - เบิก
+        }
       },
       {
         $lookup: {
           from: "products",
           localField: "_id",
           foreignField: "sku",
-          as: "productInfo",
-        },
+          as: "productInfo"
+        }
       },
       { $unwind: "$productInfo" },
       {
         $project: {
           sku: "$_id",
           description: "$productInfo.description",
-          totalOutQty: 1,
-        },
+          netQty: 1
+        }
       },
-      { $sort: { totalOutQty: -1 } },
-      { $limit: 10 },
+      { $sort: { netQty: 1 } }, // ✅ เรียงจากติดลบมากสุด ไปหาบวก
+      { $limit: 10 }
     ]);
+    
+    
 
     const totalStockValue = await Product.aggregate([
       {
@@ -397,14 +419,57 @@ router.get("/", isAuthenticated, async (req, res) => {
       },
     ]);
 
+    const pendingSummary = await Transaction.aggregate([
+      { $match: { workStatus: "Pending" } },
+      { $unwind: "$products" },
+      {
+        $lookup: {
+          from: "products",
+          localField: "products.sku",
+          foreignField: "sku",
+          as: "productInfo"
+        }
+      },
+      { $unwind: "$productInfo" },
+      {
+        $group: {
+          _id: null,
+          totalPendingQty: {
+            $sum: {
+              $cond: [
+                { $eq: ["$transactionType", "OUT"] },
+                "$products.quantity",
+                { $multiply: ["$products.quantity", -1] } // ลบคืน IN
+              ]
+            }
+          },
+          totalPendingValue: {
+            $sum: {
+              $cond: [
+                { $eq: ["$transactionType", "OUT"] },
+                { $multiply: ["$products.quantity", "$productInfo.cost"] },
+                { $multiply: ["$products.quantity", "$productInfo.cost", -1] }
+              ]
+            }
+          }
+        }
+      }
+    ]);
+    
+    const totalPendingQty = pendingSummary[0]?.totalPendingQty || 0;
+    const totalPendingValue = pendingSummary[0]?.totalPendingValue || 0;
+    
+
     res.render("index", {
+      totalPendingQty,
+      totalPendingValue,
       pendingWorkOrders,
       searchQuery,
       partsMovementToday,
       pendingWorkOrdersTable,
       totalSKUs,
       totalStockQty: totalStockQty[0]?.totalQty || 0,
-      top10OutThisMonth,
+      top10Movement,
       totalStockValue: totalStockValue[0]?.totalValue || 0,
     });
   } catch (error) {
@@ -636,7 +701,6 @@ router.get('/workorder/:requestId',isAuthenticated, async (req, res) => {
 });
 
 
-
 router.put('/workorder/:requestId/update-status',isAuthenticated, async (req, res) => {
   const requestId = decodeURIComponent(req.params.requestId); // 🔥 ถอดรหัส
   const { workStatus } = req.body;
@@ -733,50 +797,41 @@ router.get("/get-transaction-details", async (req, res) => {
 });
 
   
-router.post('/add_trans-in', isAuthenticated,isAdmin, async (req, res) => {
+router.post('/add_trans-in', isAuthenticated, isAdmin, async (req, res) => {
   try {
     const { name, repair, workStatus, storeId, products } = req.body;
 
-    // ตรวจสอบว่า request มีข้อมูลครบถ้วน
     if (!name || !repair || !storeId || !Array.isArray(products) || products.length === 0) {
       return res.status(400).json({ error: 'ข้อมูลไม่ครบถ้วน' });
     }
 
-    // ตรวจสอบว่า storeId มีอยู่จริงในระบบ
     const store = await Store.findOne({ storeId: Number(storeId) });
     if (!store) {
       return res.status(404).json({ error: 'ไม่พบรหัสสาขานี้' });
     }
 
-    // สร้างรายการ Transaction
+    // อัปเดตสถานะ workStatus ของทุก Transaction ที่มี requestId เดียวกัน
+    await Transaction.updateMany({ requestId: repair }, { $set: { workStatus } });
+
     const newTransaction = new Transaction({
       requesterName: name,
       requestId: repair,
       transactionType: 'IN',
       workStatus,
-      storeId: Number(storeId), // บันทึก storeId
-      products: products.map(p => ({
-        sku: p.sku,
-        quantity: p.quantity
-      }))
+      storeId: Number(storeId),
+      products: products.map(p => ({ sku: p.sku, quantity: p.quantity }))
     });
 
-    // ตรวจสอบและเพิ่มจำนวนสินค้า
     for (const item of products) {
       const product = await Product.findOne({ sku: item.sku });
-
       if (!product) {
         return res.status(404).json({ error: `ไม่พบสินค้า SKU: ${item.sku}` });
       }
-
-      // อัปเดตจำนวนสินค้า
       product.quantity = (product.quantity || 0) + item.quantity;
       await product.save();
     }
 
-    // บันทึก Transaction
     await newTransaction.save();
-
     res.status(200).json({ message: 'บันทึกข้อมูลสำเร็จ', transaction: newTransaction });
   } catch (error) {
     console.error('Error saving transaction:', error);
@@ -785,8 +840,7 @@ router.post('/add_trans-in', isAuthenticated,isAdmin, async (req, res) => {
 });
 
 
-
-router.post("/add_trans-out", isAuthenticated,isAdmin, async (req, res) => {
+router.post("/add_trans-out", isAuthenticated, isAdmin, async (req, res) => {
   try {
     const { name, repair, products, workStatus, storeId } = req.body;
 
@@ -821,8 +875,9 @@ router.post("/add_trans-out", isAuthenticated,isAdmin, async (req, res) => {
         alert: `สินค้าบางรายการมีจำนวนไม่เพียงพอ<br>${alertMessage}`
       });
     }
-    
-    
+
+    // ✅ Sync workStatus ให้ทุก Transaction ที่มี requestId เดียวกัน
+    await Transaction.updateMany({ requestId: repair }, { $set: { workStatus } });
 
     // หักลบจำนวนสินค้าเมื่อแน่ใจว่ามีเพียงพอทุก SKU
     for (const item of products) {
@@ -852,7 +907,7 @@ router.post("/add_trans-out", isAuthenticated,isAdmin, async (req, res) => {
   }
 });
 
-  
+
 
 router.get('/edit-product', isAuthenticated,isAdmin, (req, res) => {
   const searchQuery = req.query.search || ''; // รับค่าที่ผู้ใช้กรอกมา (ถ้ามี)
@@ -881,7 +936,6 @@ router.get('/edit-product', isAuthenticated,isAdmin, (req, res) => {
 router.get('/add-product', isAuthenticated,isAdmin, (req, res) => {
     res.render('add-product', { success: null, error: null }); 
 });
-
 
 
 router.post("/add", upload.single("image"), async (req, res) => {
@@ -1027,6 +1081,101 @@ router.post("/import-excel",isAuthenticated, async (req, res) => {
   }
 });
 
+router.get('/stock-summary',isAuthenticated, async (req, res) => {
+  try {
+    // ดึงข้อมูล onHand จาก collection products
+    const products = await Product.find({}, 'sku description quantity');
+
+    // ดึงข้อมูล Pending (รวม OUT - IN)
+    const pendingData = await Transaction.aggregate([
+      { $match: { workStatus: 'Pending' } },
+      { $unwind: '$products' },
+      {
+        $group: {
+          _id: '$products.sku',
+          totalOut: {
+            $sum: {
+              $cond: [{ $eq: ['$transactionType', 'OUT'] }, '$products.quantity', 0]
+            }
+          },
+          totalIn: {
+            $sum: {
+              $cond: [{ $eq: ['$transactionType', 'IN'] }, '$products.quantity', 0]
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          pendingQuantity: { $subtract: ['$totalOut', '$totalIn'] }
+        }
+      }
+    ]);
+
+    // แปลงให้เป็น map เพื่อความเร็วในการค้นหา
+    const pendingMap = {};
+    pendingData.forEach(item => {
+      pendingMap[item._id] = item.pendingQuantity;
+    });
+
+    // รวม product กับ pending
+    const summary = products.map(product => ({
+      sku: product.sku,
+      description: product.description,
+      onHand: product.quantity,
+      pending: pendingMap[product.sku] || 0
+    }));
+
+    res.render('stock-summary', { summary });
+  } catch (error) {
+    console.error('Error fetching stock summary:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+
+router.get('/get-transactions-summary', isAuthenticated, async (req, res) => {
+  const { repair } = req.query;
+  try {
+    const transactions = await Transaction.aggregate([
+      { $match: { requestId: repair } },
+      { $unwind: '$products' },
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'products.sku',
+          foreignField: 'sku',
+          as: 'productInfo'
+        }
+      },
+      { $unwind: '$productInfo' },
+      {
+        $group: {
+          _id: '$_id',
+          requesterName: { $first: '$requesterName' },
+          requestId: { $first: '$requestId' },
+          createdAt: { $first: '$createdAt' },
+          transactionType: { $first: '$transactionType' },
+          workStatus: { $first: '$workStatus' },
+          storeId: { $first: '$storeId' },
+          products: {
+            $push: {
+              sku: '$products.sku',
+              quantity: '$products.quantity',
+              description: '$productInfo.description'
+            }
+          }
+        }
+      },
+      { $sort: { createdAt: 1 } }
+    ]);
+
+    res.json({ transactions });
+  } catch (error) {
+    console.error('Error fetching summary:', error);
+    res.status(500).json({ error: 'เกิดข้อผิดพลาดในการดึงข้อมูล' });
+  }
+});
 
 
 

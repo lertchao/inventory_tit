@@ -44,7 +44,7 @@ document.addEventListener("DOMContentLoaded", function () {
                   weight: "normal",
                   size: getResponsiveFontSize(),
                 }),
-                formatter: (value, context) => `🛠️ ${cmPendingCounts[context.dataIndex]} Jobs`,
+                formatter: (value, context) => `${cmPendingCounts[context.dataIndex]} Jobs`,
               },
               value: {
                 anchor: "end",
@@ -79,7 +79,7 @@ document.addEventListener("DOMContentLoaded", function () {
                   weight: "normal",
                   size: getResponsiveFontSize(),
                 }),
-                formatter: (value, context) => `🛠️ ${pmPendingCounts[context.dataIndex]} Jobs`,
+                formatter: (value, context) => `${pmPendingCounts[context.dataIndex]} Jobs`,
               },
               value: {
                 anchor: "end",
