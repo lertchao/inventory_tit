@@ -29,10 +29,12 @@ document.addEventListener("DOMContentLoaded", function () {
         const data = await response.json();
 
         if (data && data.product) {
-          descriptionCell.textContent = data.product.description || "ไม่พบข้อมูล";
+          descriptionCell.textContent =
+            data.product.description || "ไม่พบข้อมูล";
           descriptionCell.classList.replace("text-danger", "text-dark");
           costCell.classList.replace("text-danger", "text-dark");
-          costCell.textContent = new Intl.NumberFormat().format(data.product.cost) || "ไม่พบข้อมูล";
+          costCell.textContent =
+            new Intl.NumberFormat().format(data.product.cost) || "ไม่พบข้อมูล";
         } else {
           descriptionCell.textContent = "ไม่พบข้อมูล SKU";
           descriptionCell.classList.replace("text-dark", "text-danger");
@@ -48,37 +50,36 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-// ค้นหาชื่อสาขาจาก storeId
-const storeIdInput = document.getElementById("storeId");
-const storenameInput = document.getElementById("storename");
+  // ค้นหาชื่อสาขาจาก storeId
+  const storeIdInput = document.getElementById("storeId");
+  const storenameInput = document.getElementById("storename");
 
-storeIdInput.addEventListener("input", async function () {
-  const storeId = storeIdInput.value.trim();
-  storenameInput.value = ""; // เคลียร์ค่าก่อน
+  storeIdInput.addEventListener("input", async function () {
+    const storeId = storeIdInput.value.trim();
+    storenameInput.value = ""; // เคลียร์ค่าก่อน
 
-  if (!storeId) {
-    storenameInput.classList.remove("text-danger");
-    return;
-  }
+    if (!storeId) {
+      storenameInput.classList.remove("text-danger");
+      return;
+    }
 
-  try {
-    const response = await fetch(`/get-store-name?storeId=${storeId}`);
-    const data = await response.json();
+    try {
+      const response = await fetch(`/get-store-name?storeId=${storeId}`);
+      const data = await response.json();
 
-    if (response.ok && data.storename) {
-      storenameInput.value = data.storename;
-      storenameInput.classList.remove("text-danger"); // ลบ text-danger เมื่อพบข้อมูล
-    } else {
-      storenameInput.value = "ไม่พบข้อมูล";
+      if (response.ok && data.storename) {
+        storenameInput.value = data.storename;
+        storenameInput.classList.remove("text-danger"); // ลบ text-danger เมื่อพบข้อมูล
+      } else {
+        storenameInput.value = "ไม่พบข้อมูล";
+        storenameInput.classList.add("text-danger");
+      }
+    } catch (error) {
+      console.error("Error fetching store name:", error);
+      storenameInput.value = "เกิดข้อผิดพลาด";
       storenameInput.classList.add("text-danger");
     }
-  } catch (error) {
-    console.error("Error fetching store name:", error);
-    storenameInput.value = "เกิดข้อผิดพลาด";
-    storenameInput.classList.add("text-danger");
-  }
-});
-
+  });
 
   // เพิ่มแถว
   document.querySelector(".add-row").addEventListener("click", function () {
@@ -106,119 +107,218 @@ storeIdInput.addEventListener("input", async function () {
   // อัปเดตปุ่มลบตอนโหลดหน้าเว็บ
   updateRemoveButtons();
 
+  // ฟังก์ชันตรวจสอบเลขที่ใบเบิกและกรอกข้อมูลอัตโนมัติ
+  const repairInput = document.querySelector('[name="repair"]');
+  const nameInput = document.querySelector('[name="name"]');
+  const workStatusInput = document.querySelector('[name="workStatus"]');
+  const storeIdInputField = document.querySelector('[name="storeId"]');
+  const storenameInputField = document.getElementById("storename");
 
-// ฟังก์ชันตรวจสอบเลขที่ใบเบิกและกรอกข้อมูลอัตโนมัติ
-const repairInput = document.querySelector('[name="repair"]');
-const nameInput = document.querySelector('[name="name"]');
-const workStatusInput = document.querySelector('[name="workStatus"]');
-const storeIdInputField = document.querySelector('[name="storeId"]');
-const storenameInputField = document.getElementById('storename');
-  
-repairInput.addEventListener('input', async function () {
-  const repair = repairInput.value.trim();
+  repairInput.addEventListener("input", async function () {
+    const repair = repairInput.value.trim();
 
-  if (!repair) {
-    // ถ้าไม่มีการกรอกเลขที่ใบเบิก ให้เคลียร์ข้อมูล
-    nameInput.value = '';
-    workStatusInput.value = 'Pending';
-    storeIdInputField.value = '';
-    storenameInputField.value = '';
-    return;
-  }
-
-  try {
-    const response = await fetch(`/get-transaction-details?repair=${repair}`);
-    const data = await response.json();
-
-    if (response.ok && data.transaction) {
-      // หากพบข้อมูล transaction ในฐานข้อมูล
-      nameInput.value = data.transaction.requesterName;
-      workStatusInput.value = data.transaction.workStatus || 'Pending';
-      storeIdInputField.value = data.transaction.storeId;
-      storenameInputField.value = data.transaction.storeName || ''; // ถ้า storeName มีค่า ให้แสดง
-
-      // เรียกใช้งานฟังก์ชันค้นหาชื่อสาขาหลังจากกรอก storeId
-      storeIdInputField.dispatchEvent(new Event('input'));
-    } else {
-      // หากไม่พบข้อมูล ให้ปล่อยให้ฟอร์มเป็นค่าว่าง
-      nameInput.value = '';
-      workStatusInput.value = 'Pending';
-      storeIdInputField.value = '';
-      storenameInputField.value = '';
+    if (!repair) {
+      // ถ้าไม่มีการกรอกเลขที่ใบเบิก ให้เคลียร์ข้อมูล
+      nameInput.value = "";
+      workStatusInput.value = "Pending";
+      storeIdInputField.value = "";
+      storenameInputField.value = "";
+      repairHistorySection.classList.add("d-none");
+      return;
     }
-  } catch (error) {
-    console.error('Error fetching transaction details:', error);
-    // ถ้าเกิดข้อผิดพลาด ให้เคลียร์ค่าหรือแสดงข้อความผิดพลาด
-    nameInput.value = '';
-    workStatusInput.value = '';
-    storeIdInputField.value = '';
-    storenameInputField.value = '';
+
+    try {
+      const response = await fetch(`/get-transaction-details?repair=${repair}`);
+      const data = await response.json();
+
+      if (response.ok && data.transaction) {
+        // หากพบข้อมูล transaction ในฐานข้อมูล
+        nameInput.value = data.transaction.requesterName;
+        workStatusInput.value = data.transaction.workStatus || "Pending";
+        storeIdInputField.value = data.transaction.storeId;
+        storenameInputField.value = data.transaction.storeName || ""; // ถ้า storeName มีค่า ให้แสดง
+
+        // เรียกใช้งานฟังก์ชันค้นหาชื่อสาขาหลังจากกรอก storeId
+        storeIdInputField.dispatchEvent(new Event("input"));
+      } else {
+        // หากไม่พบข้อมูล ให้ปล่อยให้ฟอร์มเป็นค่าว่าง
+        nameInput.value = "";
+        workStatusInput.value = "Pending";
+        storeIdInputField.value = "";
+        storenameInputField.value = "";
+      }
+
+      await loadRepairHistory(repair);
+
+    } catch (error) {
+      console.error("Error fetching transaction details:", error);
+      // ถ้าเกิดข้อผิดพลาด ให้เคลียร์ค่าหรือแสดงข้อความผิดพลาด
+      nameInput.value = "";
+      workStatusInput.value = "";
+      storeIdInputField.value = "";
+      storenameInputField.value = "";
+      repairHistorySection.classList.add("d-none");
+    }
+  });
+
+  // โหลดข้อมูล Transaction ทั้งหมดหากพบเลข repair ซ้ำ
+  const repairHistorySection = document.getElementById("repair-history-section");
+  const transactionTableBody = document.querySelector("#transaction-table tbody");
+  const summaryTableBody = document.querySelector("#summary-table tbody");
+
+  async function loadRepairHistory(repair) {
+    try {
+      const response = await fetch(
+        `/get-transactions-summary?repair=${repair}`
+      );
+      const data = await response.json();
+
+      if (response.ok && data.transactions && data.transactions.length > 0) {
+        repairHistorySection.classList.remove("d-none");
+        transactionTableBody.innerHTML = "";
+        summaryTableBody.innerHTML = "";
+
+        // --- ตาราง Transaction
+        let count = 1;
+        data.transactions.forEach((transaction) => {
+          const createdAt = new Date(transaction.createdAt).toLocaleString(
+            "en-GB",
+            {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            }
+          );
+
+          transaction.products.forEach((product, index) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+            <td class="text-center">${index === 0 ? count : ""}</td>
+            <td class="text-center">${product.sku}</td>
+            <td>${product.description || ""}</td>
+            <td class="text-center">${product.quantity}</td>
+            <td class="text-center">${transaction.transactionType}</td>
+            <td class="text-center">${createdAt}</td>
+          `;
+            transactionTableBody.appendChild(tr);
+          });
+
+          count++;
+        });
+
+        // --- สรุปยอด (Summary)
+        const summary = {};
+        data.transactions.forEach((tr) => {
+          tr.products.forEach((p) => {
+            if (!summary[p.sku]) {
+              summary[p.sku] = {
+                description: p.description || "",
+                net: 0,
+              };
+            }
+            summary[p.sku].net +=
+              tr.transactionType === "IN" ? p.quantity : -p.quantity;
+          });
+        });
+
+        let summaryIndex = 1;
+        for (const sku in summary) {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+          <td class="text-center">${summaryIndex++}</td>
+          <td class="text-center">${sku}</td>
+          <td>${summary[sku].description}</td>
+          <td class="text-center">${summary[sku].net}</td>
+        `;
+          summaryTableBody.appendChild(tr);
+        }
+      } else {
+        // ไม่พบ transaction
+        repairHistorySection.classList.add("d-none");
+      }
+    } catch (error) {
+      console.error("Error loading repair history:", error);
+      repairHistorySection.classList.add("d-none");
+    }
   }
-});
 
+  // การบันทึกข้อมูล
+  document.querySelector("form").addEventListener("submit", async function (event) {
+      event.preventDefault();
 
-  // เมื่อกดปุ่ม submit
-document.querySelector("form").addEventListener("submit", async function (event) {
-  event.preventDefault();
+      const submitButton = this.querySelector('button[type="submit"]');
+      submitButton.disabled = true; // ปิดปุ่ม
+      submitButton.innerHTML = "⏳ กำลังบันทึก..."; // เปลี่ยนข้อความ
 
-  const alertContainer = document.getElementById("alert-container");
-  const name = document.querySelector('[name="name"]').value.trim();
-  const repair = document.querySelector('[name="repair"]').value.trim();
-  const workStatus = document.querySelector('[name="workStatus"]').value.trim();
-  const storeId = document.querySelector('[name="storeId"]').value.trim(); // เพิ่ม storeId
+      const alertContainer = document.getElementById("alert-container");
+      const name = document.querySelector('[name="name"]').value.trim();
+      const repair = document.querySelector('[name="repair"]').value.trim();
+      const workStatus = document
+        .querySelector('[name="workStatus"]')
+        .value.trim();
+      const storeId = document.querySelector('[name="storeId"]').value.trim(); // เพิ่ม storeId
 
-  if (!name || !repair || !workStatus || !storeId) {
-    alertContainer.innerHTML = `
+      if (!name || !repair || !workStatus || !storeId) {
+        alertContainer.innerHTML = `
       <div class="alert alert-warning alert-dismissible fade show" role="alert">
         <strong>แจ้งเตือน!</strong> กรุณากรอกข้อมูลให้ครบถ้วน.
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       </div>`;
-    return;
-  }
+        return;
+      }
 
-  const products = Array.from(document.querySelectorAll("table tbody tr")).map((row) => ({
-    sku: row.querySelector(".sku-input").value.trim(),
-    description: row.querySelector(".description-cell").textContent,
-    quantity: parseInt(row.querySelector('[name="quantity"]').value, 10),
-    cost: parseFloat(row.querySelector(".cost-cell").textContent.replace(/,/g, "")) || 0,
-  }));
+      const products = Array.from(
+        document.querySelectorAll("table tbody tr")
+      ).map((row) => ({
+        sku: row.querySelector(".sku-input").value.trim(),
+        description: row.querySelector(".description-cell").textContent,
+        quantity: parseInt(row.querySelector('[name="quantity"]').value, 10),
+        cost:
+          parseFloat(
+            row.querySelector(".cost-cell").textContent.replace(/,/g, "")
+          ) || 0,
+      }));
 
-  try {
-    const response = await fetch("/add_trans-out", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, repair, workStatus, products, storeId }), // ส่ง storeId
-    });
+      try {
+        const response = await fetch("/add_trans-out", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, repair, workStatus, products, storeId }), // ส่ง storeId
+        });
 
-    const data = await response.json();
+        const data = await response.json();
 
-    if (response.ok) {
-      alertContainer.innerHTML = `
+        if (response.ok) {
+          alertContainer.innerHTML = `
         <div class="alert alert-success alert-dismissible fade show" role="alert">
           <strong>สำเร็จ!</strong> บันทึกข้อมูลเรียบร้อยแล้ว.
           <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>`;
 
-      setTimeout(() => window.location.reload(), 2500);
-    } else {
-      if (data.alert) {
-        alertContainer.innerHTML = `
+          setTimeout(() => window.location.reload(), 2500);
+        } else {
+          if (data.alert) {
+            alertContainer.innerHTML = `
           <div class="alert alert-danger alert-dismissible fade show" role="alert">
             <strong>ผิดพลาด!</strong> ${data.alert}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
           </div>`;
-      } else {
-        throw new Error(data.error || "ไม่สามารถบันทึกข้อมูลได้");
-      }
-    }
-  } catch (error) {
-    console.error("Error:", error);
-    alertContainer.innerHTML = `
+          } else {
+            throw new Error(data.error || "ไม่สามารถบันทึกข้อมูลได้");
+          }
+        }
+      } catch (error) {
+        console.error("Error:", error);
+        submitButton.disabled = false;
+        submitButton.innerHTML = "บันทึกข้อมูล"; // คืนค่าเดิม
+        alertContainer.innerHTML = `
       <div class="alert alert-danger alert-dismissible fade show" role="alert">
         <strong>ผิดพลาด!</strong> ${error.message}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       </div>`;
-  }
-});
-  
+      }
+    });
 });

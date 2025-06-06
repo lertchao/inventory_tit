@@ -104,37 +104,60 @@
 
 
                             <div class="row text-center g-3 m-3 justify-content-center">
-                                <div class="col-md-3">
-                                    <div class="card shadow-sm border bg-light">
-                                        <div class="card-body">
-                                            <small class="text-muted">SKU ทั้งหมด</small>
-                                            <h4 class="fw-semibold mt-2">
-                                                <%= totalSKUs %>
-                                            </h4>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="card shadow-sm border bg-light">
-                                        <div class="card-body">
-                                            <small class="text-muted">สต๊อกทั้งหมด</small>
-                                            <h4 class="fw-semibold mt-2">
-                                                <%= totalStockQty.toLocaleString() %> ชิ้น
-                                            </h4>
-                                        </div>
-                                    </div>
-                                </div>
 
                                 <div class="col-md-3">
+                                  <div class="card shadow-sm border bg-light">
+                                    <div class="card-body">
+                                      <small class="text-muted">On Shelf (Quantity)</small>
+                                      <h4 class="fw-semibold mt-2"><%= totalStockQty.toLocaleString() %> ชิ้น</h4>
+                                    </div>
+                                  </div>
+                                </div>
+                              
+                                <div class="col-md-3">
+                                  <div class="card shadow-sm border bg-light">
+                                    <div class="card-body">
+                                      <small class="text-muted">On Shelf Value</small>
+                                      <h4 class="fw-semibold mt-2">฿ <%= totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2 }) %></h4>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div class="d-none col-md-3">
                                     <div class="card shadow-sm border bg-light">
                                       <div class="card-body">
-                                        <small class="text-muted">มูลค่าสต๊อกปัจจุบัน</small>
-                                        <h4 class="fw-semibold mt-2">฿ <%= totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2 }) %></h4>
+                                        <small class="text-muted">Active SKU</small>
+                                        <h4 class="fw-semibold mt-2"><%= totalSKUs %></h4>
                                       </div>
                                     </div>
                                   </div>
-
-                            </div>
+                              
+                                <!-- Row 2: Pending Summary -->
+                                <div class="col-md-3">
+                                  <div class="card shadow-sm border bg-light">
+                                    <div class="card-body">
+                                      <small class="text-muted">Pending (Quantity)</small>
+                                      <h4 class="fw-semibold mt-2"><%= totalPendingQty.toLocaleString() %> ชิ้น</h4>
+                                    </div>
+                                  </div>
+                                </div>
+                              
+                                <div class="col-md-3">
+                                  <div class="card shadow-sm border bg-light">
+                                    <div class="card-body">
+                                      <small class="text-muted">Pending Value</small>
+                                      <h4 class="fw-semibold mt-2">฿ <%= totalPendingValue.toLocaleString(undefined, { minimumFractionDigits: 2 }) %></h4>
+                                    </div>
+                                  </div>
+                                </div>
+                              
+                                <!-- Optional Slot -->
+                                <div class="d-none col-md-3 d-flex align-items-center justify-content-center text-muted">
+                                  <small>ข้อมูลเพิ่มเติม เช่น Low Stock, Movement, etc.</small>
+                                </div>
+                              
+                              </div>                              
+                              
 
 
 
@@ -188,7 +211,7 @@
                                 </div>
 
 
-                                <h4 class="m-3 mt-5 section-title">Top 10 SKU Issued Parts This Month</h4>
+                                <h4 class="m-3 mt-5 section-title">Top 10 Parts Movement (This Month)</h4>
 
                                 <table class="table table-bordered table-hover text-center">
                                     <thead class="table-secondary">
@@ -200,7 +223,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <% top10OutThisMonth.forEach((item, index)=> { %>
+                                        <% top10Movement.forEach((item, index)=> { %>
                                             <tr>
                                                 <td>
                                                     <%= index + 1 %>
@@ -212,8 +235,9 @@
                                                     <%= item.description %>
                                                 </td>
                                                 <td>
-                                                    <%= item.totalOutQty.toLocaleString() %> ชิ้น
-                                                </td>
+                                                    <%= item.netQty.toLocaleString() %> 
+                                                  </td>                                                  
+                                                  
                                             </tr>
                                             <% }) %>
                                     </tbody>
