@@ -10,14 +10,14 @@ const bcrypt = require("bcrypt")
 const User = require("../models/user")
 
 
-router.get("/register",isAuthenticated, isAdmin,(req, res) => {
+router.get("/register",(req, res) => {
   res.render("register", {
     message: null,
     success: false
   });
 });
 
-router.post("/register",isAuthenticated, isAdmin,async (req, res) => {
+router.post("/register",async (req, res) => {
   try {
     const { username, password, confirmPassword, role } = req.body;
 
