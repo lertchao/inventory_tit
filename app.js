@@ -9,7 +9,7 @@ const MongoStore = require("connect-mongo");
 //mongodb+srv://64230092:1234@cluster0.pglvr.mongodb.net/
 //mongodb://localhost:27017/Database
 
-const dbUrl = 'mongodb+srv://64230092:1234@cluster0.pglvr.mongodb.net'; 
+const dbUrl = 'mongodb://localhost:27017/Database'; 
 mongoose.connect(dbUrl, {
     useNewUrlParser: true,
     useUnifiedTopology: true
@@ -41,14 +41,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// Middleware สำหรับ parse JSON
-app.use(express.json());
-// Middleware สำหรับ parse form-urlencoded
-app.use(express.urlencoded({ extended: true }));
+// Middleware สำหรับ parse JSON และ form-urlencoded พร้อมเพิ่ม limit
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.set('views',path.join(__dirname,'views'))
 app.set('view engine', 'ejs')
-app.use(express.urlencoded({extended:false}))
+//app.use(express.urlencoded({extended:false}))
 app.use(router)
 app.use(express.static(path.join(__dirname,'public')))
 

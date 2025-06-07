@@ -38,8 +38,6 @@
               </div>
             </form>
 
-            <div id="importAlertContainer" class="container mt-3 col-md-9"></div>
-            
 
 
             <!-- Sample Format -->
@@ -77,7 +75,7 @@
                   <label class="form-label">Name</label>
                   <input type="text" id="requesterNameInput" class="form-control" placeholder="Enter Name">
                 </div>
-            
+
                 <div class="col-md-6 mb-3">
                   <label class="form-label">Remark</label>
                   <input type="text" id="requestIdInput" class="form-control" placeholder="Enter Remark">
@@ -104,6 +102,8 @@
                 </table>
               </div>
 
+              <div id="importAlertContainer" class="container mt-3 col-md-9"></div>
+
               <div class="mt-3 text-end">
                 <button id="confirmImportBtn" class="btn btn-primary d-none">
                   <i class="fa-solid fa-check me-1"></i> Confirm Import
@@ -123,53 +123,56 @@
     let parsedData = [];
 
     document.getElementById('excelFile').addEventListener('change', function (e) {
-  const file = e.target.files[0];
-  if (!file) return;
+      const file = e.target.files[0];
+      if (!file) return;
 
-  const reader = new FileReader();
-  reader.onload = function (e) {
-    const data = new Uint8Array(e.target.result);
-    const workbook = XLSX.read(data, { type: 'array' });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const jsonArray = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonArray = XLSX.utils.sheet_to_json(sheet, { defval: '' });
 
-    parsedData = jsonArray;
+        parsedData = jsonArray;
 
-    // Render Preview Table
-    const tbody = document.querySelector('#previewTable tbody');
-    tbody.innerHTML = '';
-    jsonArray.forEach(row => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
+        // Render Preview Table
+        const tbody = document.querySelector('#previewTable tbody');
+        tbody.innerHTML = '';
+        jsonArray.forEach(row => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
         <td>${row.SKU || ''}</td>
         <td>${row.Description || ''}</td>
         <td>${row.Type || ''}</td>
         <td>${row.Cost || ''}</td>
         <td>${row.Quantity || ''}</td>
       `;
-      tbody.appendChild(tr);
+          tbody.appendChild(tr);
+        });
+
+        document.getElementById('previewTable').classList.remove('d-none');
+        document.getElementById('confirmImportBtn').classList.remove('d-none');
+        document.getElementById('importDetails').classList.remove('d-none'); // ✅ Show input fields
+      };
+
+      reader.readAsArrayBuffer(file);
     });
 
-    document.getElementById('previewTable').classList.remove('d-none');
-    document.getElementById('confirmImportBtn').classList.remove('d-none');
-    document.getElementById('importDetails').classList.remove('d-none'); // ✅ Show input fields
-  };
 
-  reader.readAsArrayBuffer(file);
-});
-
-
-document.getElementById('confirmImportBtn').addEventListener('click', async () => {
+    document.getElementById('confirmImportBtn').addEventListener('click', async () => {
   if (!parsedData.length) return;
 
   const alertBox = document.getElementById('importAlertContainer');
+  const confirmBtn = document.getElementById('confirmImportBtn');
   alertBox.innerHTML = '';
 
-  // ✅ ดึง requesterName และ requestId จาก input
+  // Disable button to prevent double click
+  confirmBtn.disabled = true;
+  confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Importing...';
+
   const requesterName = document.getElementById('requesterNameInput')?.value.trim();
   const requestId = document.getElementById('requestIdInput')?.value.trim();
 
-  // ✅ ตรวจสอบว่าผู้ใช้กรอกหรือยัง
   if (!requesterName || !requestId) {
     alertBox.innerHTML = `
       <div class="alert alert-warning alert-dismissible fade show" role="alert">
@@ -177,9 +180,9 @@ document.getElementById('confirmImportBtn').addEventListener('click', async () =
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
       </div>
     `;
-    setTimeout(() => {
-      alertBox.innerHTML = '';
-    }, 5000);
+    confirmBtn.disabled = false;
+    confirmBtn.innerHTML = '<i class="fa-solid fa-check me-1"></i> Confirm Import';
+    setTimeout(() => { alertBox.innerHTML = ''; }, 5000);
     return;
   }
 
@@ -187,11 +190,7 @@ document.getElementById('confirmImportBtn').addEventListener('click', async () =
     const res = await fetch('/import-excel', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        data: parsedData,
-        requesterName: requesterName,
-        requestId: requestId
-      })
+      body: JSON.stringify({ data: parsedData, requesterName, requestId })
     });
 
     const result = await res.json();
@@ -208,9 +207,11 @@ document.getElementById('confirmImportBtn').addEventListener('click', async () =
         alertBox.innerHTML = '';
         document.getElementById('excelPreviewForm').reset();
         document.getElementById('previewTable').classList.add('d-none');
-        document.getElementById('confirmImportBtn').classList.add('d-none');
+        confirmBtn.classList.add('d-none');
         document.getElementById('importDetails')?.classList.add('d-none');
         parsedData = [];
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i class="fa-solid fa-check me-1"></i> Confirm Import';
       }, 3000);
 
     } else {
@@ -220,10 +221,9 @@ document.getElementById('confirmImportBtn').addEventListener('click', async () =
           <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
       `;
-
-      setTimeout(() => {
-        alertBox.innerHTML = '';
-      }, 3000);
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = '<i class="fa-solid fa-check me-1"></i> Confirm Import';
+      setTimeout(() => { alertBox.innerHTML = ''; }, 3000);
     }
   } catch (err) {
     alertBox.innerHTML = `
@@ -232,9 +232,9 @@ document.getElementById('confirmImportBtn').addEventListener('click', async () =
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
       </div>
     `;
-    setTimeout(() => {
-      alertBox.innerHTML = '';
-    }, 3000);
+    confirmBtn.disabled = false;
+    confirmBtn.innerHTML = '<i class="fa-solid fa-check me-1"></i> Confirm Import';
+    setTimeout(() => { alertBox.innerHTML = ''; }, 3000);
   }
 });
 

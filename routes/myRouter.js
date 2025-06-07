@@ -1040,16 +1040,18 @@ router.post("/import-excel",isAuthenticated, async (req, res) => {
       if (item.Cost !== undefined && item.Cost !== "") updateFields.cost = parseFloat(item.Cost);
       if (item.Image) updateFields.image = item.Image;
 
-      if (item.Quantity !== undefined && item.Quantity !== "") {
-        const importedQuantity = parseInt(item.Quantity);
-
-        if (existingProduct) {
-          updateFields.quantity = (existingProduct.quantity || 0) + importedQuantity;
-        } else {
-          updateFields.quantity = importedQuantity;
-        }
-
-        // ✅ Save Transaction IN พร้อม requesterName, requestId จาก user
+      let importedQuantity = parseInt(item.Quantity);
+      if (isNaN(importedQuantity)) importedQuantity = 0;
+      
+      // กำหนด quantity ให้ product ใหม่ หรือ update
+      if (existingProduct) {
+        updateFields.quantity = (existingProduct.quantity || 0) + importedQuantity;
+      } else {
+        updateFields.quantity = importedQuantity;
+      }
+      
+      // ✔ สร้าง Transaction เฉพาะเมื่อ quantity > 0
+      if (importedQuantity > 0) {
         const transaction = new Transaction({
           requesterName: requesterName || "Excel Import",
           requestId: requestId || "Excel Import",
@@ -1063,9 +1065,10 @@ router.post("/import-excel",isAuthenticated, async (req, res) => {
           ],
           createdAt: new Date()
         });
-
+      
         await transaction.save();
       }
+      
 
       await Product.updateOne(
         { sku: sku },
