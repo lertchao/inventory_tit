@@ -13,160 +13,249 @@
 <body>
 
   <div class="container mt-5">
-    <h2 class="text-center section-title">Request ID: <%= requestId %></h2>
+    <h2 class="text-center section-title">Request ID: <%= requestId %>
+    </h2>
 
 
-<!-- แสดง storeId ด้านล่างของ Request ID -->
-<% if (transactions.length > 0) { %>
-  <h5>Store : <%= transactions[0].storeId %> - <%= transactions[0].storename %></h5>
-<% } %>
-  
-    <!-- Dropdown สำหรับเปลี่ยน Work Status -->
-    <div class="text-end mb-3">
-      <label for="workStatusSelect" class="form-label fw-bold">Update Work Status:</label>
-      <select id="workStatusSelect" class="form-select d-inline-block w-auto">
-        <option value="Pending">Pending</option>
-        <option value="Finish">Finish</option>
-      </select>
-      <button id="updateWorkStatus" class="ms-3 btn btn-primary btn-sm">Update</button>
-    </div>
-    
-    <!-- ตารางรายการธุรกรรม -->
-    <table class="table table-bordered mt-3">
-      <thead class="table-dark">
-        <tr>
-          <th class="text-center align-middle">#</th>
-          <th class="text-center align-middle">SKU</th>
-          <th class="text-center align-middle">Quantity</th>
-          <th class="text-center align-middle col-2">Transaction Type</th>
-          <th class="text-center align-middle col-2">Work Status</th>
-          <th class="text-center align-middle">Created At</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% transactions.forEach((transaction, tIndex) => { %>
-          <% transaction.products.forEach((product, pIndex) => { %>
-            <tr>
-              <td class="text-center">
-                <%= pIndex === 0 ? tIndex + 1 : '' %>
-              </td>
-              <td class="text-center"><%= product.sku %></td>
-              <td class="text-center"><%= product.quantity %></td>
-              <td class="text-center"><%= transaction.transactionType %></td>          
-              <td class="text-center">
-                <span class="badge bg-<%= transaction.workStatus === 'Finish' ? 'success' : 'secondary' %>">
-                  <%= transaction.workStatus %>
-                </span>
-              </td>
-              <td class="text-center">
-                <%= new Date(transaction.createdAt).toLocaleString('en-GB', {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: true
-                    }) %>
-              </td>
-            </tr>
-          <% }) %>
-        <% }) %>
-      </tbody>
-      
-    </table>
+    <!-- แสดง storeId ด้านล่างของ Request ID -->
+    <% if (transactions.length> 0) { %>
+      <h5>Store : <%= transactions[0].storeId %> - <%= transactions[0].storename %>
+      </h5>
+      <% } %>
+      <div class="text-end mb-3">
+        <!-- ปุ่ม Update -->
+        <div class="text-end mb-3">
+          <label for="newRequestId" class="form-label fw-bold ms-3">New Request ID:</label>
+          <input id="newRequestId" class="form-control d-inline-block w-auto" value="<%= requestId %>" />
+          <label for="workStatusSelect" class="form-label fw-bold">Update Work Status:</label>
+          <select id="workStatusSelect" class="form-select d-inline-block w-auto">
+            <option value="Pending">Pending</option>
+            <option value="Finish">Finish</option>
+          </select>
+          
+          <button id="updateWorkStatus" class="ms-3 btn btn-primary btn">Update</button>
+        </div>
 
-    <!-- ส่วนคำนวณ Summary -->
-    <%
-    // สร้างออบเจ็กต์ summary สำหรับเก็บยอดรวมและข้อมูล description ของแต่ละ SKU
-    let summary = {};
-    transactions.forEach(transaction => {
-      transaction.products.forEach(product => {
-        const sku = product.sku;
-        const desc = product.description || ''; // ตรวจสอบว่า product.description มีค่าหรือไม่
-        const qty = Number(product.quantity);
+      </div>
+
+          <!-- ✅ Modal แจ้งเตือนหาก Request ID ซ้ำ -->
+          <div class="modal fade" id="duplicateModal" tabindex="-1" aria-labelledby="duplicateModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                  <h5 class="modal-title" id="duplicateModalLabel">คำเตือน</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  Request ID นี้มีอยู่แล้วในระบบ<br>คุณต้องการใช้ซ้ำหรือไม่?
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                  <button id="confirmDuplicateBtn" type="button" class="btn btn-primary">ยืนยันใช้ซ้ำ</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ตารางรายการธุรกรรม -->
+          <table class="table table-bordered mt-3">
+            <thead class="table-dark">
+              <tr>
+                <th class="text-center align-middle">#</th>
+                <th class="text-center align-middle">SKU</th>
+                <th class="text-center align-middle">Quantity</th>
+                <th class="text-center align-middle col-2">Transaction Type</th>
+                <th class="text-center align-middle col-2">Work Status</th>
+                <th class="text-center align-middle">Created At</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% transactions.forEach((transaction, tIndex)=> { %>
+                <% transaction.products.forEach((product, pIndex)=> { %>
+                  <tr>
+                    <td class="text-center">
+                      <%= pIndex===0 ? tIndex + 1 : '' %>
+                    </td>
+                    <td class="text-center">
+                      <%= product.sku %>
+                    </td>
+                    <td class="text-center">
+                      <%= product.quantity %>
+                    </td>
+                    <td class="text-center">
+                      <%= transaction.transactionType %>
+                    </td>
+                    <td class="text-center">
+                      <span class="badge bg-<%= transaction.workStatus === 'Finish' ? 'success' : 'secondary' %>">
+                        <%= transaction.workStatus %>
+                      </span>
+                    </td>
+                    <td class="text-center">
+                      <%= new Date(transaction.createdAt).toLocaleString('en-GB', { day: '2-digit' , month: 'short' ,
+                        year: 'numeric' , hour: '2-digit' , minute: '2-digit' , hour12: true }) %>
+                    </td>
+                  </tr>
+                  <% }) %>
+                    <% }) %>
+            </tbody>
+
+          </table>
+
+
+          <% let summary={}; transactions.forEach(transaction=> {
+            transaction.products.forEach(product => {
+            const sku = product.sku;
+            const desc = product.description || ''; // ตรวจสอบว่า product.description มีค่าหรือไม่
+            const qty = Number(product.quantity);
+
+            // ถ้ายังไม่มี key สำหรับ SKU นี้ใน summary ให้สร้าง key ใหม่
+            if (!summary[sku]) {
+            summary[sku] = { description: desc, net: 0 };
+            }
+
+            // คำนวณยอดรวมตาม transactionType
+            if (transaction.transactionType.toLowerCase() === 'in') {
+            summary[sku].net += qty;
+            } else if (transaction.transactionType.toLowerCase() === 'out') {
+            summary[sku].net -= qty;
+            }
+            });
+            });
+            %>
+
+
+            <!-- ตาราง Summary ด้านล่าง -->
+            <h3 class="mt-5 text-center">Summary (ยอดใช้อะไหล่จริง)</h3>
+            <table class="table table-bordered mt-3">
+              <thead class="table-dark">
+                <tr>
+                  <th class="text-center align-middle">#</th>
+                  <th class="text-center align-middle">SKU</th>
+                  <th class="text-center align-middle">Description</th>
+                  <th class="text-center align-middle">Net Quantity</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% Object.keys(summary).forEach((sku, index)=> { %>
+                  <tr>
+                    <td class="text-center">
+                      <%= index + 1 %>
+                    </td>
+                    <td class="text-center">
+                      <%= sku %>
+                    </td>
+                    <td class="text-center">
+                      <%= summary[sku].description %>
+                    </td>
+                    <td class="text-center">
+                      <%= summary[sku].net %>
+                    </td>
+                  </tr>
+                  <% }) %>
+              </tbody>
+            </table>
+
+
+            <div id="alertMessage" class="alert d-none alert-dismissible fade show mt-3" role="alert">
+              <span id="alertText">ข้อความแจ้งเตือนที่นี่</span>
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          
+          
+            <a href="/workorder" class="btn btn-secondary mt-3">Back</a>
         
-        // ถ้ายังไม่มี key สำหรับ SKU นี้ใน summary ให้สร้าง key ใหม่
-        if (!summary[sku]) {
-          summary[sku] = { description: desc, net: 0 };
-        }
-        
-        // คำนวณยอดรวมตาม transactionType
-        if (transaction.transactionType.toLowerCase() === 'in') {
-          summary[sku].net += qty;
-        } else if (transaction.transactionType.toLowerCase() === 'out') {
-          summary[sku].net -= qty;
-        }
-      });
-    });
-  %>
-  
 
-<!-- ตาราง Summary ด้านล่าง -->
-<h3 class="mt-5 text-center">Summary (ยอดใช้อะไหล่จริง)</h3>
-<table class="table table-bordered mt-3">
-  <thead class="table-dark">
-    <tr>
-      <th class="text-center align-middle">#</th>
-      <th class="text-center align-middle">SKU</th>
-      <th class="text-center align-middle">Description</th>
-      <th class="text-center align-middle">Net Quantity</th>
-    </tr>
-  </thead>
-  <tbody>
-    <% Object.keys(summary).forEach((sku, index) => { %>
-      <tr>
-        <td class="text-center"><%= index + 1 %></td>
-        <td class="text-center"><%= sku %></td>
-        <td class="text-center"><%= summary[sku].description %></td>
-        <td class="text-center"><%= summary[sku].net %></td>
-      </tr>
-    <% }) %>
-  </tbody>
-</table>
+            <script>
+              const updateBtn = document.getElementById("updateWorkStatus");
+              const alertMessage = document.getElementById("alertMessage");
+              const alertText = document.getElementById("alertText");
+              const confirmDuplicateBtn = document.getElementById("confirmDuplicateBtn");
+              let duplicateModal;
+            
+              async function sendUpdate(force = false) {
+                const newStatus = document.getElementById("workStatusSelect").value;
+                const newRequestId = document.getElementById("newRequestId").value.trim();
+            
+                const originalText = updateBtn.innerHTML;
+                updateBtn.disabled = true;
+                updateBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Updating...`;
+            
+                try {
+                  const encodedRequestId = encodeURIComponent("<%= requestId %>");
+                  const response = await fetch(`/workorder/${encodedRequestId}/update-status`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      workStatus: newStatus,
+                      newRequestId: newRequestId,
+                      forceUpdate: force
+                    }),
+                  });
+            
+                  const result = await response.json();
+            
+                  // ⚠️ เจอ requestId ซ้ำ => เปิด modal
+                  if (result.duplicate && !force) {
+                    duplicateModal = new bootstrap.Modal(document.getElementById("duplicateModal"));
+                    duplicateModal.show();
+                    updateBtn.disabled = false;
+                    updateBtn.innerHTML = originalText;
+                    return;
+                  }
+            
+                  if (response.ok) {
+                    if (result.message === "No transactions found to update.") {
+                      alertMessage.className = "alert alert-warning alert-dismissible fade show mt-3";
+                      alertText.innerText = result.message;
+                      alertMessage.classList.remove("d-none");
+                      updateBtn.disabled = false;
+                      updateBtn.innerHTML = originalText;
+                      return;
+                    }
+            
+                    // ✅ สำเร็จ
+                    alertMessage.className = "alert alert-success alert-dismissible fade show mt-3";
+                    alertText.innerText = result.message;
+                    alertMessage.classList.remove("d-none");
+            
+                    setTimeout(() => {
+                      if (result.newRequestId) {
+                        window.location.href = `/workorder/${encodeURIComponent(result.newRequestId)}`;
+                      } else {
+                        location.reload();
+                      }
+                    }, 2000);
+                  } else {
+                    // ❌ Response ไม่สำเร็จ
+                    throw new Error(result.message || "Update failed.");
+                  }
+                } catch (error) {
+                  alertMessage.className = "alert alert-danger alert-dismissible fade show mt-3";
+                  alertText.innerText = error.message || "An unexpected error occurred.";
+                  alertMessage.classList.remove("d-none");
+                  updateBtn.disabled = false;
+                  updateBtn.innerHTML = originalText;
+                }
+              }
+            
+              // ✅ ครั้งแรกที่กด
+              updateBtn.addEventListener("click", () => {
+                sendUpdate(false);
+              });
+            
+              // ✅ เมื่อยืนยันซ้ำจาก modal
+              confirmDuplicateBtn.addEventListener("click", () => {
+                if (duplicateModal) duplicateModal.hide();
+                sendUpdate(true);
+              });
+            </script>
+            
+            
+            
 
-
-    
-
-    <!-- Alert Messages -->
-    <div id="alertMessage" class="alert d-none" role="alert"></div>
-  
-    <a href="/workorder" class="btn btn-secondary mt-3">Back</a>
-  </div>
-  
-  <script>
-    document.getElementById("updateWorkStatus").addEventListener("click", async function () {
-      const newStatus = document.getElementById("workStatusSelect").value;
-      const alertMessage = document.getElementById("alertMessage");
-  
-      try {
-        const encodedRequestId = encodeURIComponent("<%= requestId %>");
-        const response = await fetch(`/workorder/${encodedRequestId}/update-status`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ workStatus: newStatus }),
-        });
-  
-        if (response.ok) {
-          alertMessage.className = "alert alert-success";
-          alertMessage.innerText = "Work Status Updated Successfully!";
-        } else {
-          alertMessage.className = "alert alert-danger";
-          alertMessage.innerText = "Failed to update work status.";
-        }
-      } catch (error) {
-        alertMessage.className = "alert alert-danger";
-        alertMessage.innerText = "An error occurred while updating work status.";
-      }
-  
-      alertMessage.classList.remove("d-none");
-      setTimeout(() => {
-        alertMessage.classList.add("d-none");
-        location.reload();
-      }, 2000);
-    });
-  </script>
-  
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
+
 </html>

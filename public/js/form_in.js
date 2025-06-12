@@ -126,7 +126,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // อัปเดตปุ่มลบในตอนโหลดหน้าเว็บ
   updateRemoveButtons();
 
-  // ฟังก์ชันตรวจสอบเลขที่ใบเบิกและกรอกข้อมูลอัตโนมัติ
+  // ฟังก์ชันตรวจสอบเลขที่ใบเบิกและกรอกช้อมูลอัตโนมัติ
   const repairInput = document.querySelector('[name="repair"]');
   const nameInput = document.querySelector('[name="name"]');
   const workStatusInput = document.querySelector('[name="workStatus"]');
@@ -264,68 +264,68 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // การบันทึกข้อมูล
-  document.querySelector("form").addEventListener("submit", function (event) {
-    event.preventDefault();
+// ✅ form_in.js (ความปลอดภัย + ป้องกัน error + แสดงผลด้วย Bootstrap alert)
+if (!document.querySelector("form")) return;
 
-    const submitButton = this.querySelector('button[type="submit"]');
-    submitButton.disabled = true; // ปิดปุ่ม
-    submitButton.innerHTML = "⏳ กำลังบันทึก..."; // เปลี่ยนข้อความ
+document.querySelector("form").addEventListener("submit", function (event) {
+  event.preventDefault();
 
-    const alertContainer = document.getElementById("alert-container");
-    const name = document.querySelector('[name="name"]').value;
-    const repair = document.querySelector('[name="repair"]').value;
-    const workStatus = document.querySelector('[name="workStatus"]').value;
-    const storeId = document.querySelector('[name="storeId"]').value; // ดึงค่า storeId
+  const submitButton = this.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+  submitButton.innerHTML = "⏳ กำลังบันทึก...";
 
-    const products = Array.from(
-      document.querySelectorAll("table tbody tr")
-    ).map((row) => ({
-      sku: row.querySelector(".sku-input").value,
-      description: row.querySelector(".description-cell").textContent,
-      quantity: parseInt(row.querySelector('[name="quantity"]').value, 10),
-      cost:
-        parseFloat(
-          row.querySelector(".cost-cell").textContent.replace(/,/g, "")
-        ) || 0,
-    }));
+  const alertContainer = document.getElementById("alert-container");
+  const name = document.querySelector('[name="name"]').value.trim();
+  const repair = document.querySelector('[name="repair"]').value.trim();
+  const workStatus = document.querySelector('[name="workStatus"]').value;
+  const storeId = document.querySelector('[name="storeId"]').value.trim();
 
-    fetch("/add_trans-in", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, repair, workStatus, storeId, products }), // ส่ง storeId ไปด้วย
+  const products = Array.from(document.querySelectorAll("table tbody tr"))
+    .map((row) => {
+      const skuEl = row.querySelector(".sku-input");
+      const descEl = row.querySelector(".description-cell");
+      const qtyEl = row.querySelector('[name="quantity"]');
+      const costEl = row.querySelector(".cost-cell");
+      if (!skuEl || !descEl || !qtyEl || !costEl) return null;
+      return {
+        sku: skuEl.value.trim(),
+        description: descEl.textContent.trim(),
+        quantity: parseInt(qtyEl.value, 10),
+        cost: parseFloat(costEl.textContent.replace(/,/g, "")) || 0,
+      };
     })
-      .then((response) => {
-        if (response.ok) {
-          return response.json();
-        }
-        throw new Error("Failed to save data");
-      })
-      .then((data) => {
-        alertContainer.innerHTML = `
-          <div class="container mt-5 col-md-9 justify-content-center alert alert-success alert-dismissible fade show" role="alert">
-            <strong>สำเร็จ!</strong> บันทึกข้อมูลเรียบร้อยแล้ว.
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
-        `;
-      })
-      .catch((error) => {
-        console.error("Error:", error);
-        submitButton.disabled = false;
-        submitButton.innerHTML = "บันทึกข้อมูล"; // คืนค่าเดิม
-        alertContainer.innerHTML = `
-          <div class="container mt-5 col-md-9 justify-content-center alert alert-danger alert-dismissible fade show" role="alert">
-            <strong>ผิดพลาด!</strong> ไม่สามารถบันทึกข้อมูลได้.
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
-        `;
-      });
-    setTimeout(() => {
-      const alerts = document.querySelectorAll(".alert");
-      alerts.forEach((alert) => alert.classList.remove("show"));
+    .filter(Boolean);
 
-      // รีโหลดหน้า
-      window.location.reload();
-    }, 2500);
-  });
+  fetch("/add_trans-in", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, repair, workStatus, storeId, products }),
+  })
+    .then(async (response) => {
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw data;
+      }
+
+      alertContainer.innerHTML = `<div class="alert alert-success alert-dismissible fade show" role="alert">
+        <strong>สำเร็จ!</strong> ${data.message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>`;
+      setTimeout(() => window.location.reload(), 2500);
+    })
+    .catch((error) => {
+      console.error("Error saving:", error);
+      submitButton.disabled = false;
+      submitButton.innerHTML = "บันทึกข้อมูล";
+
+      alertContainer.innerHTML = `<div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>เกิดข้อผิดพลาด!</strong> ${error.alert || error.error || "ไม่สามารถบันทึกข้อมูลได้"}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>`;
+    });
+});
+
+
+  
 });

@@ -67,10 +67,12 @@
                         <!-- แสดงรูปเดิม -->
                         <% if (product.image) { %>
                             <div class="mb-3 col-md-8 col-sm-12 text-center">
-                                <label class="form-label">รูปภาพปัจจุบัน</label><br>
-                                <img src="<%= product.image %>" alt="Product Image" class="img-fluid" style="max-width: 200px;">
+                              <label class="form-label">รูปภาพปัจจุบัน</label><br>
+                              <img src="https://res.cloudinary.com/dzuw4hsd7/image/upload/f_auto,q_auto/<%= product.image %>?v=<%= Date.now() %>" alt="Product Image" class="img-fluid" style="max-width: 200px;">
                             </div>
-                        <% } %>
+
+                          <% } %>
+                          
                         
 
                     </div>

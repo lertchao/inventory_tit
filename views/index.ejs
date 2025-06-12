@@ -10,6 +10,10 @@
     <link rel="stylesheet" href="css/styles.css">
     <link rel="icon" href="images/storage.png" sizes="32x32">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+
+
 </head>
 
 <body>
@@ -25,24 +29,6 @@
                 <div class="col-lg-10 col-12">
                     <h3 class="m-3 section-title">Pending Work</h3>
                     <canvas id="pendingWorkChart"></canvas>
-
-
-                    <!-- <h3 class="mt-5 m-3 section-title">Pending Work</h3> -->
-
-                    <div class="mb-3 d-flex justify-content-between align-items-end">
-                        <div class="col-6">
-                            <input type="text" id="requesterSearch" class="form-control"
-                                placeholder="Search by Name...">
-                        </div>
-
-                        <div>
-                            <label class="form-label d-block invisible">Export</label>
-                            <button class="btn btn-success"
-                                onclick="exportTableToExcel('pendingTable', 'Pending_Work_Report')">
-                                📤 Export to Excel
-                            </button>
-                        </div>
-                    </div>
 
 
 
@@ -103,61 +89,76 @@
                             <% } %>
 
 
-                            <div class="row text-center g-3 m-3 justify-content-center">
 
-                                <div class="col-md-3">
-                                  <div class="card shadow-sm border bg-light">
-                                    <div class="card-body">
-                                      <small class="text-muted">On Shelf (Quantity)</small>
-                                      <h4 class="fw-semibold mt-2"><%= totalStockQty.toLocaleString() %> ชิ้น</h4>
+
+                                <div class="row text-center g-3 m-3 justify-content-center">
+
+                                    <div class="col-md-3">
+                                        <div class="card shadow-sm border bg-light">
+                                            <div class="card-body">
+                                                <small class="text-muted">On Shelf (Quantity)</small>
+                                                <h4 class="fw-semibold mt-2">
+                                                    <%= totalStockQty.toLocaleString() %> ชิ้น
+                                                </h4>
+                                            </div>
+                                        </div>
                                     </div>
-                                  </div>
-                                </div>
-                              
-                                <div class="col-md-3">
-                                  <div class="card shadow-sm border bg-light">
-                                    <div class="card-body">
-                                      <small class="text-muted">On Shelf Value</small>
-                                      <h4 class="fw-semibold mt-2">฿ <%= totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2 }) %></h4>
+
+                                    <div class="col-md-3">
+                                        <div class="card shadow-sm border bg-light">
+                                            <div class="card-body">
+                                                <small class="text-muted">On Shelf Value</small>
+                                                <h4 class="fw-semibold mt-2">฿ <%=
+                                                        totalStockValue.toLocaleString(undefined, {
+                                                        minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+                                                </h4>
+                                            </div>
+                                        </div>
                                     </div>
-                                  </div>
+
+                                    <div class="d-none col-md-3">
+                                        <div class="card shadow-sm border bg-light">
+                                            <div class="card-body">
+                                                <small class="text-muted">Active SKU</small>
+                                                <h4 class="fw-semibold mt-2">
+                                                    <%= totalSKUs %>
+                                                </h4>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Row 2: Pending Summary -->
+                                    <div class="col-md-3">
+                                        <div class="card shadow-sm border bg-light">
+                                            <div class="card-body">
+                                                <small class="text-muted">Pending (Quantity)</small>
+                                                <h4 class="fw-semibold mt-2">
+                                                    <%= totalPendingQty.toLocaleString() %> ชิ้น
+                                                </h4>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-3">
+                                        <div class="card shadow-sm border bg-light">
+                                            <div class="card-body">
+                                                <small class="text-muted">Pending Value</small>
+                                                <h4 class="fw-semibold mt-2">฿ <%=
+                                                        totalPendingValue.toLocaleString(undefined, {
+                                                        minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+                                                </h4>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Optional Slot -->
+                                    <div
+                                        class="d-none col-md-3 d-flex align-items-center justify-content-center text-muted">
+                                        <small>ข้อมูลเพิ่มเติม เช่น Low Stock, Movement, etc.</small>
+                                    </div>
+
                                 </div>
 
-                                <div class="d-none col-md-3">
-                                    <div class="card shadow-sm border bg-light">
-                                      <div class="card-body">
-                                        <small class="text-muted">Active SKU</small>
-                                        <h4 class="fw-semibold mt-2"><%= totalSKUs %></h4>
-                                      </div>
-                                    </div>
-                                  </div>
-                              
-                                <!-- Row 2: Pending Summary -->
-                                <div class="col-md-3">
-                                  <div class="card shadow-sm border bg-light">
-                                    <div class="card-body">
-                                      <small class="text-muted">Pending (Quantity)</small>
-                                      <h4 class="fw-semibold mt-2"><%= totalPendingQty.toLocaleString() %> ชิ้น</h4>
-                                    </div>
-                                  </div>
-                                </div>
-                              
-                                <div class="col-md-3">
-                                  <div class="card shadow-sm border bg-light">
-                                    <div class="card-body">
-                                      <small class="text-muted">Pending Value</small>
-                                      <h4 class="fw-semibold mt-2">฿ <%= totalPendingValue.toLocaleString(undefined, { minimumFractionDigits: 2 }) %></h4>
-                                    </div>
-                                  </div>
-                                </div>
-                              
-                                <!-- Optional Slot -->
-                                <div class="d-none col-md-3 d-flex align-items-center justify-content-center text-muted">
-                                  <small>ข้อมูลเพิ่มเติม เช่น Low Stock, Movement, etc.</small>
-                                </div>
-                              
-                              </div>                              
-                              
 
 
 
@@ -235,11 +236,11 @@
                                                     <%= item.description %>
                                                 </td>
                                                 <td>
-                                                    <%= item.netQty.toLocaleString() %> 
-                                                  </td>                                                  
-                                                  
+                                                    <%= item.totalIssued.toLocaleString() %>
+                                                </td> <!-- ✅ เปลี่ยนตรงนี้ -->
                                             </tr>
                                             <% }) %>
+
                                     </tbody>
                                 </table>
 
@@ -266,48 +267,73 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
+
+
+    <!-- DataTables Scripts -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
+
+    <!-- Init DataTables -->
     <script>
-        function exportTableToExcel(tableId, filename = 'Pending_Work_Report') {
-            const table = document.getElementById(tableId);
-            const wb = XLSX.utils.table_to_book(table, { sheet: "Sheet1" });
-            const ws = wb.Sheets["Sheet1"];
-
-            const range = XLSX.utils.decode_range(ws['!ref']);
-
-            const storeIdColIndex = 2;
-            const costColIndex = 4;
-
-            for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-
-                const storeCellAddress = XLSX.utils.encode_cell({ r: R, c: storeIdColIndex });
-                const storeCell = ws[storeCellAddress];
-                if (storeCell && typeof storeCell.v === 'number') {
-                    storeCell.v = storeCell.v.toString().padStart(3, '0');
-                    storeCell.t = 's';
+        $(document).ready(function () {
+            $('#transactionTable').DataTable({
+                dom: 'Bfrtip',
+                buttons: ['copy', 'csv', 'excel', 'print'],
+                order: [[8, 'desc']],
+                responsive: true,
+                pageLength: 25,
+                language: {
+                    search: "ค้นหา:",
+                    lengthMenu: "แสดง _MENU_ รายการต่อหน้า",
+                    info: "แสดง _START_ ถึง _END_ จากทั้งหมด _TOTAL_ รายการ",
+                    paginate: {
+                        next: "ถัดไป",
+                        previous: "ก่อนหน้า"
+                    },
+                    zeroRecords: "ไม่พบข้อมูลที่ค้นหา",
+                    infoEmpty: "ไม่มีข้อมูลแสดง",
+                    infoFiltered: "(กรองจากทั้งหมด _MAX_ รายการ)"
                 }
+            });
 
-                const costCellAddress = XLSX.utils.encode_cell({ r: R, c: costColIndex });
-                const costCell = ws[costCellAddress];
-                if (costCell && typeof costCell.v === 'string') {
-                    const numeric = parseFloat(costCell.v.replace(/[^\d.-]/g, '').trim());
-                    if (!isNaN(numeric)) {
-                        costCell.v = numeric;
-                        costCell.t = 'n';
-                        costCell.z = '#,##0.00';
+            $('#pendingTable').DataTable({
+                dom: 'Bfrtip',
+                buttons: [
+                    {
+                        extend: 'csv',
+                        text: '<i class="bi bi-file-earmark-spreadsheet"></i> CSV',
+                    },
+                    {
+                        extend: 'excel',
+                        text: '<i class="bi bi-file-earmark-excel"></i> Excel',
+
+                    },
+                    {
+                        extend: 'print',
+                        text: '<i class="bi bi-printer"></i> Print',
                     }
+                ],
+                responsive: true,
+                pageLength: 10,
+                language: {
+                    search: "ค้นหา:",
+                    lengthMenu: "แสดง _MENU_ รายการต่อหน้า",
+                    info: "แสดง _START_ ถึง _END_ จากทั้งหมด _TOTAL_ รายการ",
+                    paginate: {
+                        next: "ถัดไป",
+                        previous: "ก่อนหน้า"
+                    },
+                    zeroRecords: "ไม่พบข้อมูลที่ค้นหา",
+                    infoEmpty: "ไม่มีข้อมูลแสดง",
+                    infoFiltered: "(กรองจากทั้งหมด _MAX_ รายการ)"
                 }
-            }
-
-            XLSX.writeFile(wb, `${filename}.xlsx`);
-        }
-    </script>
-
-    <script>
-        document.getElementById('requesterSearch').addEventListener('input', function () {
-            const search = this.value.toLowerCase();
-            document.querySelectorAll('#pendingTable tbody tr').forEach(row => {
-                const requester = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
-                row.style.display = requester.includes(search) ? '' : 'none';
             });
         });
     </script>
