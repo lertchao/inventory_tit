@@ -3,7 +3,10 @@ const router = express.Router()
 const Product = require('../models/products')
 const Transaction = require('../models/transaction')
 const Store = require('../models/store')
-const { upload } = require('../config/cloudinary')
+const fs = require('fs');
+const path = require('path');
+const { cloudinary, upload } = require('../config/cloudinary');
+
 // const authMiddleware = require("../middleware/auth")
 const { isAuthenticated, isAdmin } = require("../middleware/auth")
 const bcrypt = require("bcrypt")
@@ -384,11 +387,6 @@ router.get("/", isAuthenticated, async (req, res) => {
         }
       },
       {
-        $addFields: {
-          netQty: { $subtract: ["$inQty", "$outQty"] } // รับ - เบิก
-        }
-      },
-      {
         $lookup: {
           from: "products",
           localField: "_id",
@@ -401,12 +399,13 @@ router.get("/", isAuthenticated, async (req, res) => {
         $project: {
           sku: "$_id",
           description: "$productInfo.description",
-          netQty: 1
+          totalIssued: "$outQty"
         }
       },
-      { $sort: { netQty: 1 } }, // ✅ เรียงจากติดลบมากสุด ไปหาบวก
+      { $sort: { totalIssued: -1 } }, // ✅ เรียงจากการเบิกมากที่สุด
       { $limit: 10 }
     ]);
+    
     
     
 
@@ -491,25 +490,33 @@ router.get('/trans-out',isAuthenticated, isAdmin,(req,res)=>{
 })
 
 
-router.get('/onhand',isAuthenticated,(req, res) => {
-    const searchQuery = req.query.search || ''; // รับค่าที่ผู้ใช้กรอกมา (ถ้ามี)
+router.get('/onhand', isAuthenticated, async (req, res) => {
+  const perPage = 12;
+  const page = parseInt(req.query.page) || 1;
+  const searchQueryRaw = req.query.search || '';
 
-    // สร้างเงื่อนไขการค้นหา
-    const searchCondition = {
-        $or: [
-            { sku: { $regex: searchQuery, $options: 'i' } }, 
-            { description: { $regex: searchQuery, $options: 'i' } } 
-        ]
-    };
+  function escapeRegex(str) {
+      return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+  const escapedQuery = escapeRegex(searchQueryRaw);
+  const condition = searchQueryRaw ? {
+      $or: [
+          { sku: { $regex: escapedQuery, $options: 'i' } },
+          { description: { $regex: escapedQuery, $options: 'i' } }
+      ]
+  } : {};
 
-    Product.find(searchQuery ? searchCondition : {}).exec((err, doc) => {
-        if (err) {
-            console.error('Error fetching products:', err);
-            return res.status(500).send('Internal Server Error');
-        }
+  const total = await Product.countDocuments(condition);
+  const products = await Product.find(condition)
+      .skip((page - 1) * perPage)
+      .limit(perPage);
 
-        res.render('onhand', { products: doc, search: searchQuery });
-    });
+  res.render('onhand', {
+      products,
+      search: searchQueryRaw,
+      current: page,
+      pages: Math.ceil(total / perPage)
+  });
 });
 
 
@@ -701,23 +708,43 @@ router.get('/workorder/:requestId',isAuthenticated, async (req, res) => {
 });
 
 
-router.put('/workorder/:requestId/update-status',isAuthenticated, async (req, res) => {
-  const requestId = decodeURIComponent(req.params.requestId); // 🔥 ถอดรหัส
-  const { workStatus } = req.body;
+router.put('/workorder/:requestId/update-status', isAuthenticated, async (req, res) => {
+  const requestId = decodeURIComponent(req.params.requestId);
+  const { workStatus, newRequestId, forceUpdate } = req.body;
 
   try {
+    // ตรวจสอบว่า requestId ใหม่ซ้ำ และไม่ใช่ forceUpdate
+    if (newRequestId && newRequestId !== requestId && !forceUpdate) {
+      const exists = await Transaction.findOne({ requestId: newRequestId });
+      if (exists) {
+        return res.status(200).json({
+          message: "This Request ID already exists. Do you still want to use it?",
+          duplicate: true
+        });
+      }
+    }
+
     const result = await Transaction.updateMany(
       { requestId },
-      { $set: { workStatus } }
+      {
+        $set: {
+          workStatus,
+          ...(newRequestId && newRequestId !== requestId ? { requestId: newRequestId } : {})
+        }
+      }
     );
 
     if (result.modifiedCount === 0) {
-      return res.status(404).json({ message: "No transactions found to update" });
+      return res.status(404).json({ message: "No transactions found to update." });
     }
 
-    res.json({ message: "Work Status updated successfully", modifiedCount: result.modifiedCount });
+    res.json({
+      message: "Updated successfully",
+      modifiedCount: result.modifiedCount,
+      newRequestId: newRequestId !== requestId ? newRequestId : null
+    });
   } catch (error) {
-    console.error("Error updating work status:", error);
+    console.error("Error updating:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
@@ -797,115 +824,167 @@ router.get("/get-transaction-details", async (req, res) => {
 });
 
   
-router.post('/add_trans-in', isAuthenticated, isAdmin, async (req, res) => {
+router.post("/add_trans-in", isAuthenticated, isAdmin, async (req, res) => {
   try {
     const { name, repair, workStatus, storeId, products } = req.body;
 
-    if (!name || !repair || !storeId || !Array.isArray(products) || products.length === 0) {
-      return res.status(400).json({ error: 'ข้อมูลไม่ครบถ้วน' });
+    if (!name?.trim() || !repair?.trim() || !storeId?.trim() || !Array.isArray(products) || products.length === 0) {
+      return res.status(400).json({ error: "ข้อมูลไม่ครบถ้วน" });
     }
 
     const store = await Store.findOne({ storeId: Number(storeId) });
     if (!store) {
-      return res.status(404).json({ error: 'ไม่พบรหัสสาขานี้' });
+      return res.status(404).json({ error: "ไม่พบรหัสสาขานี้" });
     }
 
-    // อัปเดตสถานะ workStatus ของทุก Transaction ที่มี requestId เดียวกัน
-    await Transaction.updateMany({ requestId: repair }, { $set: { workStatus } });
+    const invalidMessages = [];
+
+    // ตรวจสอบ SKU และ quantity
+    for (const item of products) {
+      const product = await Product.findOne({ sku: item.sku.trim() });
+      if (!product) {
+        invalidMessages.push(`ไม่พบสินค้า SKU: ${item.sku}`);
+        continue; // ข้ามการตรวจสอบ quantity ถ้าไม่พบสินค้า
+      }
+      if (!item.quantity || item.quantity <= 0) {
+        invalidMessages.push(`SKU: ${item.sku} → จำนวนต้องมากกว่า 0`);
+      }
+    }
+
+    if (invalidMessages.length > 0) {
+      return res.status(400).json({
+        error: "พบข้อผิดพลาดในรายการสินค้า",
+        alert: invalidMessages.join("<br>"),
+      });
+    }
+
+    await Transaction.updateMany({ requestId: repair.trim() }, { $set: { workStatus } });
 
     const newTransaction = new Transaction({
-      requesterName: name,
-      requestId: repair,
-      transactionType: 'IN',
+      requesterName: name.trim(),
+      requestId: repair.trim(),
+      transactionType: "IN",
       workStatus,
       storeId: Number(storeId),
-      products: products.map(p => ({ sku: p.sku, quantity: p.quantity }))
+      products: products.map((p) => ({
+        sku: p.sku.trim(),
+        quantity: Number(p.quantity)
+      })),
     });
 
+    // อัปเดต stock เฉพาะที่ validate ผ่านแล้ว
     for (const item of products) {
-      const product = await Product.findOne({ sku: item.sku });
-      if (!product) {
-        return res.status(404).json({ error: `ไม่พบสินค้า SKU: ${item.sku}` });
-      }
+      const product = await Product.findOne({ sku: item.sku.trim() });
       product.quantity = (product.quantity || 0) + item.quantity;
       await product.save();
     }
 
     await newTransaction.save();
-    res.status(200).json({ message: 'บันทึกข้อมูลสำเร็จ', transaction: newTransaction });
-  } catch (error) {
-    console.error('Error saving transaction:', error);
-    res.status(500).json({ error: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล' });
-  }
-});
+    res.status(200).json({ message: "บันทึกข้อมูลเรียบร้อยแล้ว" });
 
-
-router.post("/add_trans-out", isAuthenticated, isAdmin, async (req, res) => {
-  try {
-    const { name, repair, products, workStatus, storeId } = req.body;
-
-    if (!name || !repair || !storeId || !Array.isArray(products) || products.length === 0) {
-      return res.status(400).json({ error: "ข้อมูลไม่ครบถ้วน" });
-    }
-
-    const store = await Store.findOne({ storeId: storeId });
-    if (!store) {
-      return res.status(404).json({ error: "ไม่พบข้อมูลสาขาที่ระบุ" });
-    }
-
-    // ตรวจสอบจำนวนสินค้าทั้งหมดก่อน
-    const insufficientStock = [];
-    for (const item of products) {
-      const product = await Product.findOne({ sku: item.sku });
-
-      if (!product) {
-        return res.status(404).json({ error: `ไม่พบสินค้า SKU: ${item.sku}` });
-      }
-
-      if ((product.quantity || 0) < item.quantity) {
-        insufficientStock.push({ sku: item.sku, available: product.quantity || 0 });
-      }
-    }
-
-    if (insufficientStock.length > 0) {
-      const alertMessage = insufficientStock.map(item => `SKU: ${item.sku} คงเหลือ: ${item.available}`).join("<br>");
-      return res.status(400).json({
-        error: "สินค้าบางรายการมีจำนวนไม่เพียงพอ",
-        insufficientStock,
-        alert: `สินค้าบางรายการมีจำนวนไม่เพียงพอ<br>${alertMessage}`
-      });
-    }
-
-    // ✅ Sync workStatus ให้ทุก Transaction ที่มี requestId เดียวกัน
-    await Transaction.updateMany({ requestId: repair }, { $set: { workStatus } });
-
-    // หักลบจำนวนสินค้าเมื่อแน่ใจว่ามีเพียงพอทุก SKU
-    for (const item of products) {
-      const product = await Product.findOne({ sku: item.sku });
-      product.quantity -= item.quantity;
-      await product.save();
-    }
-
-    const newTransaction = new Transaction({
-      requesterName: name,
-      requestId: repair,
-      transactionType: "OUT",
-      workStatus,
-      storeId: Number(storeId),
-      products: products.map((p) => ({
-        sku: p.sku,
-        quantity: p.quantity,
-      })),
-    });
-
-    await newTransaction.save();
-
-    res.status(200).json({ message: "บันทึกข้อมูลสำเร็จ", transaction: newTransaction });
   } catch (error) {
     console.error("Error saving transaction:", error);
     res.status(500).json({ error: "เกิดข้อผิดพลาดในการบันทึกข้อมูล" });
   }
 });
+
+
+
+router.post('/add_trans-out', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const { name, repair, workStatus, storeId, products } = req.body;
+
+    // ✅ ตรวจสอบข้อมูลเบื้องต้น
+    if (!name || !repair || !storeId || !Array.isArray(products) || products.length === 0) {
+      return res.status(400).json({ alert: 'กรุณากรอกข้อมูลให้ครบถ้วน' });
+    }
+
+    const store = await Store.findOne({ storeId: Number(storeId) });
+    if (!store) {
+      return res.status(404).json({ alert: 'ไม่พบรหัสสาขานี้' });
+    }
+
+    // ✅ ตรวจสอบ SKU และจำนวนก่อนบันทึก
+    const insufficientStock = [];
+
+    for (const item of products) {
+      const sku = item.sku ? item.sku.trim() : '';
+      const quantity = Number(item.quantity);
+
+      // ✅ ตรวจสอบว่าใส่ SKU หรือไม่
+      if (!sku) {
+        return res.status(400).json({
+          alert: `พบ SKU ที่ไม่ถูกต้อง (ไม่ได้ระบุ)`
+        });
+      }
+
+      // ✅ ตรวจสอบว่ามีสินค้า SKU นี้หรือไม่
+      const product = await Product.findOne({ sku });
+      if (!product) {
+        return res.status(404).json({
+          alert: `ไม่พบสินค้า SKU: ${sku}`
+        });
+      }
+
+      // ✅ ตรวจสอบจำนวนที่มากกว่า 0
+      if (isNaN(quantity) || quantity <= 0) {
+        return res.status(400).json({
+          alert: `SKU: ${sku} → จำนวนต้องมากกว่า 0`
+        });
+      }
+
+      // ✅ ตรวจสอบว่าคงเหลือพอหรือไม่
+      if ((product.quantity || 0) < quantity) {
+        insufficientStock.push({ sku, available: product.quantity || 0 });
+      }
+    }
+
+    if (insufficientStock.length > 0) {
+      const alertMessage = insufficientStock
+        .map(item => `SKU: ${item.sku} คงเหลือ: ${item.available}`)
+        .join("<br>");
+      return res.status(400).json({
+        alert: `สินค้าบางรายการมีจำนวนไม่เพียงพอ<br>${alertMessage}`
+      });
+    }
+
+    // ✅ อัปเดตสถานะใบงาน
+    await Transaction.updateMany({ requestId: repair }, { $set: { workStatus } });
+
+    // ✅ บันทึก Transaction ใหม่
+    const newTransaction = new Transaction({
+      requesterName: name.trim(),
+      requestId: repair.trim(),
+      transactionType: 'OUT',
+      workStatus,
+      storeId: Number(storeId),
+      products: products.map(p => ({
+        sku: p.sku.trim(),
+        quantity: Number(p.quantity)
+      }))
+    });
+
+    // ✅ ตัดสต็อกสินค้า
+    for (const item of products) {
+      const product = await Product.findOne({ sku: item.sku.trim() });
+      product.quantity -= Number(item.quantity);
+      try {
+        await product.save();
+      } catch (err) {
+        console.error("❌ บันทึกสินค้า SKU ผิดพลาด:", item.sku, err);
+        return res.status(500).json({ alert: `บันทึก SKU ${item.sku} ผิดพลาด` });
+      }
+    }
+
+    await newTransaction.save();
+    res.status(200).json({ message: 'บันทึกข้อมูลเรียบร้อยแล้ว' });
+
+  } catch (error) {
+    console.error('❌ เกิดข้อผิดพลาดใน /add_trans-out:', error);
+    res.status(500).json({ alert: 'ไม่สามารถบันทึกข้อมูลได้' });
+  }
+});
+
 
 
 
@@ -940,19 +1019,40 @@ router.get('/add-product', isAuthenticated,isAdmin, (req, res) => {
 
 router.post("/add", upload.single("image"), async (req, res) => {
   try {
+    let imagePublicId = "";
+
+    if (req.file) {
+      // 📤 อัปโหลดรูปไป Cloudinary
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: 'products',
+        public_id: req.body.sku,
+        overwrite: true,
+        invalidate: true
+      });
+
+      imagePublicId = result.public_id; // เช่น "products/DM123456"
+
+      // 🧹 ลบไฟล์ local หลัง upload
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error("⚠️ Failed to delete local file:", err);
+        else console.log("🧹 Local file deleted:", req.file.path);
+      });
+    }
+
     const data = new Product({
       sku: req.body.sku,
       description: req.body.description,
       cost: req.body.cost,
-      image: req.file ? req.file.path : "", // เก็บ URL ของภาพจาก Cloudinary
+      image: imagePublicId, // ✅ เก็บ public_id
       typeparts: req.body.typeparts,
     });
 
-    // บันทึกข้อมูลสินค้าในฐานข้อมูล
     await data.save();
+    console.log("✅ Product added:", data);
     res.render("add-product", { success: true, error: false });
+
   } catch (err) {
-    console.error(err);
+    console.error("🔴 Error adding product:", err);
     res.render("add-product", { success: false, error: true });
   }
 });
@@ -966,59 +1066,75 @@ router.post('/edit',isAuthenticated, (req, res) => {
 })
 
 
-router.post('/update', upload.single('image'),isAuthenticated, async (req, res) => {
+
+router.post('/update', upload.single('image'), isAuthenticated, async (req, res) => {
   try {
-      console.log("🟢 Received update request:", req.body); // เช็คค่าที่ได้รับจากฟอร์ม
+    console.log("🟢 Received update request:", req.body);
 
-      const update_id = req.body.update_id;
-      let updateData = {
-          sku: req.body.sku,
-          description: req.body.description,
-          cost: req.body.cost,
-          typeparts: req.body.typeparts,
-      };
+    const update_id = req.body.update_id;
 
-      // ค้นหาข้อมูลเดิม
-      let product = await Product.findById(update_id);
-      if (!product) {
-          console.log("🔴 Error: Product not found!");
-          return res.render('edit-form', { product: updateData, message: 'error' });
+    let updateData = {
+      sku: req.body.sku,
+      description: req.body.description,
+      cost: req.body.cost,
+      typeparts: req.body.typeparts
+    };
+
+    const product = await Product.findById(update_id);
+    if (!product) {
+      console.log("🔴 Error: Product not found!");
+      return res.render('edit-form', { product: updateData, message: 'error' });
+    }
+
+    console.log("🟢 Found product:", product);
+
+    if (req.file) {
+      console.log("🟢 Uploaded file (local):", req.file);
+
+      // ลบรูปเก่าออกจาก Cloudinary
+      if (product.image) {
+        try {
+          console.log(`🟡 Deleting old image: ${product.image}`);
+          await cloudinary.uploader.destroy(product.image);
+        } catch (err) {
+          console.error("🔴 Error deleting old image:", err);
+        }
       }
 
-      console.log("🟢 Found product:", product);
+      // อัปโหลดรูปใหม่ขึ้น Cloudinary
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: 'products',
+        public_id: req.body.sku,
+        overwrite: true,
+        invalidate: true
+      });
 
-      // ตรวจสอบว่าอัปโหลดไฟล์ใหม่หรือไม่
-      if (req.file) {
-          console.log("🟢 Uploaded file:", req.file);
+      updateData.image = result.public_id; // เช่น products/DM124011
 
-          if (product.image) {
-              try {
-                  const publicId = product.image.split('/').pop().split('.')[0];
-                  console.log(`🟡 Deleting old image: products/${publicId}`);
-                  await cloudinary.uploader.destroy(`products/${publicId}`);
-              } catch (deleteError) {
-                  console.error("🔴 Error deleting old image:", deleteError);
-              }
-          }
+      // ✅ ลบไฟล์ local หลัง upload สำเร็จ
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error("⚠️ Failed to delete local file:", err);
+        else console.log("🧹 Local file deleted:", req.file.path);
+      });
+    } else {
+      updateData.image = product.image;
+    }
 
-          updateData.image = req.file.path; // อัปเดตเป็น URL ของรูปใหม่จาก Cloudinary
-      } else {
-          updateData.image = product.image;
-      }
+    console.log("🟢 Updating product with data:", updateData);
 
-      console.log("🟢 Updating product with data:", updateData);
+    const updatedProduct = await Product.findByIdAndUpdate(update_id, updateData, { new: true });
 
-      // อัปเดตข้อมูลในฐานข้อมูล
-      await Product.findByIdAndUpdate(update_id, updateData, { new: true });
-
-      console.log("✅ Update successful!");
-      res.render('edit-form', { product: updateData, message: 'success' });
+    console.log("✅ Update successful!");
+    res.render('edit-form', { product: updatedProduct, message: 'success' });
 
   } catch (err) {
-      console.error("🔴 Error updating product:", err);
-      res.render('edit-form', { product: req.body, message: 'error' });
+    console.error("🔴 Error updating product:", err);
+    res.render('edit-form', { product: req.body, message: 'error' });
   }
 });
+
+
+
 
 router.post("/import-excel",isAuthenticated, async (req, res) => {
   const { data: parts, requesterName, requestId } = req.body;

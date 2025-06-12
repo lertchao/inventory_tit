@@ -3,12 +3,12 @@ const mongoose = require('mongoose')
 const productSchema = new mongoose.Schema({
   sku: { 
     type: String, 
-    unique: true,   // ต้องไม่ซ้ำ
-    required: true  // ต้องกำหนดค่า
+    unique: true,
+    required: true
   },
   description: { 
     type: String, 
-    required: true  // บังคับให้ต้องมีคำอธิบายสินค้า
+    required: true
   },
   cost: { 
     type: Number, 
@@ -23,8 +23,14 @@ const productSchema = new mongoose.Schema({
     default: 0, 
     min: [0, 'Quantity cannot be negative'] 
   },
-  typeparts: { type: String, enum: ["CM", "PM"]}
+  typeparts: { 
+    type: String, 
+    enum: ["CM", "PM"]
+  }
+}, {
+  timestamps: true // ✅ เพิ่มบรรทัดนี้
 });
+
 
 //Models
 let Product = mongoose.model("products",productSchema)

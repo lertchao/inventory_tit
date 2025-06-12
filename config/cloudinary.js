@@ -1,6 +1,7 @@
+// config/cloudinary.js
 const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
+const path = require('path');
 require('dotenv').config();
 
 // ตั้งค่า Cloudinary
@@ -10,13 +11,14 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// ตั้งค่า Storage สำหรับ Multer
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'products', // โฟลเดอร์ใน Cloudinary
-    format: async (req, file) => 'png', // บังคับเป็น .png
-    public_id: (req, file) => file.originalname.split('.')[0]
+// ใช้ diskStorage เก็บไฟล์ก่อนอัปโหลด
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/'); // อย่าลืมสร้างโฟลเดอร์นี้
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, req.body.sku + ext); // ตั้งชื่อไฟล์ตาม SKU
   }
 });
 

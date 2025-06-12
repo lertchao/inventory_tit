@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // ฟังก์ชันคำนวณขนาดตัวอักษรตามขนาดหน้าจอ
   function getResponsiveFontSize() {
-    if (window.innerWidth < 768) return 8; // หน้าจอเล็ก (มือถือ)
+    if (window.innerWidth < 768) return 9; // หน้าจอเล็ก (มือถือ)
     if (window.innerWidth < 1024) return 12; // หน้าจอขนาดกลาง (แท็บเล็ต)
     return 15; // หน้าจอใหญ่ (เดสก์ท็อป)
   }
@@ -140,12 +140,14 @@ document.addEventListener("DOMContentLoaded", function () {
     chart.options.scales.y.ticks.font.size = getResponsiveFontSize();
     chart.options.scales.x.ticks.font.size = getResponsiveFontSize();
     chart.options.plugins.legend.labels.font.size = getResponsiveFontSize();
-
+  
     chart.data.datasets.forEach((dataset) => {
       dataset.datalabels.labels.title.font.size = getResponsiveFontSize();
       dataset.datalabels.labels.value.font.size = getResponsiveFontSize();
     });
-
-    chart.update(); // รีเฟรชกราฟ
+  
+    chart.resize(); // ✅ ปรับขนาด chart ตาม container
+    chart.update(); // ✅ อัปเดตข้อมูล/ฟอนต์
   });
+  
 });
