@@ -33,29 +33,32 @@
                 </button>
               </div>
 
-          <table table id="stockSummaryTable" class="table table-bordered table-hover">
-            <thead class="table-dark">
-              <tr>
-                <th>SKU</th>
-                <th>Description</th>
-                <th class="text-center align-middle">On Shelf</th>
-                <th class="text-center align-middle">Pending</th>
-                <th class="text-center align-middle">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% summary.forEach(item => { %>
+          <div class="table-responsive">
+            <table table id="stockSummaryTable" class="table table-bordered table-hover">
+              <thead class="table-dark">
                 <tr>
-                  <td><%= item.sku %></td>
-                  <td><%= item.description %></td>
-                  <td class="text-center align-middle"><%= item.onHand %></td>
-                  <td class="text-center align-middle"><%= item.pending %></td>
-                  <td class="text-center align-middle"><%= item.onHand + item.pending %></td>
+                  <th>SKU</th>
+                  <th>Description</th>
+                  <th class="text-center align-middle">On Shelf</th>
+                  <th class="text-center align-middle">Pending</th>
+                  <th class="text-center align-middle">Total</th>
                 </tr>
-              <% }) %>
-            </tbody>
-            
-          </table>
+              </thead>
+              <tbody>
+                <% summary.forEach(item => { %>
+                  <tr>
+                    <td><%= item.sku %></td>
+                    <td><%= item.description %></td>
+                    <td class="text-center align-middle"><%= item.onHand %></td>
+                    <td class="text-center align-middle"><%= item.pending %></td>
+                    <td class="text-center align-middle"><%= item.onHand + item.pending %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+              
+            </table>  
+          </div>
+
 
         </div>
     </div>
