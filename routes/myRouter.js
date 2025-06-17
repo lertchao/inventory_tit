@@ -7,7 +7,6 @@ const fs = require('fs');
 const path = require('path');
 const { cloudinary, upload } = require('../config/cloudinary');
 
-// const authMiddleware = require("../middleware/auth")
 const { isAuthenticated, isAdmin } = require("../middleware/auth")
 const bcrypt = require("bcrypt")
 const User = require("../models/user")
@@ -870,6 +869,7 @@ router.post("/add_trans-in", isAuthenticated, isAdmin, async (req, res) => {
         sku: p.sku.trim(),
         quantity: Number(p.quantity)
       })),
+      username: req.user.username,
     });
 
     // อัปเดต stock เฉพาะที่ validate ผ่านแล้ว
@@ -961,7 +961,8 @@ router.post('/add_trans-out', isAuthenticated, isAdmin, async (req, res) => {
       products: products.map(p => ({
         sku: p.sku.trim(),
         quantity: Number(p.quantity)
-      }))
+      })),
+      username: req.user.username,
     });
 
     // ✅ ตัดสต็อกสินค้า

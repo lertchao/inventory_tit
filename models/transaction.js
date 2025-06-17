@@ -22,6 +22,7 @@ const transactionSchema = new mongoose.Schema({
   ],
   workStatus: { type: String, enum: ["Pending", "Finish"]},
   storeId: { type: Number},
+  username: { type: String, required: true },
 });
 
 
