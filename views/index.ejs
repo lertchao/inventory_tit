@@ -33,62 +33,62 @@
 
 
                     <% if (pendingWorkOrdersTable.length> 0) { %>
-                        <table id="pendingTable" class="table table-bordered table-striped">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>Request ID</th>
-                                    <th class="text-center col-2">Requester Name</th>
-                                    <th class="text-center col-1">Store ID</th>
-                                    <th class="text-center">Store Name</th>
-                                    <!-- <th class="text-center">Total Pending Cost (CM)</th>
-                                    <th class="text-center">Total Pending Cost (PM)</th> -->
-                                    <th class="text-center">Total Cost</th>
-                                    <th class="text-center">Issue Date</th>
-                                    <th class="text-center">Pending (Days)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <% pendingWorkOrdersTable.forEach(order=> { %>
+                        <div class="table-responsive">
+
+                            <table id="pendingTable" class="table table-bordered table-striped">
+                                <thead class="table-dark">
                                     <tr>
-                                        <td>
-                                            <%= order._id.requestId %>
-                                        </td>
-                                        <td class="text-center">
-                                            <%= order._id.requesterName %>
-                                        </td>
-                                        <td class="text-center">
-                                            <%= order._id.storeId ? String(order._id.storeId).padStart(3, '0' ) : '-' %>
-                                        </td>
-                                        <td class="text-center">
-                                            <%= order._id.storename || 'N/A' %>
-                                        </td>
-                                        <td class="text-center">
-                                            <%= order.totalCombinedCost.toLocaleString('en-US', { minimumFractionDigits:
-                                                2, maximumFractionDigits: 2 }) %>
-
-                                        </td>
-                                        <td class="text-center">
-                                            <%= new Date(order.latestTransactionDate).toLocaleDateString('en-GB', {
-                                                year: 'numeric' , month: 'short' , day: 'numeric' }) %>
-                                        </td>
-                                        <td class="text-center">
-                                            <% if (order.pendingDays !==null) { %>
-                                                <%= order.pendingDays %> Days
-                                                    <% } else { %>
-                                                        -
-                                                        <% } %>
-                                        </td>
+                                        <th>Request ID</th>
+                                        <th class="text-center col-2">Requester Name</th>
+                                        <th class="text-center col-1">Store ID</th>
+                                        <th class="text-center">Store Name</th>
+                                        <th class="text-center">Total Cost</th>
+                                        <th class="text-center">Issue Date</th>
+                                        <th class="text-center">Pending (Days)</th>
                                     </tr>
-                                    <% }) %>
+                                </thead>
+                                <tbody>
+                                    <% pendingWorkOrdersTable.forEach(order=> { %>
+                                        <tr>
+                                            <td>
+                                                <%= order._id.requestId %>
+                                            </td>
+                                            <td class="text-center">
+                                                <%= order._id.requesterName %>
+                                            </td>
+                                            <td class="text-center">
+                                                <%= order._id.storeId ? String(order._id.storeId).padStart(3, '0' ) : '-' %>
+                                            </td>
+                                            <td class="text-center">
+                                                <%= order._id.storename || 'N/A' %>
+                                            </td>
+                                            <td class="text-center">
+                                                <%= order.totalCombinedCost.toLocaleString('en-US', { minimumFractionDigits:
+                                                    2, maximumFractionDigits: 2 }) %>
+    
+                                            </td>
+                                            <td class="text-center">
+                                                <%= new Date(order.latestTransactionDate).toLocaleDateString('en-GB', {
+                                                    year: 'numeric' , month: 'short' , day: 'numeric' }) %>
+                                            </td>
+                                            <td class="text-center">
+                                                <% if (order.pendingDays !==null) { %>
+                                                    <%= order.pendingDays %> Days
+                                                        <% } else { %>
+                                                            -
+                                                            <% } %>
+                                            </td>
+                                        </tr>
+                                        <% }) %>
+    
+    
+                                </tbody>
+                            </table>
+                            <% } else { %>
+                                <p class="text-muted">No pending work orders available.</p>
+                                <% } %>
 
-
-                            </tbody>
-                        </table>
-                        <% } else { %>
-                            <p class="text-muted">No pending work orders available.</p>
-                            <% } %>
-
-
+                        </div>
 
 
                                 <div class="row text-center g-3 m-3 justify-content-center">
