@@ -11,6 +11,13 @@ const { isAuthenticated, isAdmin } = require("../middleware/auth")
 const bcrypt = require("bcrypt")
 const User = require("../models/user")
 
+const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
 
 router.get("/register",(req, res) => {
   res.render("register", {
@@ -525,7 +532,7 @@ router.get('/delete/:id',isAuthenticated,(req,res)=>{
     })
 })
 
-router.get("/transaction",isAuthenticated, async (req, res) => {
+router.get("/transaction", isAuthenticated, async (req, res) => {
   try {
     const searchQuery = req.query.search ? req.query.search.trim() : "";
 
@@ -556,24 +563,26 @@ router.get("/transaction",isAuthenticated, async (req, res) => {
       const updatedProducts = transaction.products.map(product => {
         const sku = product.sku;
 
-        // คำนวณคงเหลือ
-        if (!skuBalances[sku]) skuBalances[sku] = 0; // เริ่มต้นที่ 0
+        if (!skuBalances[sku]) skuBalances[sku] = 0;
         if (transaction.transactionType === "IN") {
-          skuBalances[sku] += product.quantity; // เพิ่มจำนวนถ้าเป็น IN
+          skuBalances[sku] += product.quantity;
         } else if (transaction.transactionType === "OUT") {
-          skuBalances[sku] -= product.quantity; // ลดจำนวนถ้าเป็น OUT
+          skuBalances[sku] -= product.quantity;
         }
 
         return {
           ...product,
           description: productsMap[sku]?.description || "N/A",
-          remaining: skuBalances[sku], // เพิ่มข้อมูล Remaining Quantity
+          remaining: skuBalances[sku],
         };
       });
 
       return {
         ...transaction,
         products: updatedProducts,
+        createdAtFormatted: dayjs(transaction.createdAt)
+          .tz("Asia/Bangkok")
+          .format("DD MMM YYYY, HH:mm"),
       };
     });
 
@@ -587,7 +596,7 @@ router.get("/transaction",isAuthenticated, async (req, res) => {
             product.sku.includes(searchQuery)
           ),
         }))
-        .filter(transaction => transaction.products.length > 0); // กรอง Transaction ที่ไม่มี Products ตรง
+        .filter(transaction => transaction.products.length > 0);
     }
 
     res.render("transaction", {
@@ -600,42 +609,44 @@ router.get("/transaction",isAuthenticated, async (req, res) => {
   }
 });
 
-router.get('/workorder',isAuthenticated,isAdmin, async (req, res) => {
+router.get('/workorder', isAuthenticated, isAdmin, async (req, res) => {
   try {
-    const searchQuery = req.query.search?.trim() || ''; // รับค่าค้นหา Request ID
-    const statusFilter = req.query.statusFilter?.trim() || ''; // รับค่าฟิลเตอร์ Work Status
-    let matchStage = {}; // เริ่มต้นเป็นค่าว่าง
+    const searchQuery = req.query.search?.trim() || '';
+    const statusFilter = req.query.statusFilter?.trim() || '';
+    let matchStage = {};
 
-    // ถ้ามีการค้นหา Request ID และ ชื่อ
     if (searchQuery) {
       matchStage.$or = [
-        { requestId: { $regex: searchQuery, $options: 'i' } }, // ค้นหา requestId (บางส่วน)
-        { requesterName: { $regex: searchQuery, $options: 'i' } } // ค้นหา requesterName (บางส่วน)
+        { requestId: { $regex: searchQuery, $options: 'i' } },
+        { requesterName: { $regex: searchQuery, $options: 'i' } }
       ];
     }
-    
 
-    // ถ้ามีการกรอง Work Status
     if (statusFilter) {
       matchStage.workStatus = statusFilter;
     }
 
-    // คิวรี่ข้อมูล
     const groupedTransactions = await Transaction.aggregate([
-      { $match: matchStage }, // ใช้เงื่อนไข matchStage เพื่อกรองข้อมูล
+      { $match: matchStage },
       {
         $group: {
-          _id: "$requestId", // Group by Request ID
+          _id: "$requestId",
           requesterName: { $first: "$requesterName" },
           createdAt: { $last: "$createdAt" },
           workStatus: { $last: "$workStatus" },
           transactionCount: { $sum: 1 },
         },
       },
-      { $sort: { createdAt: -1 } }, // เรียงลำดับตามวันที่ล่าสุด
+      { $sort: { createdAt: -1 } },
     ]);
 
-    // ส่งค่าฟิลเตอร์กลับไปที่หน้า View
+    // ✅ เพิ่ม createdAtFormatted
+    groupedTransactions.forEach(tx => {
+      tx.createdAtFormatted = dayjs(tx.createdAt)
+        .tz("Asia/Bangkok")
+        .format("DD MMM YYYY, HH:mm");
+    });
+
     res.render('workorder', { 
       transactions: groupedTransactions, 
       searchQuery, 
@@ -649,55 +660,62 @@ router.get('/workorder',isAuthenticated,isAdmin, async (req, res) => {
 });
 
 
-router.get('/workorder/:requestId',isAuthenticated, async (req, res) => {
-  const requestId = decodeURIComponent(req.params.requestId); // ถอดรหัส requestId
+router.get('/workorder/:requestId', isAuthenticated, async (req, res) => {
+  const requestId = decodeURIComponent(req.params.requestId);
   try {
     const transactions = await Transaction.aggregate([
-      { $match: { requestId } }, // คัดกรองเฉพาะ transaction ที่ตรงกับ requestId
-      { $unwind: '$products' },  // แยก subdocument products ออกมาเป็นรายการแยก
+      { $match: { requestId } },
+      { $unwind: '$products' },
       {
         $lookup: {
-          from: 'products',           // ชื่อ collection ของ Product
-          localField: 'products.sku', // คีย์ใน Transaction.products
-          foreignField: 'sku',        // คีย์ใน Product
-          as: 'productInfo'           // ผลลัพธ์จากการ join จะอยู่ใน field นี้
+          from: 'products',
+          localField: 'products.sku',
+          foreignField: 'sku',
+          as: 'productInfo'
         }
       },
-      { $unwind: '$productInfo' }, // แยก productInfo ออกมาเป็น object
+      { $unwind: '$productInfo' },
       {
         $lookup: {
-          from: 'stores',           // ชื่อ collection ของ Store
-          localField: 'storeId',    // คีย์ใน Transaction ที่จะ join
-          foreignField: 'storeId',  // คีย์ใน Store
-          as: 'storeInfo'           // ผลลัพธ์จากการ join จะอยู่ใน field นี้
+          from: 'stores',
+          localField: 'storeId',
+          foreignField: 'storeId',
+          as: 'storeInfo'
         }
       },
-      { $unwind: { path: '$storeInfo', preserveNullAndEmptyArrays: true } }, // แยก storeInfo ออกมาเป็น object
+      { $unwind: { path: '$storeInfo', preserveNullAndEmptyArrays: true } },
       {
         $group: {
-          _id: '$_id', // กลุ่ม transaction เดียวกัน
+          _id: '$_id',
           requesterName: { $first: '$requesterName' },
           requestId: { $first: '$requestId' },
           createdAt: { $first: '$createdAt' },
           transactionType: { $first: '$transactionType' },
           workStatus: { $first: '$workStatus' },
           storeId: { $first: '$storeId' },
-          storename: { $first: '$storeInfo.storename' }, // ดึง storename จาก storeInfo
+          storename: { $first: '$storeInfo.storename' },
           products: {
             $push: {
               sku: '$products.sku',
               quantity: '$products.quantity',
-              description: '$productInfo.description' // ดึง description จาก Product
+              description: '$productInfo.description'
             }
           }
         }
       },
-      { $sort: { createdAt: 1 } } // จัดเรียงจากเก่าไปใหม่
+      { $sort: { createdAt: 1 } }
     ]);
 
     if (!transactions || transactions.length === 0) {
       return res.status(404).send('No transactions found for this Request ID');
     }
+
+    // ✅ เพิ่ม createdAtFormatted
+    transactions.forEach(tx => {
+      tx.createdAtFormatted = dayjs(tx.createdAt)
+        .tz("Asia/Bangkok")
+        .format("DD MMM YYYY, HH:mm");
+    });
 
     res.render('work-detail', { transactions, requestId });
   } catch (error) {
