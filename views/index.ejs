@@ -69,8 +69,13 @@
                                             </td>
                                             <td class="text-center">
                                                 <%= new Date(order.latestTransactionDate).toLocaleDateString('en-GB', {
-                                                    year: 'numeric' , month: 'short' , day: 'numeric' }) %>
-                                            </td>
+                                                  year: 'numeric',
+                                                  month: 'short',
+                                                  day: 'numeric',
+                                                  timeZone: 'Asia/Bangkok'
+                                                }) %>
+                                              </td>
+                                              
                                             <td class="text-center">
                                                 <% if (order.pendingDays !==null) { %>
                                                     <%= order.pendingDays %> Days

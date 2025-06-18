@@ -34,7 +34,7 @@
                             <div class="col-lg-6 col-12 mx-auto">
                                 <form method="get" action="/onhand" class="d-flex">
                                     <input type="text" name="search" class="form-control me-2" value="<%= search %>" placeholder="กรอก SKU หรือ Description เพื่อค้นหา" />
-                                    
+
                                     <button type="submit" class="btn btn-success  w-sm-auto">ค้นหา</button>
                                 </form>
                             </div>
@@ -68,10 +68,6 @@
                                     </p>
                                     <p class="card-text">Cost: <%= new Intl.NumberFormat().format(product.cost) %>
                                     </p>
-                                    <!-- <p
-                                        class="card-text text-end <%= product.quantity <= 0 ? 'text-danger' : 'text-dark' %>">
-                                        Quantity: <%= product.quantity %>
-                                    </p> -->
                                     <h4 class="card-text text-end <%= product.quantity <= 0 ? 'text-danger' : 'text-dark' %>">
                                         Quantity: <%= product.quantity %>
                                     </h4>
