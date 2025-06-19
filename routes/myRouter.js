@@ -1198,6 +1198,7 @@ router.post("/import-excel",isAuthenticated, async (req, res) => {
               quantity: importedQuantity
             }
           ],
+          username: req.user?.username || "system",
           createdAt: new Date()
         });
       
