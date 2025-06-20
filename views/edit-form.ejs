@@ -28,7 +28,8 @@
 
                 <form method="POST" action="/update" enctype="multipart/form-data">
                     <div class="row justify-content-center">
-                        <input type="hidden" value="<%= product._id %>" name="update_id">
+                        <input type="hidden" name="update_id" value="<%= product._id || '' %>">
+
 
                         <div class="mb-3 col-md-3 col-sm-12">
                             <label class="form-label">SKU</label>
@@ -81,7 +82,7 @@
                         <div class="col-auto">
                             <a class="btn btn-secondary mt-3" href="/edit-product">กลับหน้าจัดการฐานข้อมูล</a>
                         </div>
-                        <div class="col-4">
+                        <div class="col-auto">
                             <button type="submit" class="btn btn-success mt-3 text-end">อัพเดทข้อมูล</button>
                         </div>
                     </div>
