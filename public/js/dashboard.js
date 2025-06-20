@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", function () {
             labels: {
               title: {
                 anchor: "start",
-                align: "top",
+                align: "center",
                 color: "black",
                 font: () => ({
                   family: "kanit",
@@ -55,7 +55,8 @@ document.addEventListener("DOMContentLoaded", function () {
                   weight: "bold",
                   size: getResponsiveFontSize(),
                 }),
-                formatter: (value) => `฿ ${value.toLocaleString()}`,
+                formatter: (value) =>
+                  `${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                 padding: 10,
               },
             },
@@ -72,7 +73,7 @@ document.addEventListener("DOMContentLoaded", function () {
             labels: {
               title: {
                 anchor: "start",
-                align: "top",
+                align: "center",
                 color: "black",
                 font: () => ({
                   family: "kanit",
@@ -90,7 +91,8 @@ document.addEventListener("DOMContentLoaded", function () {
                   weight: "bold",
                   size: getResponsiveFontSize(),
                 }),
-                formatter: (value) => `฿ ${value.toLocaleString()}`,
+                formatter: (value) =>
+                  `${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                 padding: 10,
               },
             },
@@ -100,6 +102,12 @@ document.addEventListener("DOMContentLoaded", function () {
     },
     options: {
       responsive: true,
+      layout: {
+        padding: {
+          top: 40,     // ✅ เพิ่ม padding ด้านบนเพื่อไม่ให้ label โดนตัด
+          bottom: 20,  // ✅ เผื่อพื้นที่ด้านล่างสำหรับ legend
+        },
+      },
       scales: {
         y: {
           beginAtZero: true,
@@ -114,6 +122,7 @@ document.addEventListener("DOMContentLoaded", function () {
         },
         x: {
           ticks: {
+            //padding: 15,
             font: () => ({
               size: getResponsiveFontSize(),
             }),
@@ -122,6 +131,7 @@ document.addEventListener("DOMContentLoaded", function () {
       },
       plugins: {
         legend: {
+          position: "bottom",
           labels: {
             font: () => ({
               family: "kanit",

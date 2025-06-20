@@ -196,8 +196,8 @@ router.get("/", isAuthenticated, async (req, res) => {
     ]);
 
     // ดึงข้อมูล Parts Movement วันนี้
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // ตั้งค่าเป็น 00:00:00 ของวันนี้
+    const today = dayjs().tz('Asia/Bangkok').startOf('day').toDate();
+
 
     const partsMovementToday = await Transaction.aggregate([
       {

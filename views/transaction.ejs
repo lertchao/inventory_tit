@@ -46,7 +46,7 @@
             <table id="transactionTable" class="table table-bordered table-striped display nowrap" style="width:100%">
               <thead class="table-dark">
               <tr>
-                <th>#</th>
+                <!-- <th>#</th> -->
                 <th>SKU</th>
                 <th>Description</th>
                 <th class="text-center">Quantity</th>
@@ -61,7 +61,7 @@
               <% products.forEach((transaction, index)=> { %>
                 <% transaction.products.forEach((product, productIndex)=> { %>
                   <tr>
-                    <td><%= productIndex === 0 ? index + 1 : "" %></td>
+                    <!-- <td><%= productIndex === 0 ? index + 1 : "" %></td> -->
                     <td><%= product.sku %></td>
                     <td><%= product.description || "N/A" %></td>
                     <td class="text-center"><%= product.quantity %></td>
@@ -124,7 +124,7 @@
                         text: '<i class="bi bi-printer"></i> Print',
                     }
                 ],
-      order: [[8, 'desc']],
+      order: [[7, 'desc']],
       responsive: true,
       pageLength: 25,
       language: {
