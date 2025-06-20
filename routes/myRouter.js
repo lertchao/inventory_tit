@@ -1041,28 +1041,34 @@ router.post("/add", upload.single("image"), async (req, res) => {
     let imagePublicId = "";
 
     if (req.file) {
-      // 📤 อัปโหลดรูปไป Cloudinary
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: 'products',
-        public_id: req.body.sku,
-        overwrite: true,
-        invalidate: true
-      });
+      // อัปโหลดจาก memory buffer โดยใช้ stream
+      const streamUpload = () => {
+        return new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            {
+              folder: "products",
+              public_id: req.body.sku,
+              overwrite: true,
+              invalidate: true
+            },
+            (error, result) => {
+              if (result) resolve(result);
+              else reject(error);
+            }
+          );
+          stream.end(req.file.buffer);
+        });
+      };
 
-      imagePublicId = result.public_id; // เช่น "products/DM123456"
-
-      // 🧹 ลบไฟล์ local หลัง upload
-      fs.unlink(req.file.path, (err) => {
-        if (err) console.error("⚠️ Failed to delete local file:", err);
-        else console.log("🧹 Local file deleted:", req.file.path);
-      });
+      const result = await streamUpload();
+      imagePublicId = result.public_id;
     }
 
     const data = new Product({
       sku: req.body.sku,
       description: req.body.description,
       cost: req.body.cost,
-      image: imagePublicId, // ✅ เก็บ public_id
+      image: imagePublicId,
       typeparts: req.body.typeparts,
     });
 
@@ -1071,7 +1077,8 @@ router.post("/add", upload.single("image"), async (req, res) => {
     res.render("add-product", { success: true, error: false });
 
   } catch (err) {
-    console.error("🔴 Error adding product:", err);
+    console.error("🔴 Error adding product:", err.message);
+    console.error(err.stack);
     res.render("add-product", { success: false, error: true });
   }
 });
@@ -1099,18 +1106,27 @@ router.post('/update', upload.single('image'), isAuthenticated, async (req, res)
       typeparts: req.body.typeparts
     };
 
+    if (!update_id || update_id.trim() === "") {
+      console.error("🔴 update_id is missing or empty");
+      return res.render("edit-form", {
+        product: req.body,
+        message: "error"
+      });
+    }
+
     const product = await Product.findById(update_id);
     if (!product) {
       console.log("🔴 Error: Product not found!");
-      return res.render('edit-form', { product: updateData, message: 'error' });
+      return res.redirect('/edit-product?error=notfound');
+
     }
 
     console.log("🟢 Found product:", product);
 
     if (req.file) {
-      console.log("🟢 Uploaded file (local):", req.file);
-
-      // ลบรูปเก่าออกจาก Cloudinary
+      console.log("🟢 Uploaded file (buffer):", req.file);
+    
+      // ลบรูปเก่า
       if (product.image) {
         try {
           console.log(`🟡 Deleting old image: ${product.image}`);
@@ -1119,22 +1135,28 @@ router.post('/update', upload.single('image'), isAuthenticated, async (req, res)
           console.error("🔴 Error deleting old image:", err);
         }
       }
-
-      // อัปโหลดรูปใหม่ขึ้น Cloudinary
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: 'products',
-        public_id: req.body.sku,
-        overwrite: true,
-        invalidate: true
-      });
-
-      updateData.image = result.public_id; // เช่น products/DM124011
-
-      // ✅ ลบไฟล์ local หลัง upload สำเร็จ
-      fs.unlink(req.file.path, (err) => {
-        if (err) console.error("⚠️ Failed to delete local file:", err);
-        else console.log("🧹 Local file deleted:", req.file.path);
-      });
+    
+      // ใช้ upload_stream แทน upload(path)
+      const streamUpload = () => {
+        return new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            {
+              folder: 'products',
+              public_id: req.body.sku,
+              overwrite: true,
+              invalidate: true
+            },
+            (error, result) => {
+              if (result) resolve(result);
+              else reject(error);
+            }
+          );
+          stream.end(req.file.buffer); // ใช้ buffer ตรงนี้แทน path
+        });
+      };
+    
+      const result = await streamUpload();
+      updateData.image = result.public_id;
     } else {
       updateData.image = product.image;
     }
