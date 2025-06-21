@@ -1084,12 +1084,25 @@ router.post("/add", upload.single("image"), async (req, res) => {
 });
 
 
-router.post('/edit',isAuthenticated, (req, res) => {
-    const edit_id = req.body.edit_id
-    Product.findOne({_id:edit_id}).exec((err,doc)=>{
-        res.render('edit-form',{product:doc})
-    })
-})
+// router.post('/edit',isAuthenticated, (req, res) => {
+//     const edit_id = req.body.edit_id
+//     Product.findOne({_id:edit_id}).exec((err,doc)=>{
+//         res.render('edit-form',{product:doc})
+//     })
+// })
+
+
+router.get('/edit-product/:id', isAuthenticated, async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    const message = req.query.message;
+    res.render('edit-form', { product, message });
+  } catch (err) {
+    console.error("Error loading product:", err);
+    res.redirect('/edit-product?error=notfound');
+  }
+});
+
 
 
 
@@ -1166,7 +1179,8 @@ router.post('/update', upload.single('image'), isAuthenticated, async (req, res)
     const updatedProduct = await Product.findByIdAndUpdate(update_id, updateData, { new: true });
 
     console.log("✅ Update successful!");
-    res.render('edit-form', { product: updatedProduct, message: 'success' });
+    res.redirect(`/edit-product/${update_id}?message=success`);
+
 
   } catch (err) {
     console.error("🔴 Error updating product:", err);

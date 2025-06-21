@@ -66,11 +66,9 @@
                   <td class="text-center"><%= item.description %></td>
                   <td class="text-center"><%= new Intl.NumberFormat().format(item.cost) %></td>
                   <td class="text-center">
-                    <form action="/edit" method="POST">
-                      <input type="hidden" name="edit_id" value="<%= item._id %>">
-                      <button type="submit" class="btn btn-warning btn-sm">แก้ไข</button>
-                    </form>
+                    <a href="/edit-product/<%= item._id %>" class="btn btn-warning btn-sm">แก้ไข</a>
                   </td>
+                  
                   <td class="text-center">
                     <a class="text-center btn btn-danger btn-sm" href="/delete/<%= item._id %>" onclick="return confirm('ลบหรือไม่')">ลบ</a>
                   </td>
