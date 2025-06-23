@@ -2,350 +2,212 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="css/styles.css">
-    <link rel="icon" href="images/storage.png" sizes="32x32">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
-
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" href="images/storage.png" sizes="32x32">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
 </head>
 
 <body>
+  <div class="container-fluid">
+    <div class="row">
+      <div class="desktop-sidebar col-lg-2 col-12 d-none d-lg-block">
+        <%- include('sidebar') %>
+      </div>
+      <%- include('sidebarMobile') %>
 
-    <div class="container-fluid">
-        <div class="row">
-            <div class="desktop-sidebar col-lg-2 col-12 d-none d-lg-block">
-                <%- include('sidebar') %>
-            </div>
-            <%- include('sidebarMobile') %>
+      <!-- ✅ เริ่ม Content -->
+      <div class="col-lg-10 col-12">
 
+        <h3 class="m-3 section-title">Pending Work</h3>
+        <canvas id="pendingWorkChart"></canvas>
 
-                <div class="col-lg-10 col-12">
-                    <h3 class="m-3 section-title">Pending Work</h3>
-                    <canvas id="pendingWorkChart"></canvas>
-
-
-
-                    <% if (pendingWorkOrdersTable.length> 0) { %>
-                        <div class="table-responsive">
-
-                            <table id="pendingTable" class="table table-bordered table-striped">
-                                <thead class="table-dark">
-                                    <tr>
-                                        <th>Repair Number</th>
-                                        <th class="text-center col-2">Requester Name</th>
-                                        <th class="text-center col-1">Store ID</th>
-                                        <th class="text-center">Store Name</th>
-                                        <th class="text-center">Total Cost</th>
-                                        <th class="text-center">Issue Date</th>
-                                        <th class="text-center">Pending (Days)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <% pendingWorkOrdersTable.forEach(order=> { %>
-                                        <tr>
-                                            <td>
-                                                <%= order._id.requestId %>
-                                            </td>
-                                            <td class="text-center">
-                                                <%= order._id.requesterName %>
-                                            </td>
-                                            <td class="text-center">
-                                                <%= order._id.storeId ? String(order._id.storeId).padStart(3, '0' ) : '-' %>
-                                            </td>
-                                            <td class="text-center">
-                                                <%= order._id.storename || 'N/A' %>
-                                            </td>
-                                            <td class="text-center">
-                                                <%= order.totalCombinedCost.toLocaleString('en-US', { minimumFractionDigits:
-                                                    2, maximumFractionDigits: 2 }) %>
-    
-                                            </td>
-                                            <td class="text-center">
-                                                <%= new Date(order.latestTransactionDate).toLocaleDateString('en-GB', {
-                                                  year: 'numeric',
-                                                  month: 'short',
-                                                  day: 'numeric',
-                                                  timeZone: 'Asia/Bangkok'
-                                                }) %>
-                                              </td>
-                                              
-                                            <td class="text-center">
-                                                <% if (order.pendingDays !==null) { %>
-                                                    <%= order.pendingDays %> Days
-                                                        <% } else { %>
-                                                            -
-                                                            <% } %>
-                                            </td>
-                                        </tr>
-                                        <% }) %>
-    
-    
-                                </tbody>
-                            </table>
-                        </div>
-                            <% } else { %>
-                                <p class="text-muted">No pending work orders available.</p>
-                                <% } %>
-
-                        
-
-
-                                <div class="row text-center g-3 m-3 justify-content-center">
-
-                                    <div class="col-md-3">
-                                        <div class="card shadow-sm border bg-light">
-                                            <div class="card-body">
-                                                <small class="text-muted">On Shelf (Quantity)</small>
-                                                <h4 class="fw-semibold mt-2">
-                                                    <%= totalStockQty.toLocaleString() %> ชิ้น
-                                                </h4>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-3">
-                                        <div class="card shadow-sm border bg-light">
-                                            <div class="card-body">
-                                                <small class="text-muted">On Shelf Value</small>
-                                                <h4 class="fw-semibold mt-2">฿ <%=
-                                                        totalStockValue.toLocaleString(undefined, {
-                                                        minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
-                                                </h4>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="d-none col-md-3">
-                                        <div class="card shadow-sm border bg-light">
-                                            <div class="card-body">
-                                                <small class="text-muted">Active SKU</small>
-                                                <h4 class="fw-semibold mt-2">
-                                                    <%= totalSKUs %>
-                                                </h4>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Row 2: Pending Summary -->
-                                    <div class="col-md-3">
-                                        <div class="card shadow-sm border bg-light">
-                                            <div class="card-body">
-                                                <small class="text-muted">Pending (Quantity)</small>
-                                                <h4 class="fw-semibold mt-2">
-                                                    <%= totalPendingQty.toLocaleString() %> ชิ้น
-                                                </h4>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-3">
-                                        <div class="card shadow-sm border bg-light">
-                                            <div class="card-body">
-                                                <small class="text-muted">Pending Value</small>
-                                                <h4 class="fw-semibold mt-2">฿ <%=
-                                                        totalPendingValue.toLocaleString(undefined, {
-                                                        minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
-                                                </h4>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Optional Slot -->
-                                    <div
-                                        class="d-none col-md-3 d-flex align-items-center justify-content-center text-muted">
-                                        <small>ข้อมูลเพิ่มเติม เช่น Low Stock, Movement, etc.</small>
-                                    </div>
-
-                                </div>
-
-
-
-
-                                <div>
-                                    <!-- ตารางแสดง Parts Movement วันนี้ -->
-                                    <h3 class="m-3 section-title">Parts Movement Today</h3>
-                                    <% if (partsMovementToday.length> 0) { %>
-                                        <table class="table table-bordered table-hover text-center">
-                                            <thead class="table-secondary">
-                                                <tr>
-                                                    <th>SKU</th>
-                                                    <th>Description</th>
-                                                    <th class="text-center">Quantity IN</th>
-                                                    <th class="text-center">Quantity OUT</th>
-                                                    <th class="text-center">On Shelf</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="partsMovementTable">
-                                                <% partsMovementToday.forEach(item=> { %>
-                                                    <tr>
-                                                        <td>
-                                                            <%= item._id.partId %>
-                                                        </td>
-                                                        <td>
-                                                            <%= item._id.partName %>
-                                                        </td>
-                                                        <td class="text-center">
-                                                            <% if (item.totalIn> 0) { %>
-                                                                <span class="badge in-badge">
-                                                                    <%= item.totalIn %>
-                                                                </span>
-                                                                <% } %>
-                                                        </td>
-                                                        <td class="text-center">
-                                                            <% if (item.totalOut> 0) { %>
-                                                                <span class="badge out-badge">
-                                                                    <%= item.totalOut %>
-                                                                </span>
-                                                                <% } %>
-                                                        </td>
-                                                        <td class="text-center">
-                                                            <%= item._id.onHand %>
-                                                        </td>
-                                                    </tr>
-                                                    <% }) %>
-                                            </tbody>
-                                        </table>
-                                        <% } %>
-
-
-                                </div>
-
-
-                                <h4 class="m-3 mt-5 section-title">Top 10 Parts Movement (This Month)</h4>
-
-                                <table class="table table-bordered table-hover text-center">
-                                    <thead class="table-secondary">
-                                        <tr>
-                                            <th>#</th>
-                                            <th>SKU</th>
-                                            <th>Description</th>
-                                            <th>Total Issued</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <% top10Movement.forEach((item, index)=> { %>
-                                            <tr>
-                                                <td>
-                                                    <%= index + 1 %>
-                                                </td>
-                                                <td>
-                                                    <%= item.sku %>
-                                                </td>
-                                                <td class="text-start">
-                                                    <%= item.description %>
-                                                </td>
-                                                <td>
-                                                    <%= item.totalIssued.toLocaleString() %>
-                                                </td> <!-- ✅ เปลี่ยนตรงนี้ -->
-                                            </tr>
-                                            <% }) %>
-
-                                    </tbody>
-                                </table>
-
-
-                </div>
-
-
+        <% if (pendingWorkOrdersTable.length > 0) { %>
+        <div class="table-responsive">
+          <table id="pendingTable" class="table table-bordered table-striped">
+            <thead class="table-dark">
+              <tr>
+                <th>Repair Number</th>
+                <th class="text-center col-2">Requester Name</th>
+                <th class="text-center col-1">Store ID</th>
+                <th class="text-center">Store Name</th>
+                <th class="text-center">Total Cost</th>
+                <th class="text-center">Issue Date</th>
+                <th class="text-center">Pending (Days)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% pendingWorkOrdersTable.forEach(order => { %>
+              <tr>
+                <td><%= order._id.requestId %></td>
+                <td class="text-center"><%= order._id.requesterName %></td>
+                <td class="text-center"><%= order._id.storeId ? String(order._id.storeId).padStart(3, '0') : '-' %></td>
+                <td class="text-center"><%= order._id.storename || 'N/A' %></td>
+                <td class="text-center"><%= order.totalCombinedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
+                <td class="text-center">
+                  <%= new Date(order.latestTransactionDate).toLocaleDateString('en-GB', {
+                    year: 'numeric', month: 'short', day: 'numeric', timeZone: 'Asia/Bangkok'
+                  }) %>
+                </td>
+                <td class="text-center">
+                  <% if (order.pendingDays !== null) { %>
+                  <%= order.pendingDays %> Days
+                  <% } else { %> - <% } %>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
         </div>
-    </div>
+        <% } else { %>
+        <p class="text-muted">No pending work orders available.</p>
+        <% } %>
 
-    <script src="js/dashboard.js"></script>
+        <!-- Summary Cards -->
+        <div class="row text-center g-3 m-3 justify-content-center">
+          <div class="col-md-3">
+            <div class="card shadow-sm border bg-light">
+              <div class="card-body">
+                <small class="text-muted">On Shelf (Quantity)</small>
+                <h4 class="fw-semibold mt-2"><%= totalStockQty.toLocaleString() %> ชิ้น</h4>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card shadow-sm border bg-light">
+              <div class="card-body">
+                <small class="text-muted">On Shelf Value</small>
+                <h4 class="fw-semibold mt-2">฿ <%= totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></h4>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card shadow-sm border bg-light">
+              <div class="card-body">
+                <small class="text-muted">Pending (Quantity)</small>
+                <h4 class="fw-semibold mt-2"><%= totalPendingQty.toLocaleString() %> ชิ้น</h4>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card shadow-sm border bg-light">
+              <div class="card-body">
+                <small class="text-muted">Pending Value</small>
+                <h4 class="fw-semibold mt-2">฿ <%= totalPendingValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></h4>
+              </div>
+            </div>
+          </div>
+        </div>
 
+        <!-- Parts Movement Today -->
+        <div>
+          <h3 class="m-3 section-title">Parts Movement Today</h3>
+          <% if (partsMovementToday.length > 0) { %>
+          <div class="table-responsive">
+            <table class="table table-bordered table-hover text-center">
+              <thead class="table-secondary">
+                <tr>
+                  <th>SKU</th>
+                  <th>Description</th>
+                  <th class="text-center">Quantity IN</th>
+                  <th class="text-center">Quantity OUT</th>
+                  <th class="text-center">On Shelf</th>
+                </tr>
+              </thead>
+              <tbody id="partsMovementTable">
+                <% partsMovementToday.forEach(item => { %>
+                <tr>
+                  <td><%= item._id.partId %></td>
+                  <td><%= item._id.partName %></td>
+                  <td class="text-center"><% if (item.totalIn > 0) { %><span class="badge in-badge"><%= item.totalIn %></span><% } %></td>
+                  <td class="text-center"><% if (item.totalOut > 0) { %><span class="badge out-badge"><%= item.totalOut %></span><% } %></td>
+                  <td class="text-center"><%= item._id.onHand %></td>
+                </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+          <% } %>
+        </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+        <!-- Top 10 Movement -->
+        <div>
+          <h4 class="m-3 section-title">Top 10 Parts Movement (This Month)</h4>
+          <div class="table-responsive">
+            <table class="table table-bordered table-hover text-center">
+              <thead class="table-secondary">
+                <tr>
+                  <th>#</th>
+                  <th>SKU</th>
+                  <th>Description</th>
+                  <th>Total Issued</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% top10Movement.forEach((item, index) => { %>
+                <tr>
+                  <td><%= index + 1 %></td>
+                  <td><%= item.sku %></td>
+                  <td class="text-start"><%= item.description %></td>
+                  <td><%= item.totalIssued.toLocaleString() %></td>
+                </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+      </div> <!-- ✅ ปิด col-lg-10 ตรงนี้ -->
+    </div> <!-- row -->
+  </div> <!-- container-fluid -->
 
+  <!-- Scripts -->
+  <script src="js/dashboard.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+  <script type="application/json" id="pendingWorkOrdersData">
+    <%- JSON.stringify(pendingWorkOrders || []) %>
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 
-    <script type="application/json" id="pendingWorkOrdersData">
-        <%- JSON.stringify(pendingWorkOrders || []) %>
-    </script>
-
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
-
-
-    <!-- DataTables Scripts -->
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
-
-
-    <!-- Init DataTables -->
-    <script>
-        $(document).ready(function () {
-            $('#transactionTable').DataTable({
-                dom: 'Bfrtip',
-                buttons: ['copy', 'csv', 'excel', 'print'],
-                order: [[8, 'desc']],
-                responsive: true,
-                pageLength: 25,
-                language: {
-                    search: "ค้นหา:",
-                    lengthMenu: "แสดง _MENU_ รายการต่อหน้า",
-                    info: "แสดง _START_ ถึง _END_ จากทั้งหมด _TOTAL_ รายการ",
-                    paginate: {
-                        next: "ถัดไป",
-                        previous: "ก่อนหน้า"
-                    },
-                    zeroRecords: "ไม่พบข้อมูลที่ค้นหา",
-                    infoEmpty: "ไม่มีข้อมูลแสดง",
-                    infoFiltered: "(กรองจากทั้งหมด _MAX_ รายการ)"
-                }
-            });
-
-            $('#pendingTable').DataTable({
-                dom: 'Bfrtip',
-                buttons: [
-                    {
-                        extend: 'csv',
-                        text: '<i class="bi bi-file-earmark-spreadsheet"></i> CSV',
-                    },
-                    {
-                        extend: 'excel',
-                        text: '<i class="bi bi-file-earmark-excel"></i> Excel',
-
-                    },
-                    {
-                        extend: 'print',
-                        text: '<i class="bi bi-printer"></i> Print',
-                    }
-                ],
-                responsive: true,
-                pageLength: 10,
-                language: {
-                    search: "ค้นหา:",
-                    lengthMenu: "แสดง _MENU_ รายการต่อหน้า",
-                    info: "แสดง _START_ ถึง _END_ จากทั้งหมด _TOTAL_ รายการ",
-                    paginate: {
-                        next: "ถัดไป",
-                        previous: "ก่อนหน้า"
-                    },
-                    zeroRecords: "ไม่พบข้อมูลที่ค้นหา",
-                    infoEmpty: "ไม่มีข้อมูลแสดง",
-                    infoFiltered: "(กรองจากทั้งหมด _MAX_ รายการ)"
-                }
-            });
-        });
-    </script>
-
-
-
+  <script>
+    $(document).ready(function () {
+      $('#pendingTable').DataTable({
+        dom: 'Bfrtip',
+        buttons: [
+          { extend: 'csv', text: '<i class="bi bi-file-earmark-spreadsheet"></i> CSV' },
+          { extend: 'excel', text: '<i class="bi bi-file-earmark-excel"></i> Excel' },
+          { extend: 'print', text: '<i class="bi bi-printer"></i> Print' }
+        ],
+        responsive: true,
+        pageLength: 10,
+        language: {
+          search: "ค้นหา:",
+          lengthMenu: "แสดง _MENU_ รายการต่อหน้า",
+          info: "แสดง _START_ ถึง _END_ จากทั้งหมด _TOTAL_ รายการ",
+          paginate: { next: "ถัดไป", previous: "ก่อนหน้า" },
+          zeroRecords: "ไม่พบข้อมูลที่ค้นหา",
+          infoEmpty: "ไม่มีข้อมูลแสดง",
+          infoFiltered: "(กรองจากทั้งหมด _MAX_ รายการ)"
+        }
+      });
+    });
+  </script>
 </body>
 
 </html>
