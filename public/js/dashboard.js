@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 font: () => ({
                   family: "kanit",
                   weight: "normal",
-                  size: getResponsiveFontSize(),
+                  size: getResponsiveFontSize()-1,
                 }),
                 formatter: (value, context) => `${cmPendingCounts[context.dataIndex]} Jobs`,
               },
@@ -78,9 +78,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 font: () => ({
                   family: "kanit",
                   weight: "normal",
-                  size: getResponsiveFontSize(),
+                  size: getResponsiveFontSize()-1,
                 }),
-                formatter: (value, context) => `${pmPendingCounts[context.dataIndex]} Jobs`,
+                formatter: (value, context) => `${pmPendingCounts[context.dataIndex]}Jobs`,
               },
               value: {
                 anchor: "end",
@@ -121,8 +121,9 @@ document.addEventListener("DOMContentLoaded", function () {
           },
         },
         x: {
+          barPercentage: 0.6,
+          categoryPercentage: 0.8,
           ticks: {
-            //padding: 15,
             font: () => ({
               size: getResponsiveFontSize(),
             }),

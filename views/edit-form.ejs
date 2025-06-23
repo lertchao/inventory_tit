@@ -24,18 +24,6 @@
 
       </h2>
 
-      <% if (message === 'success') { %>
-        <div class="alert alert-success alert-dismissible fade show text-center" role="alert">
-          อัพเดทข้อมูลสำเร็จ!
-          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-      <% } else if (message === 'error') { %>
-        <div class="alert alert-danger alert-dismissible fade show text-center" role="alert">
-          เกิดข้อผิดพลาดในการอัพเดทข้อมูล กรุณาลองอีกครั้ง
-          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-      <% } %>
-
       <form method="POST" action="/update" enctype="multipart/form-data">
         <input type="hidden" name="update_id" value="<%= product._id %>">
 
@@ -83,6 +71,21 @@
           </div>
         </div>
       </form>
+
+
+      <% if (message === 'success') { %>
+        <div class="col-6 mt-3 mx-auto alert alert-success alert-dismissible fade show text-center" role="alert">
+          อัพเดทข้อมูลสำเร็จ!
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      <% } else if (message === 'error') { %>
+        <div class="col-6 mt-3 mx-auto alert alert-danger alert-dismissible fade show text-center" role="alert">
+          เกิดข้อผิดพลาดในการอัพเดทข้อมูล กรุณาลองอีกครั้ง
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      <% } %>
+      
+
 
     </div>
   </div>

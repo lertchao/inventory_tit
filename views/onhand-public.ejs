@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>On Shelf</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="icon" href="/images/storage.png" sizes="32x32">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+
+      <h2 class="text-center p-4">
+        Stock on-hand (Public View)
+        <img src="/images/procurement.png" alt="logo" class="img-fluid"
+             style="max-width: 40px; vertical-align: middle" />
+      </h2>
+
+      <div class="container-fluid">
+        <div class="p-3">
+          <div class="row">
+            <div class="col-lg-6 col-12 mx-auto">
+              <form method="get" action="/public-onhand" class="d-flex">
+                <input type="text" name="search" class="form-control me-2" value="<%= search %>" placeholder="กรอก SKU หรือ Description เพื่อค้นหา" />
+                <button type="submit" class="btn btn-success w-sm-auto">ค้นหา</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <% if (products.length > 0) { %>
+          <% products.forEach(product => { %>
+            <div class="col-md-4 product-card mb-4">
+              <div class="card h-100 card-hover">
+                <a>
+                  <img class="card-img-top img-fluid fixed-size"
+                       src="https://res.cloudinary.com/dzuw4hsd7/image/upload/f_auto,q_auto/<%= product.image %>?v=<%= Date.now() %>"
+                       alt="Product Image"
+                       loading="lazy"
+                       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <div style="display:none; justify-content: center; align-items: center; height: 160px;" class="text-muted">
+                    <i class="fas fa-image fa-3x"></i>
+                  </div>
+                </a>
+                <div class="card-body">
+                  <h5 class="card-title text-center pb-3"><%= product.sku %></h5>
+                  <p class="card-text">Description: <%= product.description %></p>
+                  <p class="card-text">Cost: <%= new Intl.NumberFormat().format(product.cost) %></p>
+                  <h4 class="card-text text-end <%= product.quantity <= 0 ? 'text-danger' : 'text-dark' %>">
+                    Quantity: <%= product.quantity %>
+                  </h4>
+                </div>
+              </div>
+            </div>
+          <% }) %>
+        <% } else { %>
+          <div class="alert alert-warning text-center" role="alert">
+            ไม่พบข้อมูลที่ตรงกับคำค้นหา
+          </div>
+        <% } %>
+      </div>
+
+      <div class="overflow-auto">
+        <%
+          const pageWindow = 2;
+          let startPage = Math.max(1, current - pageWindow);
+          let endPage = Math.min(pages, current + pageWindow);
+          if (current <= pageWindow) endPage = Math.min(pages, startPage + 4);
+          if (current + pageWindow > pages) startPage = Math.max(1, pages - 4);
+        %>
+        <nav aria-label="Page navigation" class="mt-4">
+          <ul class="pagination justify-content-center flex-wrap">
+            <li class="page-item <%= current <= 1 ? 'disabled' : '' %>">
+              <a class="page-link" href="?search=<%= search %>&page=<%= current - 1 %>">Previous</a>
+            </li>
+
+            <% if (startPage > 1) { %>
+              <li class="page-item"><a class="page-link" href="?search=<%= search %>&page=1">1</a></li>
+              <% if (startPage > 2) { %>
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+              <% } %>
+            <% } %>
+
+            <% for (let i = startPage; i <= endPage; i++) { %>
+              <li class="page-item <%= current === i ? 'active' : '' %>">
+                <a class="page-link" href="?search=<%= search %>&page=<%= i %>"><%= i %></a>
+              </li>
+            <% } %>
+
+            <% if (endPage < pages) { %>
+              <% if (endPage < pages - 1) { %>
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+              <% } %>
+              <li class="page-item"><a class="page-link" href="?search=<%= search %>&page=<%= pages %>"><%= pages %></a></li>
+            <% } %>
+
+            <li class="page-item <%= current >= pages ? 'disabled' : '' %>">
+              <a class="page-link" href="?search=<%= search %>&page=<%= current + 1 %>">Next</a>
+            </li>
+          </ul>
+        </nav>
+        <p class="text-center">หน้าที่ <%= current %> จากทั้งหมด <%= pages %> หน้า</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Select text in search input after reload -->
+<script>
+  window.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.querySelector('input[name="search"]');
+    if (searchInput && searchInput.value) {
+      searchInput.focus();
+      searchInput.select();
+    }
+  });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

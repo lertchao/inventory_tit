@@ -526,6 +526,36 @@ router.get('/onhand', isAuthenticated, async (req, res) => {
 });
 
 
+router.get('/public-onhand', async (req, res) => {
+  const perPage = 12;
+  const page = parseInt(req.query.page) || 1;
+  const searchQueryRaw = req.query.search || '';
+
+  function escapeRegex(str) {
+      return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+  const escapedQuery = escapeRegex(searchQueryRaw);
+  const condition = searchQueryRaw ? {
+      $or: [
+          { sku: { $regex: escapedQuery, $options: 'i' } },
+          { description: { $regex: escapedQuery, $options: 'i' } }
+      ]
+  } : {};
+
+  const total = await Product.countDocuments(condition);
+  const products = await Product.find(condition)
+      .skip((page - 1) * perPage)
+      .limit(perPage);
+
+  res.render('onhand-public', {
+      products,
+      search: searchQueryRaw,
+      current: page,
+      pages: Math.ceil(total / perPage)
+  });
+});
+
+
 router.get('/delete/:id',isAuthenticated,(req,res)=>{
     Product.findByIdAndDelete(req.params.id,{useFindAndModify:false}).exec(err=>{
         res.redirect('/edit-product')
@@ -1083,13 +1113,6 @@ router.post("/add", upload.single("image"), async (req, res) => {
   }
 });
 
-
-// router.post('/edit',isAuthenticated, (req, res) => {
-//     const edit_id = req.body.edit_id
-//     Product.findOne({_id:edit_id}).exec((err,doc)=>{
-//         res.render('edit-form',{product:doc})
-//     })
-// })
 
 
 router.get('/edit-product/:id', isAuthenticated, async (req, res) => {
