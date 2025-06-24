@@ -123,8 +123,8 @@
               <tbody id="partsMovementTable">
                 <% partsMovementToday.forEach(item => { %>
                 <tr>
-                  <td><%= item._id.partId %></td>
-                  <td><%= item._id.partName %></td>
+                  <td class="text-start"><%= item._id.partId %></td>
+                  <td class="text-start"><%= item._id.partName %></td>
                   <td class="text-center"><% if (item.totalIn > 0) { %><span class="badge in-badge"><%= item.totalIn %></span><% } %></td>
                   <td class="text-center"><% if (item.totalOut > 0) { %><span class="badge out-badge"><%= item.totalOut %></span><% } %></td>
                   <td class="text-center"><%= item._id.onHand %></td>
@@ -138,7 +138,7 @@
 
         <!-- Top 10 Movement -->
         <div>
-          <h4 class="m-3 section-title">Top 10 Parts Movement (This Month)</h4>
+          <h4 class="m-3 section-title">Top 15 Parts Movement (This Month)</h4>
           <div class="table-responsive">
             <table class="table table-bordered table-hover text-center">
               <thead class="table-secondary">
@@ -153,7 +153,7 @@
                 <% top10Movement.forEach((item, index) => { %>
                 <tr>
                   <td><%= index + 1 %></td>
-                  <td><%= item.sku %></td>
+                  <td class="text-start"><%= item.sku %></td>
                   <td class="text-start"><%= item.description %></td>
                   <td><%= item.totalIssued.toLocaleString() %></td>
                 </tr>
