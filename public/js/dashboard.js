@@ -42,9 +42,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 font: () => ({
                   family: "kanit",
                   weight: "normal",
-                  size: getResponsiveFontSize()-1,
+                  size: getResponsiveFontSize()-2,
                 }),
-                formatter: (value, context) => `${cmPendingCounts[context.dataIndex]} Jobs`,
+                formatter: (value, context) => `${cmPendingCounts[context.dataIndex]} Rp.`,
               },
               value: {
                 anchor: "end",
@@ -78,9 +78,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 font: () => ({
                   family: "kanit",
                   weight: "normal",
-                  size: getResponsiveFontSize()-1,
+                  size: getResponsiveFontSize()-2,
                 }),
-                formatter: (value, context) => `${pmPendingCounts[context.dataIndex]}Jobs`,
+                formatter: (value, context) => `${pmPendingCounts[context.dataIndex]} Rp.`,
               },
               value: {
                 anchor: "end",
