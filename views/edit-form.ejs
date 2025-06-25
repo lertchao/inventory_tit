@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Edit Part</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
@@ -28,23 +29,23 @@
         <input type="hidden" name="update_id" value="<%= product._id %>">
 
         <div class="row justify-content-center">
-          <div class="mb-3 col-md-3">
+          <div class="mb-3 col-md-3 col-sm-12">
             <label class="form-label">SKU</label>
             <input type="text" class="form-control" name="sku" value="<%= product.sku %>" required>
           </div>
-          <div class="mb-3 col-md-3">
+          <div class="mb-3 col-md-3 col-sm-12">
             <label class="form-label">Description</label>
             <input type="text" class="form-control" name="description" value="<%= product.description %>" required>
           </div>
-          <div class="mb-3 col-md-3">
+          <div class="mb-3 col-md-3 col-sm-12">
             <label class="form-label">Cost Price</label>
             <input type="text" class="form-control" name="cost" value="<%= product.cost %>" oninput="sanitizeInput(this)" required>
           </div>
-          <div class="mb-3 col-md-5">
+          <div class="mb-3 col-md-5 col-sm-12">
             <label class="form-label">อัปโหลดรูปภาพใหม่</label>
             <input class="form-control" type="file" name="image">
           </div>
-          <div class="mb-3 col-md-4">
+          <div class="mb-3 col-md-4 col-sm-12">
             <label class="form-label">Type Parts</label>
             <select class="form-select text-center" name="typeparts" required>
               <option value="" <%= !product.typeparts ? 'selected' : '' %>>-- กรุณาเลือก --</option>
@@ -54,7 +55,7 @@
           </div>
 
           <% if (product.image) { %>
-            <div class="mb-3 col-md-8 text-center">
+            <div class="mb-3 col-md-8 text-center col-sm-12">
               <label class="form-label">รูปภาพปัจจุบัน</label><br>
               <img src="https://res.cloudinary.com/dzuw4hsd7/image/upload/f_auto,q_auto/<%= product.image %>?v=<%= Date.now() %>"
                    alt="Product Image" class="img-fluid" style="max-width: 200px;">
@@ -62,7 +63,7 @@
           <% } %>
         </div>
 
-        <div class="row justify-content-center text-center">
+        <div class="row justify-content-around text-center col-sm-12">
           <div class="col-auto">
             <a class="btn btn-secondary mt-3" href="/edit-product">กลับหน้าจัดการฐานข้อมูล</a>
           </div>

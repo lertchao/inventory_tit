@@ -52,7 +52,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 color: "black",
                 font: () => ({
                   family: "kanit",
-                  weight: "bold",
+                  weight: "normal",
                   size: getResponsiveFontSize(),
                 }),
                 formatter: (value) =>
@@ -88,7 +88,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 color: "black",
                 font: () => ({
                   family: "kanit",
-                  weight: "bold",
+                  weight: "normal",
                   size: getResponsiveFontSize(),
                 }),
                 formatter: (value) =>
