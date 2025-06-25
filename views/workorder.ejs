@@ -101,6 +101,65 @@
               <% } %>
             </div>
             
+
+<% if (pages > 1) { %>
+  <div class="overflow-auto">
+    <%
+      const pageWindow = 2; // จำนวนหน้าซ้าย-ขวา
+      let startPage = Math.max(1, current - pageWindow);
+      let endPage   = Math.min(pages, current + pageWindow);
+
+      if (current <= pageWindow)        endPage   = Math.min(pages, startPage + 4);
+      if (current + pageWindow > pages) startPage = Math.max(1, pages - 4);
+
+      const qsBase = `search=${encodeURIComponent(searchQuery || '')}&statusFilter=${encodeURIComponent(statusFilter || '')}`;
+    %>
+
+    <nav aria-label="Page navigation" class="mt-4">
+      <ul class="pagination justify-content-center flex-wrap">
+
+        <!-- Previous -->
+        <li class="page-item <%= current <= 1 ? 'disabled' : '' %>">
+          <a class="page-link" href="?<%= qsBase %>&page=<%= current - 1 %>">Previous</a>
+        </li>
+
+        <!-- First + … -->
+        <% if (startPage > 1) { %>
+          <li class="page-item"><a class="page-link" href="?<%= qsBase %>&page=1">1</a></li>
+          <% if (startPage > 2) { %>
+            <li class="page-item disabled"><span class="page-link">…</span></li>
+          <% } %>
+        <% } %>
+
+        <!-- หมายเลขหน้า -->
+        <% for (let i = startPage; i <= endPage; i++) { %>
+          <li class="page-item <%= current === i ? 'active' : '' %>">
+            <a class="page-link" href="?<%= qsBase %>&page=<%= i %>"><%= i %></a>
+          </li>
+        <% } %>
+
+        <!-- … + Last -->
+        <% if (endPage < pages) { %>
+          <% if (endPage < pages - 1) { %>
+            <li class="page-item disabled"><span class="page-link">…</span></li>
+          <% } %>
+          <li class="page-item"><a class="page-link" href="?<%= qsBase %>&page=<%= pages %>"><%= pages %></a></li>
+        <% } %>
+
+        <!-- Next -->
+        <li class="page-item <%= current >= pages ? 'disabled' : '' %>">
+          <a class="page-link" href="?<%= qsBase %>&page=<%= current + 1 %>">Next</a>
+        </li>
+
+      </ul>
+    </nav>
+
+    <p class="text-center">หน้าที่ <%= current %> จากทั้งหมด <%= pages %> หน้า</p>
+  </div>
+<% } %>
+
+
+
   
           </div>
         </div>

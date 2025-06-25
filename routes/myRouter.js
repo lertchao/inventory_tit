@@ -639,55 +639,75 @@ router.get("/transaction", isAuthenticated, async (req, res) => {
   }
 });
 
+
 router.get('/workorder', isAuthenticated, isAdmin, async (req, res) => {
   try {
-    const searchQuery = req.query.search?.trim() || '';
-    const statusFilter = req.query.statusFilter?.trim() || '';
-    let matchStage = {};
+    /* ---------- กำหนดค่าแบ่งหน้า ---------- */
+    const perPage = 20;                              // แถวต่อหน้า
+    const page    = parseInt(req.query.page) || 1;   // หน้าปัจจุบัน (ถ้าไม่กำหนด = 1)
 
+    const searchQuery  = (req.query.search        || '').trim();
+    const statusFilter = (req.query.statusFilter  || '').trim();
+
+    /* ---------- matchStage ตามเงื่อนไขค้นหา ---------- */
+    const matchStage = {};
     if (searchQuery) {
       matchStage.$or = [
-        { requestId: { $regex: searchQuery, $options: 'i' } },
-        { requesterName: { $regex: searchQuery, $options: 'i' } }
+        { requestId     : { $regex: searchQuery,  $options: 'i' } },
+        { requesterName : { $regex: searchQuery,  $options: 'i' } }
       ];
     }
+    if (statusFilter) matchStage.workStatus = statusFilter;
 
-    if (statusFilter) {
-      matchStage.workStatus = statusFilter;
-    }
-
-    const groupedTransactions = await Transaction.aggregate([
+    /* ---------- facet: ดึง total และข้อมูลแต่ละหน้าใน query เดียว ---------- */
+    const result = await Transaction.aggregate([
       { $match: matchStage },
+      { $sort : { createdAt: -1 } },            // ให้ทั้งสอง pipeline ได้ลำดับเดียวกันก่อน
       {
-        $group: {
-          _id: "$requestId",
-          requesterName: { $first: "$requesterName" },
-          createdAt: { $last: "$createdAt" },
-          workStatus: { $last: "$workStatus" },
-          transactionCount: { $sum: 1 },
-        },
-      },
-      { $sort: { createdAt: -1 } },
+        $facet: {
+          total: [ { $group: { _id: "$requestId" } }, { $count: "count" } ],
+          data : [
+            {
+              $group: {
+                _id             : "$requestId",
+                requesterName   : { $first: "$requesterName" },
+                createdAt       : { $last : "$createdAt" },
+                workStatus      : { $last : "$workStatus" },
+                transactionCount: { $sum  : 1 }
+              }
+            },
+            { $sort: { createdAt: -1 } },
+            { $skip : (page - 1) * perPage },
+            { $limit:  perPage }
+          ]
+        }
+      }
     ]);
 
-    // ✅ เพิ่ม createdAtFormatted
-    groupedTransactions.forEach(tx => {
+    const totalDocs    = result[0].total[0]?.count || 0;      // จำนวน requestId ทั้งหมด
+    const transactions = result[0].data;
+
+    /* ---------- format วันที่ ---------- */
+    transactions.forEach(tx => {
       tx.createdAtFormatted = dayjs(tx.createdAt)
-        .tz("Asia/Bangkok")
-        .format("DD MMM YYYY, HH:mm");
+        .tz('Asia/Bangkok')
+        .format('DD MMM YYYY, HH:mm');
     });
 
-    res.render('workorder', { 
-      transactions: groupedTransactions, 
-      searchQuery, 
-      statusFilter 
+    res.render('workorder', {
+      transactions,
+      searchQuery,
+      statusFilter,
+      current: page,                             // ✅ หน้าปัจจุบัน
+      pages  : Math.ceil(totalDocs / perPage)    // ✅ จำนวนหน้าทั้งหมด
     });
 
-  } catch (error) {
-    console.error('Error fetching grouped work orders:', error);
+  } catch (err) {
+    console.error('Error fetching grouped work orders:', err);
     res.status(500).send('Internal Server Error');
   }
 });
+
 
 
 router.get('/workorder/:requestId', isAuthenticated, async (req, res) => {
