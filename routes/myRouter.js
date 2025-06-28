@@ -642,52 +642,69 @@ router.get("/transaction", isAuthenticated, async (req, res) => {
 
 router.get('/workorder', isAuthenticated, isAdmin, async (req, res) => {
   try {
-    /* ---------- กำหนดค่าแบ่งหน้า ---------- */
-    const perPage = 20;                              // แถวต่อหน้า
-    const page    = parseInt(req.query.page) || 1;   // หน้าปัจจุบัน (ถ้าไม่กำหนด = 1)
+    const perPage = 20;
+    const page = parseInt(req.query.page) || 1;
 
-    const searchQuery  = (req.query.search        || '').trim();
-    const statusFilter = (req.query.statusFilter  || '').trim();
+    const searchQuery = (req.query.search || '').trim();
+    const statusFilter = (req.query.statusFilter || '').trim();
 
-    /* ---------- matchStage ตามเงื่อนไขค้นหา ---------- */
     const matchStage = {};
     if (searchQuery) {
       matchStage.$or = [
-        { requestId     : { $regex: searchQuery,  $options: 'i' } },
-        { requesterName : { $regex: searchQuery,  $options: 'i' } }
+        { requestId: { $regex: searchQuery, $options: 'i' } },
+        { requesterName: { $regex: searchQuery, $options: 'i' } }
       ];
     }
-    if (statusFilter) matchStage.workStatus = statusFilter;
+    if (statusFilter) {
+      matchStage.workStatus = statusFilter;
+    }
 
-    /* ---------- facet: ดึง total และข้อมูลแต่ละหน้าใน query เดียว ---------- */
     const result = await Transaction.aggregate([
       { $match: matchStage },
-      { $sort : { createdAt: -1 } },            // ให้ทั้งสอง pipeline ได้ลำดับเดียวกันก่อน
+      { $sort: { createdAt: -1 } },
       {
         $facet: {
-          total: [ { $group: { _id: "$requestId" } }, { $count: "count" } ],
-          data : [
+          total: [
+            { $group: { _id: "$requestId" } },
+            { $count: "count" }
+          ],
+          data: [
+            {
+              $lookup: {
+                from: "stores",
+                localField: "storeId",
+                foreignField: "storeId",
+                as: "storeInfo"
+              }
+            },
+            {
+              $unwind: {
+                path: "$storeInfo",
+                preserveNullAndEmptyArrays: true
+              }
+            },
             {
               $group: {
-                _id             : "$requestId",
-                requesterName   : { $first: "$requesterName" },
-                createdAt       : { $last : "$createdAt" },
-                workStatus      : { $last : "$workStatus" },
-                transactionCount: { $sum  : 1 }
+                _id: "$requestId",
+                requesterName: { $first: "$requesterName" },
+                createdAt: { $last: "$createdAt" },
+                workStatus: { $last: "$workStatus" },
+                transactionCount: { $sum: 1 },
+                storeId: { $last: "$storeId" },
+                storeName: { $last: "$storeInfo.storename" }
               }
             },
             { $sort: { createdAt: -1 } },
-            { $skip : (page - 1) * perPage },
-            { $limit:  perPage }
+            { $skip: (page - 1) * perPage },
+            { $limit: perPage }
           ]
         }
       }
     ]);
 
-    const totalDocs    = result[0].total[0]?.count || 0;      // จำนวน requestId ทั้งหมด
+    const totalDocs = result[0].total[0]?.count || 0;
     const transactions = result[0].data;
 
-    /* ---------- format วันที่ ---------- */
     transactions.forEach(tx => {
       tx.createdAtFormatted = dayjs(tx.createdAt)
         .tz('Asia/Bangkok')
@@ -698,8 +715,8 @@ router.get('/workorder', isAuthenticated, isAdmin, async (req, res) => {
       transactions,
       searchQuery,
       statusFilter,
-      current: page,                             // ✅ หน้าปัจจุบัน
-      pages  : Math.ceil(totalDocs / perPage)    // ✅ จำนวนหน้าทั้งหมด
+      current: page,
+      pages: Math.ceil(totalDocs / perPage)
     });
 
   } catch (err) {

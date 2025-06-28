@@ -64,12 +64,13 @@
                 <table class="table table-bordered table-hover">
                   <thead class="table-dark">
                     <tr>
-                      <th class="col-1 align-middle">#</th>
-                      <th class="col-2 align-middle">Request ID</th>
-                      <th class="col-2 text-center align-middle">Requester Name</th>
+                      <th class="col-auto align-middle">#</th>
+                      <th class="col-auto align-middle">Request ID</th>
+                      <th class="col-auto text-center align-middle">Store</th>
+                      <th class="col-1 text-center align-middle">Requester Name</th>
                       <th class="col-2 text-center align-middle">Last transaction</th>
                       <th class="col-2 text-center align-middle">Work Status</th>
-                      <th class="col-2 text-center align-middle">Transaction Count</th>
+                      <th class="col-1 text-center align-middle">Transaction Count</th>
                       <th class="text-center align-middle">Details</th>
                     </tr>
                   </thead>
@@ -78,6 +79,9 @@
                       <tr>
                         <td><%= index + 1 %></td>
                         <td><%= transaction._id %></td> <!-- Request ID -->
+                        <td class="text-start">
+                          <%= String(transaction.storeId).padStart(3, '0') %> - <%= transaction.storeName || '-' %>
+                        </td>                        
                         <td class="text-center"><%= transaction.requesterName %></td>
                         <td class="text-center">
                           <%= transaction.createdAtFormatted %>
