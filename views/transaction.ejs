@@ -77,7 +77,10 @@
                     <td class="text-center"><%= product.remaining %></td>
                     <td class="text-center"><%= transaction.requesterName %></td>
                     <td><%= transaction.requestId %></td>
-                    <td><%= transaction.createdAtFormatted %></td>
+                    <td data-order="<%= transaction.createdAt.toISOString() %>">
+                      <%= transaction.createdAtFormatted %>
+                    </td>
+                    
                 
                   </tr>
                 <% }); %>
