@@ -100,11 +100,11 @@ document.addEventListener("DOMContentLoaded", function () {
         <td>
           <input type="text" class="form-control sku-input" placeholder="กรอกรหัสสินค้า" name="sku" required>
         </td>
-        <td class="text-center description-cell"></td>
+        <td class="text-start description-cell align-middle"></td>
         <td>
           <input type="number" class="form-control text-center" placeholder="กรอกจำนวน" name="quantity" value="1" required>
         </td>
-        <td class="text-center cost-cell"></td>
+        <td class="text-center cost-cell align-middle"></td>
         <td class="text-center">
           <button type="button" class="btn btn-danger btn-sm remove-row">ลบ</button>
         </td>

@@ -63,7 +63,7 @@
               <% products.forEach(function(item) { %>
                 <tr>
                   <td class="text-center"><%= item.sku %></td>
-                  <td class="text-center"><%= item.description %></td>
+                  <td class="text-start"><%= item.description %></td>
                   <td class="text-center"><%= new Intl.NumberFormat().format(item.cost) %></td>
                   <td class="text-center">
                     <a href="/edit-product/<%= item._id %>" class="btn btn-warning btn-sm">แก้ไข</a>
