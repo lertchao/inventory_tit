@@ -6,10 +6,10 @@ const app = express()
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
 
-//mongodb+srv://64230092:1234@cluster0.pglvr.mongodb.net/
+//mongodb+srv://64230092:1234@cluster0.pglvr.mongodb.net/Database
 //mongodb://localhost:27017/Database
 
-const dbUrl = 'mongodb+srv://64230092:1234@cluster0.pglvr.mongodb.net/'; 
+const dbUrl = 'mongodb+srv://64230092:1234@cluster0.pglvr.mongodb.net/Database'; 
 mongoose.connect(dbUrl, {
     useNewUrlParser: true,
     useUnifiedTopology: true
