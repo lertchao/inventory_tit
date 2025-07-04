@@ -87,7 +87,7 @@ router.post("/login", async (req, res) => {
       username: user.username,
       role: user.role
     };
-
+    req.session.successMessage = "เข้าสู่ระบบสำเร็จ";
     res.redirect(req.body.returnUrl || "/");
   } catch (error) {
     res.status(500).send("เกิดข้อผิดพลาด");
@@ -95,11 +95,19 @@ router.post("/login", async (req, res) => {
 });
 
 
-router.get("/logout", (req, res) => {
-  req.session.destroy(() => {
-      res.redirect("/login");
+router.get("/logout", (req, res, next) => {
+  const msg = "ออกจากระบบสำเร็จ";
+
+  // สร้าง session ใหม่ (ID ใหม่) ทันที
+  req.session.regenerate((err) => {
+    if (err) return next(err);
+
+    // ตอนนี้มี session ใหม่สะอาด ๆ แล้ว
+    req.session.successMessage = msg;
+    res.redirect("/login");
   });
 });
+
 
 router.get("/", isAuthenticated, async (req, res) => {
   try {
@@ -556,7 +564,7 @@ router.get('/public-onhand', async (req, res) => {
 });
 
 
-router.get('/delete/:id',isAuthenticated,(req,res)=>{
+router.get('/delete/:id',isAuthenticated,isAdmin, (req,res)=>{
     Product.findByIdAndDelete(req.params.id,{useFindAndModify:false}).exec(err=>{
         res.redirect('/edit-product')
     })
@@ -1098,9 +1106,15 @@ router.get('/edit-product', isAuthenticated,isAdmin, (req, res) => {
 });
 
 
-router.get('/add-product', isAuthenticated,isAdmin, (req, res) => {
-    res.render('add-product', { success: null, error: null }); 
+router.get("/add-product", isAuthenticated,isAdmin, (req, res) => {
+  res.render("add-product", {
+    success: false,
+    error: false,
+    duplicate: false,
+    sku: ""
+  });
 });
+
 
 
 router.post("/add", upload.single("image"), async (req, res) => {
@@ -1108,7 +1122,6 @@ router.post("/add", upload.single("image"), async (req, res) => {
     let imagePublicId = "";
 
     if (req.file) {
-      // อัปโหลดจาก memory buffer โดยใช้ stream
       const streamUpload = () => {
         return new Promise((resolve, reject) => {
           const stream = cloudinary.uploader.upload_stream(
@@ -1136,19 +1149,42 @@ router.post("/add", upload.single("image"), async (req, res) => {
       description: req.body.description,
       cost: req.body.cost,
       image: imagePublicId,
-      typeparts: req.body.typeparts,
+      typeparts: req.body.typeparts
     });
 
     await data.save();
-    console.log("✅ Product added:", data);
-    res.render("add-product", { success: true, error: false });
+
+    // ✅ ส่งทุกตัวแปรที่จำเป็น
+    return res.render("add-product", {
+      success: true,
+      error: false,
+      duplicate: false,
+      sku: ""
+    });
 
   } catch (err) {
     console.error("🔴 Error adding product:", err.message);
-    console.error(err.stack);
-    res.render("add-product", { success: false, error: true });
+
+    if (err.code === 11000) {
+      // ✅ ตรวจเจอ SKU ซ้ำ
+      return res.render("add-product", {
+        success: false,
+        error: false,
+        duplicate: true,
+        sku: req.body.sku
+      });
+    }
+
+    // ✅ error อื่น ๆ
+    return res.render("add-product", {
+      success: false,
+      error: true,
+      duplicate: false,
+      sku: ""
+    });
   }
 });
+
 
 
 
