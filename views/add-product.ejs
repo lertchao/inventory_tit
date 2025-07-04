@@ -68,6 +68,14 @@
                 </form>
 
                 <div class="container mt-5 col-md-9 justify-content-center">
+
+                    <% if (duplicate) { %>
+                        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                          <strong>SKU "<%= sku %>" มีอยู่ในระบบแล้ว</strong> กรุณากรอก SKU ใหม่
+                          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                      <% } %>
+
                     <!-- Success Alert -->
                     <% if (success) { %>
                         <div class="alert alert-success alert-dismissible fade show" role="alert">

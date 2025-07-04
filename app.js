@@ -9,7 +9,7 @@ const MongoStore = require("connect-mongo");
 //mongodb+srv://64230092:1234@cluster0.pglvr.mongodb.net/
 //mongodb://localhost:27017/Database
 
-const dbUrl = 'mongodb+srv://64230092:1234@cluster0.pglvr.mongodb.net/Database'; 
+const dbUrl = 'mongodb+srv://64230092:1234@cluster0.pglvr.mongodb.net'; 
 mongoose.connect(dbUrl, {
     useNewUrlParser: true,
     useUnifiedTopology: true
@@ -37,7 +37,11 @@ app.use(
 );
 
 app.use((req, res, next) => {
-  res.locals.user = req.session.user || null; 
+  res.locals.user = req.session.user || null;
+
+  res.locals.successMessage = req.session.successMessage;
+  delete req.session.successMessage;
+  
   next();
 });
 
