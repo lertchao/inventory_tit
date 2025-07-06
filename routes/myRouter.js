@@ -564,11 +564,16 @@ router.get('/public-onhand', async (req, res) => {
 });
 
 
-router.get('/delete/:id',isAuthenticated,isAdmin, (req,res)=>{
-    Product.findByIdAndDelete(req.params.id,{useFindAndModify:false}).exec(err=>{
-        res.redirect('/edit-product')
-    })
-})
+router.post('/delete/:id', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    await Product.findByIdAndDelete(req.params.id);
+    res.redirect('/edit-product');
+  } catch (err) {
+    console.error("❌ Delete error:", err);
+    res.status(500).send("เกิดข้อผิดพลาด");
+  }
+});
+
 
 router.get("/transaction", isAuthenticated, async (req, res) => {
   try {
@@ -1323,6 +1328,7 @@ router.post("/import-excel",isAuthenticated, async (req, res) => {
           requesterName: requesterName || "Excel Import",
           requestId: requestId || "Excel Import",
           transactionType: "IN",
+          storeId:"903",
           workStatus: "Finish",
           products: [
             {
