@@ -9,7 +9,7 @@ const MongoStore = require("connect-mongo");
 //mongodb+srv://64230092:1234@cluster0.pglvr.mongodb.net/Database
 //mongodb://localhost:27017/Database
 
-const dbUrl = 'mongodb+srv://64230092:1234@cluster0.pglvr.mongodb.net/Database'; 
+const dbUrl = 'mongodb://localhost:27017/Database'; 
 mongoose.connect(dbUrl, {
     useNewUrlParser: true,
     useUnifiedTopology: true
