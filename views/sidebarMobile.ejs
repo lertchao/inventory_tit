@@ -1,3 +1,56 @@
+<script>
+  let hasShownModal = false;
+
+  setInterval(() => {
+    // ⛔ หยุดทำงานถ้าอยู่หน้า login
+    if (window.location.pathname === "/login") return;
+
+    fetch("/session-check")
+      .then(async (res) => {
+        const data = await res.json();
+
+        if (res.status === 401 && !hasShownModal) {
+          hasShownModal = true;
+
+          const modalHtml = `
+            <div class="modal fade" id="sessionModal" tabindex="-1" aria-labelledby="sessionModalLabel" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border border-warning rounded-3 shadow">
+                  <div class="modal-header bg-warning text-white">
+                    <h5 class="modal-title" id="sessionModalLabel">
+                      <i class="bi bi-exclamation-triangle-fill me-2"></i> แจ้งเตือนระบบ
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body text-dark">
+                    ${data.modalMessage || "Session หมดอายุ กรุณาเข้าสู่ระบบใหม่อีกครั้ง"}
+                  </div>
+                  <div class="modal-footer">
+                    <a href="/login" class="btn btn-warning">เข้าสู่ระบบใหม่</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+
+          document.body.insertAdjacentHTML("beforeend", modalHtml);
+          new bootstrap.Modal(document.getElementById('sessionModal')).show();
+        }
+      })
+      .catch((err) => {
+        console.error("Session check failed:", err);
+      });
+  }, 120000);
+</script>
+
+
+
+
+
+
+
+
+
 <!-- Mobile Menu Button -->
 <nav class="navbar navbar-dark bg-dark d-lg-none">
     <div class="container-fluid">
@@ -62,10 +115,41 @@
   
   <script>
     function logoutUser() {
-      window.location.href = "/logout";
-    }
-    function loginRedirect() {
-      window.location.href = "/login";
+      fetch("/logout")
+        .then(res => res.json())
+        .then(data => {
+          if (data.loggedOut) {
+            const modalHtml = `
+              <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                  <div class="modal-content border border-secondary rounded-3 shadow">
+  
+                    <div class="modal-header bg-secondary text-white">
+                      <h5 class="modal-title" id="logoutModalLabel">
+                        <i class="bi bi-box-arrow-right me-2"></i> ออกจากระบบ
+                      </h5>
+                      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+  
+                    <div class="modal-body text-dark">
+                      ${data.message || "ออกจากระบบแล้ว กรุณาเข้าสู่ระบบใหม่หากต้องการใช้งานต่อ"}
+                    </div>
+  
+                    <div class="modal-footer">
+                      <a href="/login" class="btn btn-secondary">เข้าสู่ระบบใหม่</a>
+                    </div>
+  
+                  </div>
+                </div>
+              </div>
+            `;
+  
+            document.body.insertAdjacentHTML("beforeend", modalHtml);
+            new bootstrap.Modal(document.getElementById('logoutModal')).show();
+          }
+        })
+        .catch(err => console.error("Logout failed:", err));
     }
   </script>
+  
   

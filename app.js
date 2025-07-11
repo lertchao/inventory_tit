@@ -41,7 +41,10 @@ app.use((req, res, next) => {
 
   res.locals.successMessage = req.session.successMessage;
   delete req.session.successMessage;
-  
+
+  res.locals.modalMessage = req.session.modalMessage || null;
+  delete req.session.modalMessage;
+
   next();
 });
 
