@@ -6,24 +6,26 @@
 // };
 
 function isAuthenticated(req, res, next) {
-    if (req.session && req.session.user) {
-      req.user = req.session.user;
-      return next();
-    } else {
-      return res.redirect("/login");
-    }
+  if (req.session && req.session.user) {
+    req.user = req.session.user;
+    return next();
+  } else {
+    req.session.modalMessage = "Session หมดอายุ กรุณาเข้าสู่ระบบใหม่อีกครั้ง";
+    return res.redirect("/login");
   }
-  
-  function isAdmin(req, res, next) {
-    if (req.session?.user?.role === "admin") {
-      return next();
-    } else {
-      return res.status(403).send("⛔ Forbidden: Admins only.");
-    }
+}
+
+function isAdmin(req, res, next) {
+  if (req.session?.user?.role === "admin") {
+    return next();
+  } else {
+    return res.status(403).send("⛔ Forbidden: Admins only.");
   }
-  
-  module.exports = {
-    isAuthenticated,
-    isAdmin
-  };
+}
+
+module.exports = {
+  isAuthenticated,
+  isAdmin
+};
+
   

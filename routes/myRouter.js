@@ -95,18 +95,13 @@ router.post("/login", async (req, res) => {
 });
 
 
-router.get("/logout", (req, res, next) => {
-  const msg = "ออกจากระบบสำเร็จ";
-
-  // สร้าง session ใหม่ (ID ใหม่) ทันที
-  req.session.regenerate((err) => {
-    if (err) return next(err);
-
-    // ตอนนี้มี session ใหม่สะอาด ๆ แล้ว
-    req.session.successMessage = msg;
-    res.redirect("/login");
+router.get("/logout", (req, res) => {
+  req.session.destroy(() => {
+    res.json({ loggedOut: true, message: "ออกจากระบบสำเร็จ" });
   });
 });
+
+
 
 
 router.get("/", isAuthenticated, async (req, res) => {
@@ -1451,6 +1446,14 @@ router.get('/get-transactions-summary', isAuthenticated, async (req, res) => {
   } catch (error) {
     console.error('Error fetching summary:', error);
     res.status(500).json({ error: 'เกิดข้อผิดพลาดในการดึงข้อมูล' });
+  }
+});
+
+router.get("/session-check", (req, res) => {
+  if (req.session && req.session.user) {
+    res.status(200).json({ loggedIn: true });
+  } else {
+    res.status(401).json({ loggedIn: false, modalMessage: "Session หมดอายุ กรุณาเข้าสู่ระบบใหม่อีกครั้ง" });
   }
 });
 
