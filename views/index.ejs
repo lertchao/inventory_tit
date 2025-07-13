@@ -41,16 +41,15 @@
 
         <h3 class="m-3 section-title">Pending Work</h3>
         <canvas id="pendingWorkChart"></canvas>
-
+        
         <% if (pendingWorkOrdersTable.length > 0) { %>
-        <div class="table-responsive">
-          <table id="pendingTable" class="table table-bordered table-striped">
+          <table id="pendingTable" class="table table-bordered table-striped display nowrap" style="width:100%">
             <thead class="table-dark">
               <tr>
                 <th>Repair Number</th>
-                <th class="text-center col-auto">Requester Name</th>
-                <th class="text-center col-auto">Store ID</th>
-                <th class="text-center col-auto">Store Name</th>
+                <th class="text-center">Requester Name</th>
+                <th class="text-center">Store ID</th>
+                <th class="text-center">Store Name</th>
                 <th class="text-center">Total Cost</th>
                 <th class="text-center">Issue Date</th>
                 <th class="text-center">Pending (Days)</th>
@@ -58,66 +57,74 @@
             </thead>
             <tbody>
               <% pendingWorkOrdersTable.forEach(order => { %>
-              <tr>
-                <td><%= order._id.requestId %></td>
-                <td class="text-center"><%= order._id.requesterName %></td>
-                <td class="text-center"><%= order._id.storeId ? String(order._id.storeId).padStart(3, '0') : '-' %></td>
-                <td class="text-start"><%= order._id.storename || 'N/A' %></td>
-                <td class="text-center"><%= order.totalCombinedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
-                <td class="text-center">
-                  <%= new Date(order.latestTransactionDate).toLocaleDateString('en-GB', {
-                    year: 'numeric', month: 'short', day: 'numeric', timeZone: 'Asia/Bangkok'
-                  }) %>
-                </td>
-                <td class="text-center">
-                  <% if (order.pendingDays !== null) { %>
-                  <%= order.pendingDays %> Days
-                  <% } else { %> - <% } %>
-                </td>
-              </tr>
+                <tr>
+                  <td><%= order._id.requestId %></td>
+                  <td class="text-center"><%= order._id.requesterName %></td>
+                  <td class="text-center"><%= order._id.storeId ? String(order._id.storeId).padStart(3, '0') : '-' %></td>
+                  <td class="text-start"><%= order._id.storename || 'N/A' %></td>
+                  <td class="text-center"><%= order.totalCombinedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
+                  <td class="text-center">
+                    <%= new Date(order.latestTransactionDate).toLocaleDateString('en-GB', {
+                      year: 'numeric', month: 'short', day: 'numeric', timeZone: 'Asia/Bangkok'
+                    }) %>
+                  </td>
+                  <td class="text-center">
+                    <% if (order.pendingDays !== null) { %>
+                      <%= order.pendingDays %> Days
+                    <% } else { %> - <% } %>
+                  </td>
+                </tr>
               <% }) %>
             </tbody>
           </table>
-        </div>
         <% } else { %>
-        <p class="text-muted">No pending work orders available.</p>
+          <p class="text-muted">No pending work orders available.</p>
         <% } %>
+        
 
         <!-- Summary Cards -->
-        <div class="row text-center g-3 m-3 justify-content-center">
-          <div class="col-md-3">
-            <div class="card shadow-sm border bg-light">
-              <div class="card-body">
-                <small class="text-muted">On Shelf (Quantity)</small>
-                <h4 class="fw-semibold mt-2"><%= totalStockQty.toLocaleString() %> ชิ้น</h4>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="card shadow-sm border bg-light">
-              <div class="card-body">
-                <small class="text-muted">On Shelf Value</small>
-                <h4 class="fw-semibold mt-2">฿ <%= totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></h4>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="card shadow-sm border bg-light">
-              <div class="card-body">
-                <small class="text-muted">Pending (Quantity)</small>
-                <h4 class="fw-semibold mt-2"><%= totalPendingQty.toLocaleString() %> ชิ้น</h4>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="card shadow-sm border bg-light">
-              <div class="card-body">
-                <small class="text-muted">Pending Value</small>
-                <h4 class="fw-semibold mt-2">฿ <%= totalPendingValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></h4>
-              </div>
-            </div>
-          </div>
-        </div>
+<div class="row text-center g-3 m-3 justify-content-center">
+  <div class="col-md-3">
+    <div class="card shadow-sm border bg-light h-100">
+      <div class="card-body">
+        <small class="text-muted">On Shelf (Quantity)</small>
+        <h4 class="fw-semibold mt-2"> <%= totalStockQty.toLocaleString() %> ชิ้น</h4>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="card shadow-sm border bg-light h-100">
+      <div class="card-body">
+        <small class="text-muted">On Shelf Value</small>
+        <h4 class="fw-semibold mt-2 text-nowrap text-truncate">
+          ฿ <%= totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+        </h4>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="card shadow-sm border bg-light h-100">
+      <div class="card-body">
+        <small class="text-muted">Pending (Quantity)</small>
+        <h4 class="fw-semibold mt-2"><%= totalPendingQty.toLocaleString() %> ชิ้น</h4>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="card shadow-sm border bg-light h-100">
+      <div class="card-body">
+        <small class="text-muted">Pending Value</small>
+        <h4 class="fw-semibold mt-2 text-nowrap text-truncate">
+          ฿ <%= totalPendingValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+        </h4>
+      </div>
+    </div>
+  </div>
+</div>
+
 
         <!-- Parts Movement Today -->
         <div>
@@ -199,17 +206,39 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 
+
   <script>
     $(document).ready(function () {
       $('#pendingTable').DataTable({
-        dom: 'Bfrtip',
+        dom: "<'row mb-2'" +
+        "<'col-12 col-md-6 mb-2 mb-md-0'l>" + 
+        "<'col-12 col-md-6 d-flex justify-content-md-end justify-content-center'B>" +
+     ">" +
+     "<'row mb-2'<'col-12'f>>" +
+     "<'row'<'col-12'tr>>" +
+     "<'row mt-2'<'col-md-6'i><'col-md-6 text-end'p>>"
+,
         buttons: [
-          { extend: 'csv', text: '<i class="bi bi-file-earmark-spreadsheet"></i> CSV' },
-          { extend: 'excel', text: '<i class="bi bi-file-earmark-excel"></i> Excel' },
-          { extend: 'print', text: '<i class="bi bi-printer"></i> Print' }
+          {
+            extend: 'csv',
+            text: '<i class="bi bi-file-earmark-spreadsheet"></i> CSV',
+            className: 'btn btn-outline-secondary btn-sm me-2'
+          },
+          {
+            extend: 'excel',
+            text: '<i class="bi bi-file-earmark-excel"></i> Excel',
+            className: 'btn btn-outline-success btn-sm me-2'
+          },
+          {
+            extend: 'print',
+            text: '<i class="bi bi-printer"></i> Print',
+            className: 'btn btn-outline-primary btn-sm'
+          }
         ],
-        responsive: true,
-        pageLength: 10,
+        scrollX: true, // ✅ เปิด scroll แนวนอน
+        responsive: false, // ❌ ปิด responsive ที่ทำให้ตารางหด
+        pageLength: 10, // ค่า default แสดง 10 รายการ
+        lengthMenu: [ [10, 25, 50, 100], [10, 25, 50, 100] ],
         language: {
           search: "ค้นหา:",
           lengthMenu: "แสดง _MENU_ รายการต่อหน้า",
@@ -222,17 +251,10 @@
       });
     });
   </script>
-
-  <script>
-    document.addEventListener("DOMContentLoaded", function () {
-      const toastEl = document.getElementById("loginToast");
-      if (toastEl) {
-        const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
-        toast.show();
-      }
-    });
-  </script>
-
+  
+  
+  
+  
 
 
 </body>

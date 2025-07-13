@@ -9,6 +9,8 @@ const MongoStore = require("connect-mongo");
 //mongodb+srv://64230092:1234@cluster0.pglvr.mongodb.net/Database
 //mongodb://localhost:27017/Database
 
+mongoose.set('strictQuery', true);
+
 const dbUrl = 'mongodb+srv://64230092:1234@cluster0.pglvr.mongodb.net/Database'; 
 mongoose.connect(dbUrl, {
     useNewUrlParser: true,

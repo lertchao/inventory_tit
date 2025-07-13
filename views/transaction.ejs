@@ -107,37 +107,49 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 
-<!-- Init DataTables -->
+
 <script>
   $(document).ready(function () {
     $('#transactionTable').DataTable({
-      dom: 'Bfrtip',
-      buttons: [
-                    {
-                        extend: 'csv',
-                        text: '<i class="bi bi-file-earmark-spreadsheet"></i> CSV',
-                    },
-                    {
-                        extend: 'excel',
-                        text: '<i class="bi bi-file-earmark-excel"></i> Excel',
+      dom:
+        "<'row mb-2'" +
+        "<'col-12 col-md-6 mb-2 mb-md-0'l>" +
+        "<'col-12 col-md-6 d-flex justify-content-md-end justify-content-center'B>" +
+        ">" +
+        "<'row mb-2'<'col-12'f>>" +
+        "<'row'<'col-12'tr>>" +
+        "<'row mt-2'<'col-md-6'i><'col-md-6 text-end'p>>",
 
-                    },
-                    {
-                        extend: 'print',
-                        text: '<i class="bi bi-printer"></i> Print',
-                    }
-                ],
-      order: [[7, 'desc']],
-      responsive: true,
+      buttons: [
+        {
+          extend: 'csv',
+          text: '<i class="bi bi-file-earmark-spreadsheet"></i> CSV',
+          className: 'btn btn-outline-secondary btn-sm me-2'
+        },
+        {
+          extend: 'excel',
+          text: '<i class="bi bi-file-earmark-excel"></i> Excel',
+          className: 'btn btn-outline-success btn-sm me-2'
+        },
+        {
+          extend: 'print',
+          text: '<i class="bi bi-printer"></i> Print',
+          className: 'btn btn-outline-primary btn-sm'
+        }
+      ],
+
+      order: [[7, 'desc']], // ลำดับตาม column ที่ 8 (index เริ่มที่ 0)
+      scrollX: true, // ✅ เปิด scroll แนวนอน
+      responsive: false, // ❌ ปิด responsive ที่ทำให้ตารางหด
       pageLength: 25,
+      lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+      pagingType: "simple_numbers",
+
       language: {
         search: "ค้นหา:",
         lengthMenu: "แสดง _MENU_ รายการต่อหน้า",
         info: "แสดง _START_ ถึง _END_ จากทั้งหมด _TOTAL_ รายการ",
-        paginate: {
-          next: "ถัดไป",
-          previous: "ก่อนหน้า"
-        },
+        paginate: { next: "ถัดไป", previous: "ก่อนหน้า" },
         zeroRecords: "ไม่พบข้อมูลที่ค้นหา",
         infoEmpty: "ไม่มีข้อมูลแสดง",
         infoFiltered: "(กรองจากทั้งหมด _MAX_ รายการ)"
@@ -145,5 +157,7 @@
     });
   });
 </script>
+
+
 </body>
 </html>
