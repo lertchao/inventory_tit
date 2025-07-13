@@ -127,5 +127,14 @@
     padding-left: 15px;
 }
 
-
+@media (max-width: 992px) {
+    table td, table th {
+      font-size: 12px;
+      white-space: nowrap; /* ไม่ตัดบรรทัด */
+    }
+    .section-title {
+      font-size: 1.1rem;
+    }
+  }
+  
 
