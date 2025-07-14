@@ -102,8 +102,6 @@ router.get("/logout", (req, res) => {
 });
 
 
-
-
 router.get("/", isAuthenticated, async (req, res) => {
   try {
     const searchQuery = req.query.search?.trim() || ""; // รับค่าค้นหาและตัดช่องว่าง
@@ -1080,8 +1078,6 @@ router.post('/add_trans-out', isAuthenticated, isAdmin, async (req, res) => {
 });
 
 
-
-
 router.get('/edit-product', isAuthenticated,isAdmin, (req, res) => {
   const searchQuery = req.query.search || ''; // รับค่าที่ผู้ใช้กรอกมา (ถ้ามี)
 
@@ -1114,7 +1110,6 @@ router.get("/add-product", isAuthenticated,isAdmin, (req, res) => {
     sku: ""
   });
 });
-
 
 
 router.post("/add", upload.single("image"), async (req, res) => {
@@ -1186,8 +1181,6 @@ router.post("/add", upload.single("image"), async (req, res) => {
 });
 
 
-
-
 router.get('/edit-product/:id', isAuthenticated, async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -1198,8 +1191,6 @@ router.get('/edit-product/:id', isAuthenticated, async (req, res) => {
     res.redirect('/edit-product?error=notfound');
   }
 });
-
-
 
 
 router.post('/update', upload.single('image'), isAuthenticated, async (req, res) => {
@@ -1283,8 +1274,6 @@ router.post('/update', upload.single('image'), isAuthenticated, async (req, res)
     res.render('edit-form', { product: req.body, message: 'error' });
   }
 });
-
-
 
 
 router.post("/import-excel",isAuthenticated, async (req, res) => {
@@ -1396,7 +1385,8 @@ router.get('/stock-summary',isAuthenticated, async (req, res) => {
       description: product.description,
       onHand: product.quantity,
       pending: pendingMap[product.sku] || 0
-    }));
+    }))
+    .sort((a, b) => a.sku.localeCompare(b.sku));
 
     res.render('stock-summary', { summary });
   } catch (error) {
