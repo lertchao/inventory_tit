@@ -63,16 +63,18 @@
                   <td class="text-center"><%= order._id.storeId ? String(order._id.storeId).padStart(3, '0') : '-' %></td>
                   <td class="text-start"><%= order._id.storename || 'N/A' %></td>
                   <td class="text-center"><%= order.totalCombinedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
-                  <td class="text-center">
-                    <%= new Date(order.latestTransactionDate).toLocaleDateString('en-GB', {
-                      year: 'numeric', month: 'short', day: 'numeric', timeZone: 'Asia/Bangkok'
-                    }) %>
-                  </td>
-                  <td class="text-center">
-                    <% if (order.pendingDays !== null) { %>
-                      <%= order.pendingDays %> Days
-                    <% } else { %> - <% } %>
-                  </td>
+                  <td class="text-center"
+                  data-order="<%= order.latestTransactionDate.toISOString().split('T')[0] %>">
+                <%= new Date(order.latestTransactionDate).toLocaleDateString('en-GB', {
+                  year: 'numeric', month: 'short', day: 'numeric', timeZone: 'Asia/Bangkok'
+                }) %>
+              </td>
+              
+              <td class="text-center"
+                  data-order="<%= order.pendingDays %>">
+                <%= order.pendingDays %> Days
+              </td>
+              
                 </tr>
               <% }) %>
             </tbody>
