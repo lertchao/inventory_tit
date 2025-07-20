@@ -137,4 +137,16 @@
     }
   }
   
-
+  @media (max-width: 576px) {
+    #searchInput {
+      font-size: 0.9rem;
+    }
+  
+    #searchInput::placeholder,
+    #searchInput::-webkit-input-placeholder,
+    #searchInput:-ms-input-placeholder {
+      font-size: 0.55rem;
+    }
+  }
+  
+  
