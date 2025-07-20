@@ -1,21 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Transaction</title>
-
-  <!-- Bootstrap -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
-  <link rel="stylesheet" href="css/styles.css">
-  <link rel="icon" href="images/storage.png" sizes="32x32">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-
-  <!-- DataTables CSS -->
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
-  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
-</head>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction</title>
+  
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" href="images/storage.png" sizes="32x32">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  
+    <!-- DataTables -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
+  </head>  
 <body>
 
 <div class="container-fluid">
@@ -37,16 +37,23 @@
       </h2>
 
       <div class="container-fluid">
+        <!-- ✅ Filter Date -->
+        <div class="row g-2 mb-3 justify-content-center">
+          <div class="col-md-3 col-6">
+            <label for="minDate" class="form-label">Start Date</label>
+            <input type="date" id="minDate" class="form-control form-control-sm">
+          </div>
+          <div class="col-md-3 col-6">
+            <label for="maxDate" class="form-label">End Date</label>
+            <input type="date" id="maxDate" class="form-control form-control-sm">
+          </div>
+        </div>
 
-
-       <% if (products.length === 0) { %>
-          
-        <% } else { %> 
-          <div class="table-responsive">
+        <% if (products.length > 0) { %>
+          <div class="table-responsive invisible" id="transactionWrapper">
             <table id="transactionTable" class="table table-bordered table-striped display nowrap" style="width:100%">
               <thead class="table-dark">
               <tr>
-                <!-- <th>#</th> -->
                 <th>SKU</th>
                 <th>Description</th>
                 <th class="text-center">Quantity</th>
@@ -58,10 +65,9 @@
               </tr>
               </thead>
               <tbody>
-              <% products.forEach((transaction, index)=> { %>
-                <% transaction.products.forEach((product, productIndex)=> { %>
+              <% products.forEach((transaction) => { %>
+                <% transaction.products.forEach((product) => { %>
                   <tr>
-                    <!-- <td><%= productIndex === 0 ? index + 1 : "" %></td> -->
                     <td><%= product.sku %></td>
                     <td><%= product.description || "N/A" %></td>
                     <td class="text-center"><%= product.quantity %></td>
@@ -80,24 +86,22 @@
                     <td data-order="<%= transaction.createdAt.toISOString() %>">
                       <%= transaction.createdAtFormatted %>
                     </td>
-                    
-                
                   </tr>
                 <% }); %>
               <% }); %>
               </tbody>
             </table>
           </div>
+        <% } else { %>
+          <p class="text-muted">No transactions found.</p>
         <% } %>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Bootstrap JS -->
+<!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
-
-<!-- DataTables Scripts -->
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
@@ -107,10 +111,38 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 
-
 <script>
+  // ✅ Custom Date Filter
+  $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
+    const minInput = $('#minDate').val();
+    const maxInput = $('#maxDate').val();
+    const dateStr = data[7]; // Column "Created At"
+    const rowDate = new Date(dateStr);
+
+    let min = minInput ? new Date(minInput) : null;
+    let max = maxInput ? new Date(maxInput) : null;
+
+    if (max) {
+      max.setHours(23, 59, 59, 999); // ✅ ครอบคลุมตลอดวัน
+    }
+
+    if ((!min || rowDate >= min) && (!max || rowDate <= max)) {
+      return true;
+    }
+    return false;
+  });
+
   $(document).ready(function () {
-    $('#transactionTable').DataTable({
+
+    const today = new Date();
+    const todayStr = today.getFullYear() + '-' +
+      String(today.getMonth() + 1).padStart(2, '0') + '-' +
+      String(today.getDate()).padStart(2, '0');
+
+    $('#minDate').val(todayStr);
+    
+
+    const table = $('#transactionTable').DataTable({
       dom:
         "<'row mb-2'" +
         "<'col-12 col-md-6 mb-2 mb-md-0'l>" +
@@ -138,9 +170,9 @@
         }
       ],
 
-      order: [[7, 'desc']], // ลำดับตาม column ที่ 8 (index เริ่มที่ 0)
-      scrollX: true, // ✅ เปิด scroll แนวนอน
-      responsive: false, // ❌ ปิด responsive ที่ทำให้ตารางหด
+      order: [[7, 'desc']],
+      scrollX: true,
+      responsive: false,
       pageLength: 25,
       lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
       pagingType: "simple_numbers",
@@ -155,9 +187,15 @@
         infoFiltered: "(กรองจากทั้งหมด _MAX_ รายการ)"
       }
     });
+
+    // ✅ Re-filter เมื่อเลือกวันที่ใหม่
+    $('#minDate, #maxDate').on('change', function () {
+      table.draw();
+      $('#transactionWrapper').removeClass('invisible');
+      $('#transactionTable').removeClass('d-none');
+    });
   });
 </script>
-
 
 </body>
 </html>

@@ -6,6 +6,8 @@ const Store = require('../models/store')
 const fs = require('fs');
 const path = require('path');
 const { cloudinary, upload } = require('../config/cloudinary');
+const mongoose = require("mongoose");
+
 
 const { isAuthenticated, isAdmin } = require("../middleware/auth")
 const bcrypt = require("bcrypt")
@@ -74,6 +76,7 @@ router.post("/login", async (req, res) => {
     const { username, password } = req.body;
     const user = await User.findOne({ username });
 
+    // ตรวจสอบว่า username/password ถูกต้องไหม
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.render("login", {
         message: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง",
@@ -81,18 +84,31 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    // ✅ เก็บ user info และ role ลง session
+    // ✅ เก็บ user info ลง session
     req.session.user = {
       _id: user._id,
       username: user.username,
       role: user.role
     };
+
+    // ✅ เซต success message และบันทึก session
     req.session.successMessage = "เข้าสู่ระบบสำเร็จ";
+    await new Promise((resolve, reject) => {
+      req.session.save((err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+
+    // ✅ redirect หลัง session ถูกบันทึกแน่นอน
     res.redirect(req.body.returnUrl || "/");
+    
   } catch (error) {
+    console.error("Login Error:", error);
     res.status(500).send("เกิดข้อผิดพลาด");
   }
 });
+
 
 
 router.get("/logout", (req, res) => {
@@ -464,7 +480,6 @@ router.get("/", isAuthenticated, async (req, res) => {
     
     const totalPendingQty = pendingSummary[0]?.totalPendingQty || 0;
     const totalPendingValue = pendingSummary[0]?.totalPendingValue || 0;
-    
 
     res.render("index", {
       totalPendingQty,
@@ -915,26 +930,32 @@ router.get("/get-transaction-details", async (req, res) => {
 
   
 router.post("/add_trans-in", isAuthenticated, isAdmin, async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { name, repair, workStatus, storeId, products } = req.body;
 
     if (!name?.trim() || !repair?.trim() || !storeId?.trim() || !Array.isArray(products) || products.length === 0) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({ error: "ข้อมูลไม่ครบถ้วน" });
     }
 
-    const store = await Store.findOne({ storeId: Number(storeId) });
+    const store = await Store.findOne({ storeId: Number(storeId) }).session(session);
     if (!store) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({ error: "ไม่พบรหัสสาขานี้" });
     }
 
     const invalidMessages = [];
 
-    // ตรวจสอบ SKU และ quantity
     for (const item of products) {
-      const product = await Product.findOne({ sku: item.sku.trim() });
+      const product = await Product.findOne({ sku: item.sku.trim() }).session(session);
       if (!product) {
         invalidMessages.push(`ไม่พบสินค้า SKU: ${item.sku}`);
-        continue; // ข้ามการตรวจสอบ quantity ถ้าไม่พบสินค้า
+        continue;
       }
       if (!item.quantity || item.quantity <= 0) {
         invalidMessages.push(`SKU: ${item.sku} → จำนวนต้องมากกว่า 0`);
@@ -942,95 +963,109 @@ router.post("/add_trans-in", isAuthenticated, isAdmin, async (req, res) => {
     }
 
     if (invalidMessages.length > 0) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({
         error: "พบข้อผิดพลาดในรายการสินค้า",
         alert: invalidMessages.join("<br>"),
       });
     }
 
-    await Transaction.updateMany({ requestId: repair.trim() }, { $set: { workStatus } });
+    // ✅ เพิ่ม stock ใน session
+    for (const item of products) {
+      const sku = item.sku.trim();
+      const quantity = Number(item.quantity);
+      await Product.updateOne(
+        { sku },
+        { $inc: { quantity: quantity } },
+        { session }
+      );
+    }
 
-    const newTransaction = new Transaction({
+    // ✅ บันทึก transaction
+    await Transaction.create([{
       requesterName: name.trim(),
       requestId: repair.trim(),
       transactionType: "IN",
       workStatus,
       storeId: Number(storeId),
-      products: products.map((p) => ({
+      products: products.map(p => ({
         sku: p.sku.trim(),
         quantity: Number(p.quantity)
       })),
       username: req.user.username,
-    });
+    }], { session });
 
-    // อัปเดต stock เฉพาะที่ validate ผ่านแล้ว
-    for (const item of products) {
-      const product = await Product.findOne({ sku: item.sku.trim() });
-      product.quantity = (product.quantity || 0) + item.quantity;
-      await product.save();
-    }
+    await session.commitTransaction();
+    session.endSession();
 
-    await newTransaction.save();
     res.status(200).json({ message: "บันทึกข้อมูลเรียบร้อยแล้ว" });
 
   } catch (error) {
-    console.error("Error saving transaction:", error);
-    res.status(500).json({ error: "เกิดข้อผิดพลาดในการบันทึกข้อมูล" });
+    await session.abortTransaction();
+    session.endSession();
+
+    console.error("❌ เกิดข้อผิดพลาดใน /add_trans-in:", error);
+    res.status(500).json({ error: "ไม่สามารถบันทึกข้อมูลได้" });
   }
 });
 
 
 
 router.post('/add_trans-out', isAuthenticated, isAdmin, async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { name, repair, workStatus, storeId, products } = req.body;
 
     // ✅ ตรวจสอบข้อมูลเบื้องต้น
     if (!name || !repair || !storeId || !Array.isArray(products) || products.length === 0) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({ alert: 'กรุณากรอกข้อมูลให้ครบถ้วน' });
     }
 
-    const store = await Store.findOne({ storeId: Number(storeId) });
+    const store = await Store.findOne({ storeId: Number(storeId) }).session(session);
     if (!store) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({ alert: 'ไม่พบรหัสสาขานี้' });
     }
 
-    // ✅ ตรวจสอบ SKU และจำนวนก่อนบันทึก
+    // ✅ ตรวจสอบสินค้าก่อน
     const insufficientStock = [];
 
     for (const item of products) {
-      const sku = item.sku ? item.sku.trim() : '';
+      const sku = item.sku?.trim();
       const quantity = Number(item.quantity);
 
-      // ✅ ตรวจสอบว่าใส่ SKU หรือไม่
-      if (!sku) {
+      if (!sku || isNaN(quantity) || quantity <= 0) {
+        await session.abortTransaction();
+        session.endSession();
         return res.status(400).json({
-          alert: `พบ SKU ที่ไม่ถูกต้อง (ไม่ได้ระบุ)`
+          alert: `SKU: ${sku || 'ไม่ระบุ'} → จำนวนไม่ถูกต้อง`
         });
       }
 
-      // ✅ ตรวจสอบว่ามีสินค้า SKU นี้หรือไม่
-      const product = await Product.findOne({ sku });
+      const product = await Product.findOne({ sku }).session(session);
       if (!product) {
+        await session.abortTransaction();
+        session.endSession();
         return res.status(404).json({
           alert: `ไม่พบสินค้า SKU: ${sku}`
         });
       }
 
-      // ✅ ตรวจสอบจำนวนที่มากกว่า 0
-      if (isNaN(quantity) || quantity <= 0) {
-        return res.status(400).json({
-          alert: `SKU: ${sku} → จำนวนต้องมากกว่า 0`
-        });
-      }
-
-      // ✅ ตรวจสอบว่าคงเหลือพอหรือไม่
       if ((product.quantity || 0) < quantity) {
         insufficientStock.push({ sku, available: product.quantity || 0 });
       }
     }
 
     if (insufficientStock.length > 0) {
+      await session.abortTransaction();
+      session.endSession();
+
       const alertMessage = insufficientStock
         .map(item => `SKU: ${item.sku} คงเหลือ: ${item.available}`)
         .join("<br>");
@@ -1039,11 +1074,19 @@ router.post('/add_trans-out', isAuthenticated, isAdmin, async (req, res) => {
       });
     }
 
-    // ✅ อัปเดตสถานะใบงาน
-    await Transaction.updateMany({ requestId: repair }, { $set: { workStatus } });
+    // ✅ ตัดสต็อกสินค้าใน session
+    for (const item of products) {
+      const sku = item.sku.trim();
+      const quantity = Number(item.quantity);
+      await Product.updateOne(
+        { sku },
+        { $inc: { quantity: -quantity } },
+        { session }
+      );
+    }
 
-    // ✅ บันทึก Transaction ใหม่
-    const newTransaction = new Transaction({
+    // ✅ บันทึก transaction
+    await Transaction.create([{
       requesterName: name.trim(),
       requestId: repair.trim(),
       transactionType: 'OUT',
@@ -1054,24 +1097,19 @@ router.post('/add_trans-out', isAuthenticated, isAdmin, async (req, res) => {
         quantity: Number(p.quantity)
       })),
       username: req.user.username,
-    });
+    }], { session });
 
-    // ✅ ตัดสต็อกสินค้า
-    for (const item of products) {
-      const product = await Product.findOne({ sku: item.sku.trim() });
-      product.quantity -= Number(item.quantity);
-      try {
-        await product.save();
-      } catch (err) {
-        console.error("❌ บันทึกสินค้า SKU ผิดพลาด:", item.sku, err);
-        return res.status(500).json({ alert: `บันทึก SKU ${item.sku} ผิดพลาด` });
-      }
-    }
+    // ✅ Commit เมื่อทุกอย่างสำเร็จ
+    await session.commitTransaction();
+    session.endSession();
 
-    await newTransaction.save();
     res.status(200).json({ message: 'บันทึกข้อมูลเรียบร้อยแล้ว' });
 
   } catch (error) {
+    // ❌ หากมี error ใด ๆ
+    await session.abortTransaction();
+    session.endSession();
+
     console.error('❌ เกิดข้อผิดพลาดใน /add_trans-out:', error);
     res.status(500).json({ alert: 'ไม่สามารถบันทึกข้อมูลได้' });
   }
