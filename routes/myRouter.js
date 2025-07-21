@@ -778,6 +778,7 @@ router.get('/workorder/:requestId', isAuthenticated, async (req, res) => {
           requesterName: { $first: '$requesterName' },
           requestId: { $first: '$requestId' },
           createdAt: { $first: '$createdAt' },
+          updatedAt: { $first: '$updatedAt' }, 
           transactionType: { $first: '$transactionType' },
           workStatus: { $first: '$workStatus' },
           storeId: { $first: '$storeId' },
@@ -798,13 +799,17 @@ router.get('/workorder/:requestId', isAuthenticated, async (req, res) => {
       return res.status(404).send('No transactions found for this Request ID');
     }
 
-    // ✅ เพิ่ม createdAtFormatted
+    // ✅ แปลงวันที่สำหรับทุก transaction
     transactions.forEach(tx => {
-      tx.createdAtFormatted = dayjs(tx.createdAt)
-        .tz("Asia/Bangkok")
-        .format("DD MMM YYYY, HH:mm");
-    });
+      tx.createdAtFormatted = tx.createdAt
+        ? dayjs(tx.createdAt).tz("Asia/Bangkok").format("DD MMM YYYY, HH:mm")
+        : "-";
 
+      tx.updatedAtFormatted = tx.updatedAt
+        ? dayjs(tx.updatedAt).tz("Asia/Bangkok").format("DD MMM YYYY, HH:mm")
+        : "-";
+    });
+    
     res.render('work-detail', { transactions, requestId });
   } catch (error) {
     console.error('Error fetching transactions for Request ID:', error);
@@ -818,7 +823,6 @@ router.put('/workorder/:requestId/update-status', isAuthenticated, async (req, r
   const { workStatus, newRequestId, forceUpdate } = req.body;
 
   try {
-    // ตรวจสอบว่า requestId ใหม่ซ้ำ และไม่ใช่ forceUpdate
     if (newRequestId && newRequestId !== requestId && !forceUpdate) {
       const exists = await Transaction.findOne({ requestId: newRequestId });
       if (exists) {
@@ -834,6 +838,7 @@ router.put('/workorder/:requestId/update-status', isAuthenticated, async (req, r
       {
         $set: {
           workStatus,
+          updatedAt: new Date(), // ✅ เพิ่มเพื่อให้ timestamps ทำงานกับ updateMany
           ...(newRequestId && newRequestId !== requestId ? { requestId: newRequestId } : {})
         }
       }
@@ -853,6 +858,7 @@ router.put('/workorder/:requestId/update-status', isAuthenticated, async (req, r
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
+
 
 
 router.get('/get-product-details', (req, res) => {
@@ -996,6 +1002,19 @@ router.post("/add_trans-in", isAuthenticated, isAdmin, async (req, res) => {
       username: req.user.username,
     }], { session });
 
+        // ✅ Sync workStatus สำหรับ requestId เดียวกัน
+    await Transaction.updateMany(
+      { requestId: repair.trim() },
+      {
+        $set: {
+          workStatus: workStatus,
+          updatedAt: new Date()
+        }
+      },
+      { session }
+    );
+
+
     await session.commitTransaction();
     session.endSession();
 
@@ -1098,6 +1117,19 @@ router.post('/add_trans-out', isAuthenticated, isAdmin, async (req, res) => {
       })),
       username: req.user.username,
     }], { session });
+
+        // ✅ Sync workStatus สำหรับ requestId เดียวกัน
+    await Transaction.updateMany(
+      { requestId: repair.trim() },
+      {
+        $set: {
+          workStatus: workStatus,
+          updatedAt: new Date()
+        }
+      },
+      { session }
+    );
+
 
     // ✅ Commit เมื่อทุกอย่างสำเร็จ
     await session.commitTransaction();
