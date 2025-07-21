@@ -36,6 +36,14 @@
           <button id="updateWorkStatus" class="ms-3 btn btn-primary btn">Update</button>
         </div>
 
+        <p class="text-muted">
+          Created At: <%= transactions[0].createdAtFormatted %><br>
+          Last Updated: <%= transactions[0].updatedAtFormatted %>
+        </p>
+        
+        
+        
+
       </div>
 
           <!-- ✅ Modal แจ้งเตือนหาก Request ID ซ้ำ -->
@@ -163,7 +171,13 @@
           
           
             <a href="/workorder" class="btn btn-secondary mt-3">Back</a>
-        
+            
+            <script>
+              document.addEventListener("DOMContentLoaded", function () {
+                const defaultStatus = "<%= transactions[0]?.workStatus || 'Pending' %>";
+                document.getElementById("workStatusSelect").value = defaultStatus;
+              });
+            </script>
 
             <script>
               const updateBtn = document.getElementById("updateWorkStatus");
