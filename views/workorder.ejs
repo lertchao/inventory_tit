@@ -77,8 +77,8 @@
                   <tbody>
                     <% transactions.forEach((transaction, index) => { %>
                       <tr>
-                        <td><%= index + 1 %></td>
-                        <td><%= transaction._id %></td> <!-- Request ID -->
+                        <td><%= (current - 1) * limit + index + 1 %></td>
+                        <td><%= transaction._id %></td> 
                         <td class="text-start">
                           <%= String(transaction.storeId).padStart(3, '0') %> - <%= transaction.storeName || '-' %>
                         </td>                        

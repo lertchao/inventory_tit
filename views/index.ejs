@@ -71,11 +71,12 @@
                   <td class="text-start"><%= order._id.storename || 'N/A' %></td>
                   <td class="text-center"><%= order.totalCombinedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
                   <td class="text-center"
-                  data-order="<%= order.latestTransactionDate.toISOString().split('T')[0] %>">
-                <%= new Date(order.latestTransactionDate).toLocaleDateString('en-GB', {
+                  data-order="<%= order.earliestTransactionDate.toISOString().split('T')[0] %>">
+                  <%= new Date(order.earliestTransactionDate).toLocaleDateString('en-GB', {
                   year: 'numeric', month: 'short', day: 'numeric', timeZone: 'Asia/Bangkok'
-                }) %>
-              </td>
+                  }) %>
+                </td>
+              
               
               <td class="text-center"
                   data-order="<%= order.pendingDays %>">
