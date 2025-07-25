@@ -283,7 +283,7 @@ router.get("/", isAuthenticated, async (req, res) => {
         },
       },
       { $unwind: { path: "$storeInfo", preserveNullAndEmptyArrays: true } },
-
+    
       // 🔹 Group by requestId + typeparts
       {
         $group: {
@@ -307,10 +307,11 @@ router.get("/", isAuthenticated, async (req, res) => {
               },
             },
           },
-          latestTransactionDate: { $max: "$createdAt" },
+          earliestTransactionDate: { $min: "$createdAt" }, // ✅ เปลี่ยนจาก $max เป็น $min
         },
       },
-
+    
+      // 🔸 รวม typeparts กลับเป็นใบงานเดียว
       {
         $group: {
           _id: {
@@ -337,10 +338,10 @@ router.get("/", isAuthenticated, async (req, res) => {
               },
             },
           },
-          latestTransactionDate: { $max: "$latestTransactionDate" },
+          earliestTransactionDate: { $min: "$earliestTransactionDate" }, // ✅ เปลี่ยนจาก $max เป็น $min
         },
       },
-
+    
       {
         $addFields: {
           totalCombinedCost: { $add: ["$cmTotalCost", "$pmTotalCost"] },
@@ -348,28 +349,29 @@ router.get("/", isAuthenticated, async (req, res) => {
       },
       {
         $sort: {
-          "_id.requesterName": 1, // เรียงตาม requesterName (A → Z)
-          "_id.requestId": 1, // แล้วเรียงตาม requestId (A → Z)
+          "_id.requesterName": 1,
+          "_id.requestId": 1,
         },
       },
     ]);
-
+    
     const current = new Date();
-
+    
     pendingWorkOrdersTable = pendingWorkOrdersTable.map((item) => {
-      const latest = item.latestTransactionDate
-        ? new Date(item.latestTransactionDate)
+      const earliest = item.earliestTransactionDate
+        ? new Date(item.earliestTransactionDate)
         : null;
-      const pendingDays = latest
-        ? Math.floor((current - latest) / (1000 * 60 * 60 * 24)) // คำนวณห่างกี่วัน
+      const pendingDays = earliest
+        ? Math.floor((current - earliest) / (1000 * 60 * 60 * 24))
         : null;
-
+    
       return {
         ...item,
-        latestTransactionDate: latest,
+        earliestTransactionDate: earliest,
         pendingDays,
       };
     });
+    
 
     const totalSKUs = await Product.countDocuments();
     const totalStockQty = await Product.aggregate([
@@ -708,7 +710,7 @@ router.get('/workorder', isAuthenticated, isAdmin, async (req, res) => {
               $group: {
                 _id: "$requestId",
                 requesterName: { $first: "$requesterName" },
-                createdAt: { $last: "$createdAt" },
+                createdAt: { $min: "$createdAt" },
                 workStatus: { $last: "$workStatus" },
                 transactionCount: { $sum: 1 },
                 storeId: { $last: "$storeId" },
@@ -737,7 +739,8 @@ router.get('/workorder', isAuthenticated, isAdmin, async (req, res) => {
       searchQuery,
       statusFilter,
       current: page,
-      pages: Math.ceil(totalDocs / perPage)
+      pages: Math.ceil(totalDocs / perPage),
+      limit: perPage
     });
 
   } catch (err) {
