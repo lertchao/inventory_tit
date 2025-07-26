@@ -136,44 +136,48 @@
 </div>
 
 
-        <!-- Parts Movement Today -->
-        <div>
-          <h3 class="m-3 section-title">Parts Movement Today</h3>
-          <% if (partsMovementToday.length > 0) { %>
-          <div class="table-responsive">
-            <table class="table table-bordered table-hover text-center">
-              <thead class="table-secondary">
-                <tr>
-                  <th>#</th>
-                  <th>SKU</th>
-                  <th>Description</th>
-                  <th class="text-center">Quantity IN</th>
-                  <th class="text-center">Quantity OUT</th>
-                  <th class="text-center">On Shelf</th>
-                </tr>
-              </thead>
-              <tbody id="partsMovementTable">
-                <% partsMovementToday.forEach((item, index) => { %>
-                <tr>
-                  <td><%= index + 1 %></td> <!-- แสดงลำดับที่ -->
-                  <td class="text-start"><%= item._id.partId %></td>
-                  <td class="text-start"><%= item._id.partName %></td>
-                  <td class="text-center">
-                    <% if (item.totalIn > 0) { %><span class="badge in-badge"><%= item.totalIn %></span><% } %>
-                  </td>
-                  <td class="text-center">
-                    <% if (item.totalOut > 0) { %><span class="badge out-badge"><%= item.totalOut %></span><% } %>
-                  </td>
-                  <td class="text-center"><%= item._id.onHand %></td>
-                </tr>
-                <% }) %>
-              </tbody>              
-            </table>
-          </div>
-          <% } %>
-        </div>
+                <!-- Parts Movement Today -->
+                <div>
+                  <h3 class="m-3 section-title">Parts Movement Today</h3>
+                  <% if (partsMovementToday.length > 0) { %>
+                  <div class="table-responsive">
+                    <table class="table table-bordered table-hover text-center align-middle">
+                      <thead class="table-secondary">
+                        <tr>
+                          <th>#</th>
+                          <th>SKU</th>
+                          <th>Description</th>
+                          <th class="text-center">Quantity IN</th>
+                          <th class="text-center">Quantity OUT</th>
+                          <th class="text-center">On Shelf</th>
+                          <th class="text-center">Counted Qty</th>
+                          <th class="text-center">Diff</th>
+                        </tr>
+                      </thead>
+                      <tbody id="partsMovementTable">
+                        <% partsMovementToday.forEach((item, index) => { %>
+                        <tr>
+                          <td><%= index + 1 %></td>
+                          <td class="text-start"><%= item._id.partId %></td>
+                          <td class="text-start"><%= item._id.partName %></td>
+                          <td class="text-center">
+                            <% if (item.totalIn > 0) { %><span class="badge in-badge"><%= item.totalIn %></span><% } %>
+                          </td>
+                          <td class="text-center">
+                            <% if (item.totalOut > 0) { %><span class="badge out-badge"><%= item.totalOut %></span><% } %>
+                          </td>
+                          <td class="text-center on-shelf-cell"><%= item._id.onHand %></td>
+                          <td><input type="number" class="form-control form-control-sm text-center counted-input" min="0"></td>
+                          <td class="text-center diff-cell">–</td>
+                        </tr>
+                        <% }) %>
+                      </tbody>
+                    </table>
+                  </div>
+                  <% } %>
+                </div>
 
-        <!-- Top 10 Movement -->
+        <!-- Top 15 Movement -->
         <div>
           <h4 class="m-3 section-title">Top 15 Parts Movement (This Month)</h4>
           <div class="table-responsive">
@@ -279,6 +283,27 @@
       }
     });
   </script>
+
+  <!-- ✅ JavaScript ตรวจสอบ Diff -->
+<script>
+  $(document).on('input', '.counted-input', function () {
+    const counted = parseInt($(this).val()) || 0;
+    const onShelf = parseInt($(this).closest('tr').find('.on-shelf-cell').text()) || 0;
+    const diff = counted - onShelf;
+    const diffCell = $(this).closest('tr').find('.diff-cell');
+
+    diffCell.text((diff > 0 ? '+' : '') + diff);
+    diffCell.removeClass('text-danger text-success');
+
+    if (diff !== 0) {
+      diffCell.addClass('text-danger');
+      $(this).closest('tr').addClass('table-danger');
+    } else {
+      diffCell.addClass('text-success');
+      $(this).closest('tr').removeClass('table-danger');
+    }
+  });
+</script>
 
 
 </body>

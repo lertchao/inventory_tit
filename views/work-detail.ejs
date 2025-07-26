@@ -18,33 +18,64 @@
 
 
     <!-- แสดง storeId ด้านล่างของ Request ID -->
-    <% if (transactions.length> 0) { %>
-      <h5>Store : <%= transactions[0].storeId %> - <%= transactions[0].storename %>
+    <% if (transactions.length > 0) { %>
+      <h5>
+        Store : <%= String(transactions[0].storeId).padStart(3, '0') %> - <%= transactions[0].storename %>
       </h5>
-      <% } %>
-      <div class="text-end mb-3">
-        <!-- ปุ่ม Update -->
-        <div class="text-end mb-3">
-          <label for="newRequestId" class="form-label fw-bold ms-3">New Request ID:</label>
-          <input id="newRequestId" class="form-control d-inline-block w-auto" value="<%= requestId %>" />
-          <label for="workStatusSelect" class="form-label fw-bold">Update Work Status:</label>
-          <select id="workStatusSelect" class="form-select d-inline-block w-auto">
-            <option value="Pending">Pending</option>
-            <option value="Finish">Finish</option>
-          </select>
-          
-          <button id="updateWorkStatus" class="ms-3 btn btn-primary btn">Update</button>
-        </div>
+    <% } %>
+    
 
-        <p class="text-muted">
+      
+      <div class="container mt-4">
+        <div class="row g-3 align-items-end justify-content-end">
+      
+          <div class="col-md-3 col-sm-6">
+            <label for="requesterNameInput" class="form-label fw-bold">ชื่อผู้เบิก</label>
+            <input id="requesterNameInput" class="form-control" value="<%= transactions[0].requesterName %>">
+          </div>
+      
+          <div class="col-md-3 col-sm-6">
+            <label for="newRequestId" class="form-label fw-bold">เลขที่ใบเบิก</label>
+            <input id="newRequestId" class="form-control" value="<%= requestId %>">
+          </div>
+      
+          <div class="col-md-3 col-sm-6">
+            <label for="storeIdInput" class="form-label fw-bold">รหัสสาขา</label>
+            <input id="storeIdInput" type="text" class="form-control"
+            value="<%= String(transactions[0].storeId).padStart(3, '0') %>"
+            pattern="\d{3}" maxlength="3"
+            oninput="this.value = this.value.replace(/\D/g, '').slice(0, 3)">          
+          </div>
+          
+      
+          <!-- ✅ รวม "สถานะใบงาน" กับปุ่ม Update -->
+          <div class="col-md-3 col-sm-6">
+            <div class="d-flex align-items-end">
+              <div class="me-2 flex-grow-1">
+                <label for="workStatusSelect" class="form-label fw-bold">สถานะใบงาน</label>
+                <select id="workStatusSelect" class="form-select">
+                  <option value="Pending">Pending</option>
+                  <option value="Finish">Finish</option>
+                </select>
+              </div>
+              <div>
+                <button id="updateWorkStatus" class="btn btn-primary mb-1">Update</button>
+              </div>
+            </div>
+          </div>
+      
+        </div>
+      
+        <div class="mt-3 text-end text-muted small">
           Created At: <%= transactions[0].createdAtFormatted %><br>
           Last Updated: <%= transactions[0].updatedAtFormatted %>
-        </p>
-        
-        
-        
-
+        </div>
       </div>
+      
+      
+      
+
+      
 
           <!-- ✅ Modal แจ้งเตือนหาก Request ID ซ้ำ -->
           <div class="modal fade" id="duplicateModal" tabindex="-1" aria-labelledby="duplicateModalLabel"
@@ -66,49 +97,55 @@
             </div>
           </div>
 
+          <div id="alertMessage" class="alert d-none alert-dismissible fade show mt-3 text-center" role="alert">
+            <span id="alertText">ข้อความแจ้งเตือนที่นี่</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+
           <!-- ตารางรายการธุรกรรม -->
-          <table class="table table-bordered mt-3">
-            <thead class="table-dark">
-              <tr>
-                <th class="text-center align-middle">#</th>
-                <th class="text-center align-middle">SKU</th>
-                <th class="text-center align-middle">Quantity</th>
-                <th class="text-center align-middle col-2">Transaction Type</th>
-                <th class="text-center align-middle col-2">Work Status</th>
-                <th class="text-center align-middle">Created At</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% transactions.forEach((transaction, tIndex)=> { %>
-                <% transaction.products.forEach((product, pIndex)=> { %>
-                  <tr>
-                    <td class="text-center">
-                      <%= pIndex===0 ? tIndex + 1 : '' %>
-                    </td>
-                    <td class="text-center">
-                      <%= product.sku %>
-                    </td>
-                    <td class="text-center">
-                      <%= product.quantity %>
-                    </td>
-                    <td class="text-center">
-                      <%= transaction.transactionType %>
-                    </td>
-                    <td class="text-center">
-                      <span class="badge bg-<%= transaction.workStatus === 'Finish' ? 'success' : 'secondary' %>">
-                        <%= transaction.workStatus %>
-                      </span>
-                    </td>
-                    <td class="text-center">
-                      <%= transaction.createdAtFormatted %>
-                    </td>
-                  </tr>
+          <div class="table-responsive mt-3">
+            <table class="table table-bordered">
+              <thead class="table-secondary">
+                <tr>
+                  <th class="text-center align-middle">#</th>
+                  <th class="text-center align-middle">SKU</th>
+                  <th class="text-center align-middle">Quantity</th>
+                  <th class="text-center align-middle">Transaction Type</th>
+                  <th class="text-center align-middle">Work Status</th>
+                  <th class="text-center align-middle">Created At</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% transactions.forEach((transaction, tIndex)=> { %>
+                  <% transaction.products.forEach((product, pIndex)=> { %>
+                    <tr>
+                      <td class="text-center">
+                        <%= pIndex===0 ? tIndex + 1 : '' %>
+                      </td>
+                      <td class="text-center">
+                        <%= product.sku %>
+                      </td>
+                      <td class="text-center">
+                        <%= product.quantity %>
+                      </td>
+                      <td class="text-center">
+                        <%= transaction.transactionType %>
+                      </td>
+                      <td class="text-center">
+                        <span class="badge bg-<%= transaction.workStatus === 'Finish' ? 'success' : 'secondary' %>">
+                          <%= transaction.workStatus %>
+                        </span>
+                      </td>
+                      <td class="text-center">
+                        <%= transaction.createdAtFormatted %>
+                      </td>
+                    </tr>
                   <% }) %>
-                    <% }) %>
-            </tbody>
-
-          </table>
-
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+          
 
           <% let summary={}; transactions.forEach(transaction=> {
             transaction.products.forEach(product => {
@@ -131,46 +168,42 @@
             });
             %>
 
-
             <!-- ตาราง Summary ด้านล่าง -->
-            <h3 class="mt-5 text-center">Summary (ยอดใช้อะไหล่จริง)</h3>
-            <table class="table table-bordered mt-3">
-              <thead class="table-dark">
-                <tr>
-                  <th class="text-center align-middle">#</th>
-                  <th class="text-center align-middle">SKU</th>
-                  <th class="text-center align-middle">Description</th>
-                  <th class="text-center align-middle">Net Quantity</th>
-                </tr>
-              </thead>
-              <tbody>
-                <% Object.keys(summary).forEach((sku, index)=> { %>
+            <h3 class="mt-3 text-center">Summary (ยอดใช้อะไหล่จริง)</h3>
+
+            <div class="table-responsive mt-3">
+              <table class="table table-bordered mt-3">
+                <thead class="table-dark">
                   <tr>
-                    <td class="text-center">
-                      <%= index + 1 %>
-                    </td>
-                    <td class="text-center">
-                      <%= sku %>
-                    </td>
-                    <td class="text-center">
-                      <%= summary[sku].description %>
-                    </td>
-                    <td class="text-center">
-                      <%= summary[sku].net %>
-                    </td>
+                    <th class="text-center align-middle">#</th>
+                    <th class="text-center align-middle">SKU</th>
+                    <th class="text-center align-middle">Description</th>
+                    <th class="text-center align-middle">Net Quantity</th>
                   </tr>
-                  <% }) %>
-              </tbody>
-            </table>
-
-
-            <div id="alertMessage" class="alert d-none alert-dismissible fade show mt-3" role="alert">
-              <span id="alertText">ข้อความแจ้งเตือนที่นี่</span>
-              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </thead>
+                <tbody>
+                  <% Object.keys(summary).forEach((sku, index)=> { %>
+                    <tr>
+                      <td class="text-center">
+                        <%= index + 1 %>
+                      </td>
+                      <td class="text-center">
+                        <%= sku %>
+                      </td>
+                      <td class="text-center">
+                        <%= summary[sku].description %>
+                      </td>
+                      <td class="text-center">
+                        <%= summary[sku].net %>
+                      </td>
+                    </tr>
+                    <% }) %>
+                </tbody>
+              </table>
             </div>
+
           
-          
-            <a href="/workorder" class="btn btn-secondary mt-3">Back</a>
+            <a href="/workorder" class="btn btn-lg btn-secondary mb-3">Back</a>
             
             <script>
               document.addEventListener("DOMContentLoaded", function () {
@@ -189,6 +222,8 @@
               async function sendUpdate(force = false) {
                 const newStatus = document.getElementById("workStatusSelect").value;
                 const newRequestId = document.getElementById("newRequestId").value.trim();
+                const requesterName = document.getElementById("requesterNameInput").value.trim();
+                const storeId = document.getElementById("storeIdInput").value.trim();
             
                 const originalText = updateBtn.innerHTML;
                 updateBtn.disabled = true;
@@ -202,6 +237,8 @@
                     body: JSON.stringify({
                       workStatus: newStatus,
                       newRequestId: newRequestId,
+                      requesterName: requesterName,
+                      storeId: storeId,
                       forceUpdate: force
                     }),
                   });

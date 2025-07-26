@@ -823,7 +823,7 @@ router.get('/workorder/:requestId', isAuthenticated, async (req, res) => {
 
 router.put('/workorder/:requestId/update-status', isAuthenticated, async (req, res) => {
   const requestId = decodeURIComponent(req.params.requestId);
-  const { workStatus, newRequestId, forceUpdate } = req.body;
+  const { workStatus, newRequestId, requesterName, storeId, forceUpdate } = req.body;
 
   try {
     if (newRequestId && newRequestId !== requestId && !forceUpdate) {
@@ -836,16 +836,33 @@ router.put('/workorder/:requestId/update-status', isAuthenticated, async (req, r
       }
     }
 
+    const updateFields = {
+      workStatus,
+      updatedAt: new Date()
+    };
+    
+    if (requesterName) updateFields.requesterName = requesterName;
+
+    if (storeId) {
+      const cleanStoreId = parseInt(storeId);
+      const storeExists = await Store.findOne({ storeId: cleanStoreId });
+      if (!storeExists) {
+        return res
+          .status(400)
+          .json({ message: "Store ID นี้ไม่มีอยู่ในระบบ" });
+      }
+      updateFields.storeId = cleanStoreId;
+    }
+
+    if (newRequestId && newRequestId !== requestId) {
+      updateFields.requestId = newRequestId;
+    }
+    
     const result = await Transaction.updateMany(
       { requestId },
-      {
-        $set: {
-          workStatus,
-          updatedAt: new Date(), // ✅ เพิ่มเพื่อให้ timestamps ทำงานกับ updateMany
-          ...(newRequestId && newRequestId !== requestId ? { requestId: newRequestId } : {})
-        }
-      }
+      { $set: updateFields }
     );
+    
 
     if (result.modifiedCount === 0) {
       return res.status(404).json({ message: "No transactions found to update." });

@@ -50,8 +50,10 @@
         </div>
 
         <% if (products.length > 0) { %>
-          <div class="table-responsive invisible" id="transactionWrapper">
+          <div class="invisible" id="transactionWrapper">
             <table id="transactionTable" class="table table-bordered table-striped display nowrap" style="width:100%">
+          
+
               <thead class="table-dark">
               <tr>
                 <th>SKU</th>
@@ -144,9 +146,8 @@
     $('#maxDate').val(todayStr);
 
     const table = $('#transactionTable').DataTable({
-      dom:
-        "<'row mb-2'" +
-        "<'col-12 col-md-6 mb-2 mb-md-0'l>" +
+      dom: "<'row mb-2'" +
+        "<'col-12 col-md-6 mb-2 mb-md-0'l>" + 
         "<'col-12 col-md-6 d-flex justify-content-md-end justify-content-center'B>" +
         ">" +
         "<'row mb-2'<'col-12'f>>" +
@@ -170,10 +171,9 @@
           className: 'btn btn-outline-primary btn-sm'
         }
       ],
-
-      order: [[7, 'desc']],
       scrollX: true,
       responsive: false,
+      order: [[7, 'desc']],
       pageLength: 25,
       lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
       pagingType: "simple_numbers",
