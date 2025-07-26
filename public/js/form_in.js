@@ -153,6 +153,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (response.ok && data.transaction) {
         // หากพบข้อมูล transaction ในฐานข้อมูล
         nameInput.value = data.transaction.requesterName;
+        $('#requesterName').val(data.transaction.requesterName).trigger('change');
         workStatusInput.value = data.transaction.workStatus || "Pending";
         storeIdInputField.value = data.transaction.storeId;
         storenameInputField.value = data.transaction.storeName || ""; // ถ้า storeName มีค่า ให้แสดง
@@ -162,6 +163,7 @@ document.addEventListener("DOMContentLoaded", function () {
       } else {
         // หากไม่พบข้อมูล ให้ปล่อยให้ฟอร์มเป็นค่าว่าง
         nameInput.value = "";
+        $('#requesterName').val(null).trigger('change');
         workStatusInput.value = "Pending";
         storeIdInputField.value = "";
         storenameInputField.value = "";
@@ -173,6 +175,7 @@ document.addEventListener("DOMContentLoaded", function () {
       console.error("Error fetching transaction details:", error);
       // ถ้าเกิดข้อผิดพลาด ให้เคลียร์ค่าหรือแสดงข้อความผิดพลาด
       nameInput.value = "";
+      $('#requesterName').val(null).trigger('change');
       workStatusInput.value = "";
       storeIdInputField.value = "";
       storenameInputField.value = "";
