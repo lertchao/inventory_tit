@@ -26,51 +26,49 @@
     
 
       
-      <div class="container mt-4">
-        <div class="row g-3 align-items-end justify-content-end">
-      
-          <div class="col-md-3 col-sm-6">
-            <label for="requesterNameInput" class="form-label fw-bold">ชื่อผู้เบิก</label>
-            <input id="requesterNameInput" class="form-control" value="<%= transactions[0].requesterName %>">
-          </div>
-      
-          <div class="col-md-3 col-sm-6">
-            <label for="newRequestId" class="form-label fw-bold">เลขที่ใบเบิก</label>
-            <input id="newRequestId" class="form-control" value="<%= requestId %>">
-          </div>
-      
-          <div class="col-md-3 col-sm-6">
-            <label for="storeIdInput" class="form-label fw-bold">รหัสสาขา</label>
-            <input id="storeIdInput" type="text" class="form-control"
+    <div class="container mt-4">
+      <div class="row g-3 align-items-end justify-content-end">
+        
+        <div class="col-md-3 col-sm-6">
+          <label for="requesterNameInput" class="form-label fw-bold">ชื่อผู้เบิก</label>
+          <input id="requesterNameInput" class="form-control" value="<%= transactions[0].requesterName %>">
+        </div>
+    
+        <div class="col-md-3 col-sm-6">
+          <label for="newRequestId" class="form-label fw-bold">เลขที่ใบเบิก</label>
+          <input id="newRequestId" class="form-control" value="<%= requestId %>">
+        </div>
+    
+        <div class="col-md-2 col-sm-6">
+          <label for="storeIdInput" class="form-label fw-bold">รหัสสาขา</label>
+          <input id="storeIdInput" type="text" class="form-control"
             value="<%= String(transactions[0].storeId).padStart(3, '0') %>"
             pattern="\d{3}" maxlength="3"
-            oninput="this.value = this.value.replace(/\D/g, '').slice(0, 3)">          
-          </div>
-          
-      
-          <!-- ✅ รวม "สถานะใบงาน" กับปุ่ม Update -->
-          <div class="col-md-3 col-sm-6">
-            <div class="d-flex align-items-end">
-              <div class="me-2 flex-grow-1">
-                <label for="workStatusSelect" class="form-label fw-bold">สถานะใบงาน</label>
-                <select id="workStatusSelect" class="form-select">
-                  <option value="Pending">Pending</option>
-                  <option value="Finish">Finish</option>
-                </select>
-              </div>
-              <div>
-                <button id="updateWorkStatus" class="btn btn-primary mb-1">Update</button>
-              </div>
-            </div>
-          </div>
-      
+            oninput="this.value = this.value.replace(/\D/g, '').slice(0, 3)">
         </div>
-      
-        <div class="mt-3 text-end text-muted small">
-          Created At: <%= transactions[0].createdAtFormatted %><br>
-          Last Updated: <%= transactions[0].updatedAtFormatted %>
+    
+        <div class="col-md-2 col-sm-6">
+          <label for="workStatusSelect" class="form-label fw-bold">สถานะใบงาน</label>
+          <select id="workStatusSelect" class="form-select">
+            <option value="Pending">Pending</option>
+            <option value="Finish">Finish</option>
+          </select>
         </div>
+    
+        <div class="col-md-2 col-sm-12">
+          <label class="form-label fw-bold invisible">Update</label>
+          <button id="updateWorkStatus" class="btn btn-primary w-100">Update</button>
+        </div>
+        
+    
       </div>
+    
+      <div class="mt-3 text-end text-muted small">
+        Created At: <%= transactions[0].createdAtFormatted %><br>
+        Last Updated: <%= transactions[0].updatedAtFormatted %>
+      </div>
+    </div>
+    
       
       
       
