@@ -148,5 +148,31 @@
       font-size: 0.55rem;
     }
   }
-  
+
+/* ไม่ให้ข้อความในแท็กขึ้นบรรทัดใหม่ */
+.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice,
+.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice__display {
+  white-space: nowrap !important;
+}
+
+/* ปรับแท็กให้จัดแนวสวย และถ้าพื้นที่ไม่พอให้ ... แทน */
+.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice {
+  display: inline-flex !important;
+  align-items: center !important;
+  max-width: 100% !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice__display {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* เผื่อกรณีข้อความยาวมาก ให้แสดงเป็นเม็ดเดียวไม่แบ่งบรรทัด */
+.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__rendered {
+  gap: .25rem !important;
+}
+
+
+
+
   

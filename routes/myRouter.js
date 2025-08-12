@@ -21,14 +21,14 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 
-router.get("/register",(req, res) => {
+router.get("/register",isAuthenticated, isAdmin,(req, res) => {
   res.render("register", {
     message: null,
     success: false
   });
 });
 
-router.post("/register",async (req, res) => {
+router.post("/register",isAuthenticated, isAdmin, async (req, res) => {
   try {
     const { username, password, confirmPassword, role } = req.body;
 
@@ -547,31 +547,45 @@ router.get('/onhand', isAuthenticated, async (req, res) => {
 router.get('/public-onhand', async (req, res) => {
   const perPage = 12;
   const page = parseInt(req.query.page) || 1;
-  const searchQueryRaw = req.query.search || '';
+  const searchQueryRaw = (req.query.search || '').trim();
+
+  // รับ machineTypes ได้ทั้งแบบ ?machineTypes=A&machineTypes=B หรือ ?machineTypes=A,B
+  let machineTypes = req.query.machineTypes || [];
+  if (!Array.isArray(machineTypes)) machineTypes = [machineTypes];
+  machineTypes = machineTypes
+    .flatMap(v => (typeof v === 'string' ? v.split(',') : v))
+    .map(v => v.trim())
+    .filter(Boolean);
 
   function escapeRegex(str) {
-      return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
-  const escapedQuery = escapeRegex(searchQueryRaw);
-  const condition = searchQueryRaw ? {
-      $or: [
-          { sku: { $regex: escapedQuery, $options: 'i' } },
-          { description: { $regex: escapedQuery, $options: 'i' } }
-      ]
-  } : {};
+  const condition = {};
+  if (searchQueryRaw) {
+    const escaped = escapeRegex(searchQueryRaw);
+    condition.$or = [
+      { sku: { $regex: escaped, $options: 'i' } },
+      { description: { $regex: escaped, $options: 'i' } }
+    ];
+  }
+  if (machineTypes.length > 0) {
+    condition.machineTypes = { $in: machineTypes };
+  }
 
   const total = await Product.countDocuments(condition);
   const products = await Product.find(condition)
-      .skip((page - 1) * perPage)
-      .limit(perPage);
+    .skip((page - 1) * perPage)
+    .limit(perPage);
 
   res.render('onhand-public', {
-      products,
-      search: searchQueryRaw,
-      current: page,
-      pages: Math.ceil(total / perPage)
+    products,
+    search: searchQueryRaw,
+    current: page,
+    pages: Math.ceil(total / perPage),
+    machineTypesSelected: machineTypes // 👉 ส่งกลับไปเพื่อ preselect
   });
 });
+
 
 
 router.post('/delete/:id', isAuthenticated, isAdmin, async (req, res) => {
@@ -1366,7 +1380,34 @@ router.post('/update', upload.single('image'), isAuthenticated, async (req, res)
 });
 
 
-router.post("/import-excel",isAuthenticated, async (req, res) => {
+router.post("/import-excel", isAuthenticated, async (req, res) => {
+  // ✅ whitelist และ helper ใช้เฉพาะใน route นี้
+  const ALLOWED_MACHINE_TYPES = [
+    "Clover", "E2S", "Grind Master", "Macro tab", "Mastrana I", "Mastrena II",
+    "NGO", "Nitro", "Nitro Single", "Oviso", "Other", "Vitamix", "Ditting"
+  ];
+
+  function parseMachineTypes(raw) {
+    if (raw === undefined || raw === null) return null; // ไม่มีคอลัมน์ → ไม่แตะของเดิม
+    const arr = String(raw)
+      .split(",")
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    const normalized = arr.map(val => {
+      const hit = ALLOWED_MACHINE_TYPES.find(a => a.toLowerCase() === val.toLowerCase());
+      return hit || null;
+    }).filter(Boolean);
+
+    return [...new Set(normalized)];
+  }
+
+  const toNumber2 = (v) => {
+    const n = parseFloat(String(v).replace(/,/g, ''));
+    if (Number.isNaN(n)) return undefined;
+    return Math.round(n * 100) / 100;
+  };
+
   const { data: parts, requesterName, requestId } = req.body;
 
   try {
@@ -1377,49 +1418,51 @@ router.post("/import-excel",isAuthenticated, async (req, res) => {
     for (const item of parts) {
       if (!item.SKU) continue;
 
-      const sku = item.SKU.trim();
+      const sku = String(item.SKU).trim();
       const existingProduct = await Product.findOne({ sku });
 
       const updateFields = {};
-      if (item.Description) updateFields.description = item.Description.trim();
-      if (item.Type) updateFields.typeparts = item.Type.trim();
-      if (item.Cost !== undefined && item.Cost !== "") updateFields.cost = parseFloat(item.Cost);
+      if (item.Description) updateFields.description = String(item.Description).trim();
+
+      if (item.Type) updateFields.typeparts = String(item.Type).trim();
+
+      if (item.Cost !== undefined && item.Cost !== "") {
+        const cost2 = toNumber2(item.Cost);
+        if (cost2 !== undefined) updateFields.cost = cost2;
+      }
+
       if (item.Image) updateFields.image = item.Image;
+
+      const mtParsed = parseMachineTypes(item.MachineTypes ?? item.machineTypes);
+      if (mtParsed && mtParsed.length) {
+        updateFields.machineTypes = mtParsed;
+      }
 
       let importedQuantity = parseInt(item.Quantity);
       if (isNaN(importedQuantity)) importedQuantity = 0;
-      
-      // กำหนด quantity ให้ product ใหม่ หรือ update
+
       if (existingProduct) {
         updateFields.quantity = (existingProduct.quantity || 0) + importedQuantity;
       } else {
         updateFields.quantity = importedQuantity;
       }
-      
-      // ✔ สร้าง Transaction เฉพาะเมื่อ quantity > 0
+
       if (importedQuantity > 0) {
         const transaction = new Transaction({
           requesterName: requesterName || "Excel Import",
           requestId: requestId || "Excel Import",
           transactionType: "IN",
-          storeId:"903",
+          storeId: "903",
           workStatus: "Finish",
-          products: [
-            {
-              sku: sku,
-              quantity: importedQuantity
-            }
-          ],
+          products: [{ sku, quantity: importedQuantity }],
           username: req.user?.username || "system",
           createdAt: new Date()
         });
-      
         await transaction.save();
       }
-      
 
       await Product.updateOne(
-        { sku: sku },
+        { sku },
         { $set: updateFields },
         { upsert: true }
       );
@@ -1432,10 +1475,11 @@ router.post("/import-excel",isAuthenticated, async (req, res) => {
   }
 });
 
+
 router.get('/stock-summary',isAuthenticated, async (req, res) => {
   try {
     // ดึงข้อมูล onHand จาก collection products
-    const products = await Product.find({}, 'sku description quantity');
+    const products = await Product.find({}, 'sku description quantity typeparts cost');
 
     // ดึงข้อมูล Pending (รวม OUT - IN)
     const pendingData = await Transaction.aggregate([
@@ -1473,6 +1517,8 @@ router.get('/stock-summary',isAuthenticated, async (req, res) => {
     const summary = products.map(product => ({
       sku: product.sku,
       description: product.description,
+      type: product.typeparts || '',                 
+      cost: typeof product.cost === 'number' ? product.cost : 0,
       onHand: product.quantity,
       pending: pendingMap[product.sku] || 0
     }))

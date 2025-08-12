@@ -150,7 +150,7 @@
                           <th class="text-center">Quantity IN</th>
                           <th class="text-center">Quantity OUT</th>
                           <th class="text-center">On Shelf</th>
-                          <th class="text-center">Counted Qty</th>
+                          <th class="text-center col-1">Counted Qty</th>
                           <th class="text-center">Diff</th>
                         </tr>
                       </thead>
@@ -284,26 +284,36 @@
     });
   </script>
 
-  <!-- ✅ JavaScript ตรวจสอบ Diff -->
+<!-- ✅ JavaScript ตรวจสอบ Diff -->
 <script>
   $(document).on('input', '.counted-input', function () {
-    const counted = parseInt($(this).val()) || 0;
+    const inputVal = $(this).val().trim();
+    const counted = parseInt(inputVal) || 0;
     const onShelf = parseInt($(this).closest('tr').find('.on-shelf-cell').text()) || 0;
     const diff = counted - onShelf;
     const diffCell = $(this).closest('tr').find('.diff-cell');
+    const row = $(this).closest('tr');
 
-    diffCell.text((diff > 0 ? '+' : '') + diff);
+    // เคลียร์ค่าก่อน
     diffCell.removeClass('text-danger text-success');
+    row.removeClass('table-danger');
 
-    if (diff !== 0) {
-      diffCell.addClass('text-danger');
-      $(this).closest('tr').addClass('table-danger');
+    if (inputVal === "") {
+      // ถ้าเคลียร์ค่ากรอกให้เคลียร์ Diff ด้วย
+      diffCell.text('');
     } else {
-      diffCell.addClass('text-success');
-      $(this).closest('tr').removeClass('table-danger');
+      diffCell.text((diff > 0 ? '+' : '') + diff);
+
+      if (diff !== 0) {
+        diffCell.addClass('text-danger');
+        row.addClass('table-danger');
+      } else {
+        diffCell.addClass('text-success');
+      }
     }
   });
 </script>
+
 
 
 </body>

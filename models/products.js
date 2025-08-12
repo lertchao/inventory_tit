@@ -26,10 +26,16 @@ const productSchema = new mongoose.Schema({
   typeparts: { 
     type: String, 
     enum: ["CM", "PM"]
+  },
+  machineTypes: {
+    type: [String],
+    default: []
   }
+
 }, {
-  timestamps: true // ✅ เพิ่มบรรทัดนี้
+  timestamps: true
 });
+
 
 
 //Models

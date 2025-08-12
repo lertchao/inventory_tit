@@ -34,11 +34,13 @@
               </div>
 
           <div class="table-responsive">
-            <table table id="stockSummaryTable" class="table table-bordered table-hover">
+            <table id="stockSummaryTable" class="table table-bordered table-hover">
               <thead class="table-dark">
                 <tr>
                   <th>SKU</th>
                   <th>Description</th>
+                  <th class="text-center align-middle">Type</th>
+                  <th class="text-center align-middle">Cost</th>
                   <th class="text-center align-middle">On Shelf</th>
                   <th class="text-center align-middle">Pending</th>
                   <th class="text-center align-middle">Total</th>
@@ -49,6 +51,10 @@
                   <tr>
                     <td><%= item.sku %></td>
                     <td><%= item.description %></td>
+                    <td class="text-center align-middle"><%= item.type %></td>
+                    <td class="text-end align-middle">
+                      <%= (item.cost ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+                    </td>
                     <td class="text-center align-middle"><%= item.onHand %></td>
                     <td class="text-center align-middle"><%= item.pending %></td>
                     <td class="text-center align-middle"><%= item.onHand + item.pending %></td>
