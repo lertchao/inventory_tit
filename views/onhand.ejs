@@ -66,7 +66,11 @@
                                     </h5>
                                     <p class="card-text">Description: <%= product.description %>
                                     </p>
-                                    <p class="card-text">Cost: <%= new Intl.NumberFormat().format(product.cost) %>
+                                    <p class="card-text">
+                                        Cost: <%= new Intl.NumberFormat(undefined, { 
+                                                minimumFractionDigits: 2, 
+                                                maximumFractionDigits: 2 
+                                              }).format(product.cost) %>
                                     </p>
                                     <h4 class="card-text text-end <%= product.quantity <= 0 ? 'text-danger' : 'text-dark' %>">
                                         Quantity: <%= product.quantity %>
