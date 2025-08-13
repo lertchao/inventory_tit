@@ -1383,7 +1383,7 @@ router.post('/update', upload.single('image'), isAuthenticated, async (req, res)
 router.post("/import-excel", isAuthenticated, async (req, res) => {
   // ✅ whitelist และ helper ใช้เฉพาะใน route นี้
   const ALLOWED_MACHINE_TYPES = [
-    "Clover", "E2S", "Grind Master", "Macro tab", "Mastrana I", "Mastrena II",
+    "Clover", "E2S", "Grind Master", "Macro Tab", "Mastrena I", "Mastrena II",
     "NGO", "Nitro", "Nitro Single", "Oviso", "Other", "Vitamix", "Ditting"
   ];
 
