@@ -50,15 +50,18 @@
                   <option value="Big">Big</option>
                   <option value="Bu">Bu</option>
                   <option value="CHP">CHP</option>
+                  <option value="Dan">Dan</option>
                   <option value="Dax">Dax</option>
                   <option value="Gale">Gale</option>
                   <option value="Ham">Ham</option>
                   <option value="Home">Home</option>
+                  <option value="Hut">Hut</option>
                   <option value="Korn">Korn</option>
                   <option value="Lert">Lert</option>
                   <option value="Mummie">Mummie</option>
                   <option value="New">New</option>
                   <option value="Night">Night</option>
+                  <option value="Noi">Noi</option>
                   <option value="Organ">Organ</option>
                   <option value="Pao">Pao</option>
                   <option value="Peet">Peet</option>
@@ -68,6 +71,8 @@
                   <option value="Udom">Udom</option>
                   <option value="Witt">Witt</option>
                 </select>
+                
+                
               </div>
 
               <div class="mb-3 col-md-4 col-sm-12">
@@ -205,6 +210,7 @@
 
 <script>
 $(document).ready(function () {
+
   $('#requesterName').select2({
     theme: 'bootstrap-5',
     placeholder: 'กรุณาเลือกชื่อผู้เบิก',
@@ -212,15 +218,6 @@ $(document).ready(function () {
     width: '100%',
     minimumResultsForSearch: 0
   });
-
-  // เมื่อเลือกชื่อแล้ว focus ไปยังสถานะใบงาน
-  // $('#requesterName').on('select2:close', function () {
-  //   if ($(this).val()) {
-  //     setTimeout(() => {
-  //       document.querySelector('[name="workStatus"]').focus();
-  //     }, 10);
-  //   }
-  // });
 
   // ป้องกัน Enter ส่งฟอร์มก่อนเวลา
   $('#requesterName').on('keypress', function (e) {

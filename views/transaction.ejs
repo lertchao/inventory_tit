@@ -114,27 +114,31 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 
 <script>
-  // ✅ Custom Date Filter
-  $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
-    const minInput = $('#minDate').val();
-    const maxInput = $('#maxDate').val();
+ // ✅ Custom Date Filter
+function parseLocalDateInput(s) {
+  if (!s) return null;
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d); // local midnight
+}
 
-    const cell = $('#transactionTable').DataTable().cell(dataIndex, 7).node();
-    const dateStr = $(cell).attr('data-order');
-    const rowDate = new Date(dateStr);
+$.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
+  const minInput = $('#minDate').val();
+  const maxInput = $('#maxDate').val();
 
-    let min = minInput ? new Date(minInput) : null;
-    let max = maxInput ? new Date(maxInput) : null;
+  const cell = $('#transactionTable').DataTable().cell(dataIndex, 7).node();
+  const dateStr = $(cell).attr('data-order');
+  const rowDate = new Date(dateStr);
 
-    if (max) {
-      max.setHours(23, 59, 59, 999);
-    }
+  let min = parseLocalDateInput(minInput);
+  let max = parseLocalDateInput(maxInput);
 
-    if ((!min || rowDate >= min) && (!max || rowDate <= max)) {
-      return true;
-    }
-    return false;
-  });
+  if (max) {
+    max.setHours(23, 59, 59, 999);
+  }
+
+  return (!min || rowDate >= min) && (!max || rowDate <= max);
+});
+
 
   $(document).ready(function () {
     const today = new Date();
