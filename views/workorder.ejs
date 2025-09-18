@@ -34,22 +34,33 @@
           <div class="container-fluid">
             <div class="p-3">
               <div class="row mb-1">
-                <div class="col-lg-3 col-12 mx-auto p-1">
+                <div class="col-lg-3 col-sm-12 mx-auto p-1">
                   <form method="get" action="/workorder">
                     <input type="text" name="search" class="form-control" value="<%= searchQuery || '' %>"
                       placeholder="กรอก RP number หรือ ชื่อ" />
                 </div>
-                <div class="col-lg-3 col-6 mx-auto p-1">
+
+                <div class="col-lg-3 col-sm-12 mx-auto p-1">
+                  <input type="text" name="storeId" class="form-control" value="<%= storeId || '' %>"
+                    inputmode="numeric" pattern="\d{1,3}" maxlength="3"
+                    placeholder="รหัสสาขา (เช่น 1 หรือ 001)" />
+                </div>
+            
+
+                <div class="col-lg-3 col-sm-12 mx-auto p-1">
                   <select name="statusFilter" class="form-select">
                     <option value="">-- เลือก Work Status --</option>
                     <option value="Pending" <%= statusFilter === 'Pending' ? 'selected' : '' %>>Pending</option>
                     <option value="Finish" <%= statusFilter === 'Finish' ? 'selected' : '' %>>Finish</option>
+                    <option value="Cancel"  <%= statusFilter === 'Cancel'  ? 'selected' : '' %>>Cancel</option>
                   </select>
                 </div>
-                <div class="col-lg-6 col-6 mx-auto p-1">
+
+                <div class="col-lg-3 col-md-3 col-sm-12 p-1">
                   <button type="submit" class="btn btn-success">ค้นหา</button>
-                  </form>
                 </div>
+                
+
               </div>
             </div>
           </div>
@@ -88,15 +99,20 @@
                         </td>
                         <td class="text-center">
                           <% if (transaction.workStatus) { %>
-                            <span class="badge bg-<%= transaction.workStatus === 'Finish' ? 'success' : 'secondary' %>">
-                              <%= transaction.workStatus %>
-                            </span>
+                            <% const badgeClass =
+                                 transaction.workStatus === 'Finish' ? 'success' :
+                                 transaction.workStatus === 'Cancel' ? 'danger'  :
+                                 'secondary'; %>
+                            <span class="badge bg-<%= badgeClass %>"><%= transaction.workStatus %></span>
                           <% } %>
+                          
                         </td>
                         <td class="text-center"><%= transaction.transactionCount %></td>
                         <td class="text-center">
                           <a href="/workorder/<%= encodeURIComponent(transaction._id) %>" 
-                            class="btn btn-outline-dark btn-sm">View</a>
+                            class="btn btn-outline-dark btn-sm"  
+                            target="_blank"
+                            rel="noopener noreferrer">View</a>
                         </td>
                       </tr>
                     <% }) %>
@@ -109,15 +125,18 @@
 <% if (pages > 1) { %>
   <div class="overflow-auto">
     <%
-      const pageWindow = 2; // จำนวนหน้าซ้าย-ขวา
-      let startPage = Math.max(1, current - pageWindow);
-      let endPage   = Math.min(pages, current + pageWindow);
-
-      if (current <= pageWindow)        endPage   = Math.min(pages, startPage + 4);
-      if (current + pageWindow > pages) startPage = Math.max(1, pages - 4);
-
-      const qsBase = `search=${encodeURIComponent(searchQuery || '')}&statusFilter=${encodeURIComponent(statusFilter || '')}`;
-    %>
+    const pageWindow = 2;
+    let startPage = Math.max(1, current - pageWindow);
+    let endPage   = Math.min(pages, current + pageWindow);
+  
+    if (current <= pageWindow)        endPage   = Math.min(pages, startPage + 4);
+    if (current + pageWindow > pages) startPage = Math.max(1, pages - 4);
+  
+    const qsBase = `search=${encodeURIComponent(searchQuery || '')}`
+                 + `&statusFilter=${encodeURIComponent(statusFilter || '')}`
+                 + `&storeId=${encodeURIComponent(storeId || '')}`;
+  %>
+  
 
     <nav aria-label="Page navigation" class="mt-4">
       <ul class="pagination justify-content-center flex-wrap">
@@ -176,36 +195,47 @@
 
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    const searchInput = document.querySelector("input[name='search']");
-    const statusFilter = document.querySelector("select[name='statusFilter']");
+    const searchInput   = document.querySelector("input[name='search']");
+    const storeIdInput  = document.querySelector("input[name='storeId']");
+    const statusFilter  = document.querySelector("select[name='statusFilter']");
 
-    // ดึงค่าจาก sessionStorage
+    // โหลดค่าที่เคยค้นหา
     const savedSearchQuery = sessionStorage.getItem("searchQuery") || "";
     const savedStatusFilter = sessionStorage.getItem("statusFilter") || "";
+    const savedStoreId = sessionStorage.getItem("storeId") || "";
 
-    // ถ้ามีค่าที่เคยค้นหา ให้เปลี่ยน URL แล้วรีโหลดผลลัพธ์ทันที
-    if (savedSearchQuery || savedStatusFilter) {
-      const urlParams = new URLSearchParams(window.location.search);
-      if (!urlParams.get("search") && !urlParams.get("statusFilter")) {
-        urlParams.set("search", savedSearchQuery);
-        urlParams.set("statusFilter", savedStatusFilter);
-        window.location.href = `/workorder?${urlParams.toString()}`; 
+    // ถ้า URL ยังว่าง ให้เติมค่าจาก sessionStorage แล้วโหลดผลลัพธ์
+    const urlParams = new URLSearchParams(window.location.search);
+    if (!urlParams.get("search") && !urlParams.get("statusFilter") && !urlParams.get("storeId")) {
+      if (savedSearchQuery || savedStatusFilter || savedStoreId) {
+        if (savedSearchQuery) urlParams.set("search", savedSearchQuery);
+        if (savedStatusFilter) urlParams.set("statusFilter", savedStatusFilter);
+        if (savedStoreId) urlParams.set("storeId", savedStoreId);
+        window.location.href = `/workorder?${urlParams.toString()}`;
+        return; // ป้องกันรันต่อ
       }
     }
 
-    // ตั้งค่าให้ input มีค่าที่เคยค้นหา
+    // ตั้งค่า input ให้เท่ากับค่าที่บันทึกไว้
     searchInput.value = savedSearchQuery;
     statusFilter.value = savedStatusFilter;
+    storeIdInput.value = savedStoreId;
 
-    // บันทึกค่าลง sessionStorage เมื่อมีการเปลี่ยนแปลง
+    // บันทึกค่าลง sessionStorage เมื่อเปลี่ยน
     searchInput.addEventListener("input", () => {
       sessionStorage.setItem("searchQuery", searchInput.value);
     });
     statusFilter.addEventListener("change", () => {
       sessionStorage.setItem("statusFilter", statusFilter.value);
     });
+    storeIdInput.addEventListener("input", () => {
+      // เก็บเฉพาะตัวเลข 1–3 หลัก
+      const digits = storeIdInput.value.replace(/\D/g, '').slice(0, 3);
+      sessionStorage.setItem("storeId", digits);
+    });
   });
 </script>
+
 
 
 

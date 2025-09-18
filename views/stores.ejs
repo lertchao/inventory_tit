@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Manage Stores</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="icon" href="/images/storage.png" sizes="32x32">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+  <style>
+    .table thead th { vertical-align: middle; }
+  </style>
+</head>
+<body>
+
+<!-- ✅ Form แยกนอก modal (ใช้กับลบ) -->
+<form method="POST" id="deleteForm"></form>
+
+<!-- ✅ Modal: Confirm Delete -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">ยืนยันการลบ</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="deleteModalAlert"></div>
+        <p>คุณแน่ใจหรือไม่ว่าต้องการลบสาขา: <strong id="storeToDelete">---</strong> ?</p>
+        <div class="small text-muted">การลบจะลบเฉพาะข้อมูลสาขา ไม่กระทบ Transaction เดิม</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">ยกเลิก</button>
+        <!-- ปุ่มนี้จะ submit ฟอร์ม deleteForm (เราจะดักไว้ยิง DELETE) -->
+        <button type="submit" class="btn btn-danger" form="deleteForm">ยืนยันลบ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ✅ Modal: Add/Edit Store -->
+<div class="modal fade" id="storeModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="storeModalLabel">เพิ่มสาขา</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="storeModalAlert"></div>
+        <form id="storeForm" autocomplete="off">
+          <input type="hidden" id="_id">
+          <div class="mb-3">
+            <label class="form-label fw-bold" for="storeId">Store ID</label>
+            <input type="number" min="0" step="1" id="storeId" class="form-control" placeholder="เช่น 17" required>
+            <div class="form-text">ต้องเป็นจำนวนเต็ม (0 ขึ้นไป) และไม่ซ้ำ</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-bold" for="storename">Store Name</label>
+            <input type="text" id="storename" class="form-control" placeholder="เช่น Thonglor" required>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">ปิด</button>
+        <button class="btn btn-primary" id="btnSave" type="button">บันทึก</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="desktop-sidebar col-lg-2 col-12 d-none d-lg-block">
+      <%- include('sidebar') %>
+    </div>
+    <%- include('sidebarMobile') %>
+
+    <div class="col-lg-10 col-12">
+      <h2 class="text-center p-4">
+        Manage Stores
+        <img src="/images/edit.png" alt="logo" class="img-fluid" style="max-width:40px; vertical-align:middle" />
+      </h2>
+
+      <!-- Actions + Search -->
+      <div class="container-fluid">
+        <div class="p-3">
+          <div class="row gy-2 align-items-center">
+            <div class="col-lg-6 col-12 mx-auto">
+              <!-- ฟอร์มค้นหาเหมือนหน้า parts: จะ filter ใน client-side -->
+              <form class="d-flex" onsubmit="event.preventDefault();">
+                <input type="text" id="searchInput" class="form-control me-2" placeholder="กรอก Store ID หรือ Store Name">
+                <button type="button" id="btnSearch" class="btn btn-success">ค้นหา</button>
+              </form>
+            </div>
+            <div class="col-lg-6 col-12 text-lg-end text-center">
+              <button class="btn btn-primary" id="btnAddStore">
+                <i class="bi bi-plus-lg"></i> เพิ่มสาขา
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="alertWrap" class="px-3"></div>
+
+      <!-- ตาราง -->
+      <div class="table-responsive px-3">
+        <table class="table table-striped table-bordered table-hover">
+          <thead>
+            <tr class="table-dark">
+              <th class="text-center col-2">Store ID</th>
+              <th class="text-center col-7">Store Name</th>
+              <th class="text-center col-1">แก้ไข</th>
+              <th class="text-center col-1">ลบ</th>
+            </tr>
+          </thead>
+          <tbody id="storeTbody">
+            <!-- rows fill by JS -->
+          </tbody>
+        </table>
+        <div id="noResult" class="alert alert-warning text-center d-none">ไม่พบข้อมูลที่ตรงกับคำค้นหา</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  // -------- State / Helper ----------
+  let cache = [];        // เก็บรายการทั้งหมดจาก /stores/list
+  let keyword = '';      // คีย์เวิร์ดค้นหา
+
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => document.querySelectorAll(sel);
+
+  function showAlertIn(containerSel, type, text, timeout = 2500) {
+  const wrap = document.querySelector(containerSel);
+  if (!wrap) return;
+  wrap.innerHTML = `
+    <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+      ${text}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  `;
+  if (timeout) setTimeout(() => { if (wrap) wrap.innerHTML = ''; }, timeout);
+}
+
+
+  function showAlert(type, text, timeout = 2500) {
+    const wrap = $('#alertWrap');
+    wrap.innerHTML = `
+      <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+        ${text}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    `;
+    if (timeout) setTimeout(() => wrap.innerHTML = '', timeout);
+  }
+
+  async function fetchJSON(url, options = {}) {
+    const res = await fetch(url, {
+      headers: { 'Content-Type': 'application/json' },
+      ...options
+    });
+    let data = {};
+    try { data = await res.json(); } catch(e) {}
+    if (!res.ok || data.ok === false) {
+      const msg = data.message || data.error || res.statusText || 'เกิดข้อผิดพลาด';
+      throw new Error(msg);
+    }
+    return data;
+  }
+
+  function renderRows(items) {
+    const tbody = $('#storeTbody');
+    tbody.innerHTML = '';
+
+    if (!items || items.length === 0) {
+      $('#noResult').classList.remove('d-none');
+      return;
+    }
+    $('#noResult').classList.add('d-none');
+
+    items.forEach(item => {
+      const tr = document.createElement('tr');
+
+      tr.innerHTML = `
+        <td class="text-center">${String(item.storeId ?? '').padStart(3, '0')}</td>
+        <td class="text-start">${escapeHtml(item.storename || '')}</td>
+        <td class="text-center">
+          <button class="btn btn-warning btn-sm btn-edit" data-id="${item._id}">แก้ไข</button>
+        </td>
+        <td class="text-center">
+          <button class="btn btn-danger btn-sm btn-del"
+                  data-id="${item._id}"
+                  data-label="${String(item.storeId ?? '').padStart(3,'0')} - ${escapeHtml(item.storename || '')}">
+            ลบ
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  function applyFilter() {
+  const kw = (keyword || '').trim().toLowerCase();
+  if (!kw) { renderRows(cache); return; }
+
+  const isDigitsOnly = /^\d+$/.test(kw);      // คีย์เวิร์ดเป็นตัวเลขล้วนไหม
+  const kwNoZero = kw.replace(/^0+/, '') || '0'; // "004" -> "4", กรณีพิมพ์ "000" ให้เป็น "0"
+  const paddedKw = kw.padStart(3, '0');       // "4"   -> "004", "09" -> "009"
+
+  const filtered = cache.filter(x => {
+    const raw = String(x.storeId ?? '');           // เช่น "4"
+    const padded = raw.padStart(3, '0');           // เช่น "004"
+    const nameStr = String(x.storename ?? '').toLowerCase();
+
+    if (isDigitsOnly) {
+      // ✅ เลขล้วน: match แบบ "เท่ากัน" เท่านั้น
+      // - ค้นหา "004" → ตรงกับ storeId 4 เท่านั้น
+      // - ค้นหา "4"   → ตรงกับ storeId 4 เท่านั้น
+      return padded === paddedKw || raw === kwNoZero;
+    } else {
+      // 🔎 คีย์เวิร์ดมีตัวอักษร: ค้นหาในชื่อร้านแบบ contains
+      return nameStr.includes(kw);
+    }
+  });
+
+  renderRows(filtered);
+}
+
+
+
+  // -------- Modal helpers ----------
+  const storeModalEl = document.getElementById('storeModal');
+  const storeModal = new bootstrap.Modal(storeModalEl);
+  const deleteModalEl = document.getElementById('deleteModal');
+  const deleteModal = new bootstrap.Modal(deleteModalEl);
+
+  function setForm(data = {}) {
+    document.getElementById('_id').value = data._id || '';
+    document.getElementById('storeId').value = data.storeId ?? '';
+    document.getElementById('storename').value = data.storename ?? '';
+  }
+
+  function getForm() {
+    return {
+      id: document.getElementById('_id').value,
+      storeId: document.getElementById('storeId').value,
+      storename: document.getElementById('storename').value.trim()
+    };
+  }
+
+  // -------- Init ----------
+  document.addEventListener('DOMContentLoaded', async () => {
+    // โหลดข้อมูลเริ่มต้น
+    try {
+      const json = await fetchJSON('/stores/list');
+      cache = json.data || [];
+      renderRows(cache);
+    } catch (err) {
+      showAlert('danger', err.message || 'โหลดข้อมูลไม่สำเร็จ');
+    }
+
+    // ค้นหา
+    $('#btnSearch').addEventListener('click', () => {
+      keyword = $('#searchInput').value || '';
+      applyFilter();
+    });
+    $('#searchInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); $('#btnSearch').click(); }
+    });
+
+    // เพิ่ม
+    $('#btnAddStore').addEventListener('click', () => {
+      setForm({});
+      document.getElementById('storeModalLabel').textContent = 'เพิ่มสาขา';
+      showAlertIn('#storeModalAlert', 'info', '', 1);
+      storeModal.show();
+    });
+
+    // แก้ไข (event delegation)
+    document.getElementById('storeTbody').addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-edit');
+      if (!btn) return;
+      const id = btn.getAttribute('data-id');
+      const found = cache.find(x => x._id === id);
+      if (!found) return showAlert('danger', 'ไม่พบรายการที่ต้องการแก้ไข');
+      setForm(found);
+      document.getElementById('storeModalLabel').textContent = 'แก้ไขสาขา';
+      showAlertIn('#storeModalAlert', 'info', '', 1);
+      storeModal.show();
+    });
+
+    // ลบ (เปิด modal)
+    document.getElementById('storeTbody').addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-del');
+      if (!btn) return;
+      const id = btn.getAttribute('data-id');
+      const label = btn.getAttribute('data-label') || '---';
+
+      // ใส่ข้อความและตั้ง action ของฟอร์ม
+      document.getElementById('storeToDelete').textContent = label;
+      const form = document.getElementById('deleteForm');
+      form.setAttribute('data-id', id); // เก็บ id ไว้ใช้ตอน submit
+
+      showAlertIn('#deleteModalAlert', 'info', '', 1);
+
+      deleteModal.show();
+    });
+
+    // ยืนยันลบ → intercept form submit แล้วยิง DELETE
+    document.getElementById('deleteForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = e.target.getAttribute('data-id');
+      if (!id) return;
+      try {
+        await fetchJSON(`/stores/${id}`, { method: 'DELETE' });
+        showAlert('success', 'ลบสำเร็จ');
+        deleteModal.hide();
+        // refresh cache
+        const j = await fetchJSON('/stores/list');
+        cache = j.data || [];
+        applyFilter();
+      } catch (err) {
+        showAlertIn('#deleteModalAlert', 'danger', err.message || 'ลบไม่สำเร็จ');
+      }
+    });
+
+    // บันทึก (เพิ่ม/แก้ไข)
+    document.getElementById('btnSave').addEventListener('click', async () => {
+  const { id, storeId, storename } = getForm();
+
+  // ✅ แจ้งเตือนในโมดัลขณะ validate
+  if (storeId === '' || isNaN(Number(storeId)) || Number(storeId) < 0) {
+    return showAlertIn('#storeModalAlert', 'warning', 'กรุณากรอก Store ID เป็นจำนวนเต็ม (0 ขึ้นไป)');
+  }
+  if (!storename) {
+    return showAlertIn('#storeModalAlert', 'warning', 'กรุณากรอก Store Name');
+  }
+
+  try {
+    if (id) {
+      await fetchJSON(`/stores/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ storeId, storename })
+      });
+      // สำเร็จ: ปิดโมดัล แล้วค่อยโชว์ด้านหลัง
+      storeModal.hide();
+      const j = await fetchJSON('/stores/list');
+      cache = j.data || [];
+      applyFilter();
+      showAlert('success', 'บันทึกการแก้ไขสำเร็จ');
+    } else {
+      await fetchJSON('/stores', {
+        method: 'POST',
+        body: JSON.stringify({ storeId, storename })
+      });
+      storeModal.hide();
+      const j = await fetchJSON('/stores/list');
+      cache = j.data || [];
+      applyFilter();
+      showAlert('success', 'เพิ่มสาขาสำเร็จ');
+    }
+  } catch (err) {
+    showAlertIn('#storeModalAlert', 'danger', err.message || 'บันทึกไม่สำเร็จ');
+  }
+});
+
+
+  });
+</script>
+</body>
+</html>

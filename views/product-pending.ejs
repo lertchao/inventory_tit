@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title><%= product.sku %> — Pending Requests</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css"/>
+  <link rel="stylesheet" href="/css/styles.css"/>
+  <link rel="icon" href="/images/storage.png" sizes="32x32"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"/>
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css"/>
+ 
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <div class="desktop-sidebar col-lg-2 col-12 d-none d-lg-block">
+        <%- include('sidebar') %>
+      </div>
+      <%- include('sidebarMobile') %>
+
+      <div class="col-lg-10 col-12">
+        <div class="text-center mt-4">
+          <h2 class="p-2 m-0">
+            Pending by SKU
+            <img src="/images/warehouse.png" alt="logo" class="img-fluid" style="max-width: 40px; vertical-align: middle;">
+          </h2>
+        </div>
+
+<!-- Product header (Bootstrap only) -->
+<div class="card shadow-sm rounded-4 mb-3">
+    <div class="card-body py-3">
+      <div class="row g-3 align-items-start">
+  
+        <!-- LEFT: SKU / Description / Machine Types -->
+        <div class="col-md-7">
+          <!-- SKU + Copy -->
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span class="badge bg-light text-dark border">SKU</span>
+            <div><%= product.sku %></div>
+          </div>
+  
+          <!-- Description -->
+          <div class="mt-2">
+            <div class="small text-muted">Description</div>
+            <div><%= product.description || '-' %></div>
+          </div>
+  
+          <!-- Machine Types -->
+          <div class="mt-2">
+            <div class="small text-muted">Machine Types</div>
+            <div class="d-flex flex-wrap gap-2">
+              <% if (product.machineTypes && product.machineTypes.length) { %>
+                <% product.machineTypes.forEach(mt => { %>
+                  <span class="badge bg-light text-dark border"><%= mt %></span>
+                <% }) %>
+              <% } else { %>
+                <span class="text-muted">–</span>
+              <% } %>
+            </div>
+          </div>
+        </div>
+  
+        <!-- RIGHT: Stat tiles -->
+        <div class="col-md-5">
+          <div class="row g-2 row-cols-3">
+            <div class="col">
+              <div class="border rounded-3 p-2 text-center bg-light">
+                <div class="text-uppercase small text-muted">Type</div>
+                <div class="h6 m-0"><%= product.typeparts || '-' %></div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="border rounded-3 p-2 text-center bg-light">
+                <div class="text-uppercase small text-muted">Cost</div>
+                <div class="h6 m-0">
+                  <%= (product.cost ?? 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) %>
+                </div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="border rounded-3 p-2 text-center bg-light">
+                <div class="fw-bold text-uppercase small text-muted">On Shelf</div>
+                <div class="h6 m-0"><%= product.quantity ?? 0 %></div>
+              </div>
+            </div>
+          </div>
+        </div>
+  
+      </div>
+    </div>
+  </div>
+  
+
+<!-- Table -->
+<div class="table-responsive mt-3">
+    <table id="pendingTable" class="table table-bordered table-hover align-middle display nowrap w-100">
+        <thead class="table-dark">
+          <tr>
+            <th class="text-center">#</th>
+            <th>Request ID</th>
+            <th>Requester</th>
+            <th class="text-center">Store</th>
+            <th>Store name</th>
+            <th class="text-center">OUT</th>
+            <th class="text-center">IN</th>
+            <th class="text-center">Pending</th>
+            <th class="text-center">Status</th>
+            <th class="text-center">Last Updated</th>
+            <th class="text-center">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (rows && rows.length) { %>
+            <% rows.forEach((r, idx) => { %>
+              <tr>
+                <td class="text-center"><%= idx + 1 %></td>
+                <td class="text-monospace"><%= r.requestId %></td>
+                <td><%= r.requesterName || '-' %></td>
+                <td class="text-center"><%= r.storeId ?? '-' %></td>
+                <td><%= r.storeName || '-' %></td>
+                <td class="text-center"><%= r.totalOut ?? 0 %></td>
+                <td class="text-center"><%= r.totalIn ?? 0 %></td>
+                <td class="text-center fw-bold <%= (r.pending ?? 0) > 0 ? 'text-danger' : 'text-success' %>">
+                  <%= r.pending ?? 0 %>
+                </td>
+                <td class="text-center"><span class="badge bg-warning text-dark"><%= r.workStatus %></span></td>
+                <td class="text-center" data-order="<%= r.updatedAt ? new Date(r.updatedAt).toISOString() : '' %>">
+                  <%= r.updatedAtFormatted %>
+                </td>
+                <td class="text-center">
+                  <a href="/workorder/<%= encodeURIComponent(r.requestId) %>"
+                     class="btn btn-outline-primary btn-sm"
+                     target="_blank" rel="noopener noreferrer">
+                    Open Work
+                  </a>
+                </td>
+              </tr>
+            <% }) %>
+          <% } %>
+          
+        </tbody>
+      </table>
+      
+      
+  </div>
+  
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // กันพลาด: ถ้ายังเหลือแถว colspan มา ให้เคลียร์ก่อน init
+      const $tb = $('#pendingTable tbody');
+      if ($tb.find('tr').length === 1 && $tb.find('td').length === 1) $tb.empty();
+  
+      const dt = $('#pendingTable').DataTable({
+        dom:
+          "<'row g-2 align-items-center mb-2'"+
+            "<'col-12 col-sm-auto'l>"+
+            "<'col-12 col-sm-auto ms-sm-auto'f>"+
+          ">"+
+          "<'row'<'col-12'tr>>"+
+          "<'row mt-2'<'col-md-6'i><'col-md-6 text-md-end'p>>",
+  
+        scrollX: true,
+        autoWidth: false,
+        responsive: false,
+        order: [[9, 'desc']],
+        pageLength: 25,
+        lengthMenu: [[10,25,50,100],[10,25,50,100]],
+        pagingType: "simple_numbers",
+  
+        language: {
+          emptyTable: "No pending requests for this SKU.",
+          search: "Search:",
+          lengthMenu: "Show _MENU_ entries",
+          info: "Showing _START_ to _END_ of _TOTAL_ entries",
+          paginate: { next: "Next", previous: "Previous" },
+          zeroRecords: "No matching records found",
+          infoEmpty: "No entries to show",
+          infoFiltered: "(filtered from _MAX_ total entries)"
+        }
+      });
+  
+      dt.columns.adjust();
+      setTimeout(() => dt.columns.adjust(), 0);
+      window.addEventListener('resize', () => dt.columns.adjust());
+    });
+  </script>
+  
+  
+
+ 
+</body>
+</html>

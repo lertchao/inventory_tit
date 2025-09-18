@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,75 +12,92 @@
 </head>
 
 <body>
-
-
-
   <div class="container-fluid">
     <div class="row">
       <div class="desktop-sidebar col-lg-2 col-12 d-none d-lg-block">
         <%- include('sidebar') %>
       </div>
       <%- include('sidebarMobile') %>
-        <div class="col-lg-10 col-12">
-          
-          <h2 class="text-center p-4">Stock Summary <img src="images/warehouse.png" alt="logo" class="img-fluid"
-              style="max-width: 40px; vertical-align: middle;"></h2>
 
-              <div class="text-end mb-3 me-3">
-                <button class="btn btn-success" onclick="exportTableToExcel('stockSummaryTable', 'Stock_Summary')">
-                  📤 Export to Excel
-                </button>
-              </div>
+      <div class="col-lg-10 col-12">
+        <h2 class="text-center p-4">
+          Stock Summary
+          <img src="images/warehouse.png" alt="logo" class="img-fluid" style="max-width: 40px; vertical-align: middle;">
+        </h2>
 
-          <div class="table-responsive">
-            <table id="stockSummaryTable" class="table table-bordered table-hover">
-              <thead class="table-dark">
-                <tr>
-                  <th>SKU</th>
-                  <th>Description</th>
-                  <th class="text-center align-middle">Type</th>
-                  <th class="text-center align-middle">Cost</th>
-                  <th class="text-center align-middle">On Shelf</th>
-                  <th class="text-center align-middle">Pending</th>
-                  <th class="text-center align-middle">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                <% summary.forEach(item => { %>
-                  <tr>
-                    <td><%= item.sku %></td>
-                    <td><%= item.description %></td>
-                    <td class="text-center align-middle"><%= item.type %></td>
-                    <td class="text-end align-middle">
-                      <%= (item.cost ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
-                    </td>
-                    <td class="text-center align-middle"><%= item.onHand %></td>
-                    <td class="text-center align-middle"><%= item.pending %></td>
-                    <td class="text-center align-middle"><%= item.onHand + item.pending %></td>
-                  </tr>
-                <% }) %>
-              </tbody>
-              
-            </table>  
-          </div>
-
-
+        <div class="text-end mb-3 me-3">
+          <button class="btn btn-success" onclick="exportTableToExcel('stockSummaryTable', 'Stock_Summary')">
+            📤 Export to Excel
+          </button>
         </div>
+
+        <div class="table-responsive">
+          <table id="stockSummaryTable" class="table table-bordered table-hover align-middle">
+            <thead class="table-dark">
+              <tr>
+                <th>SKU</th>
+                <th>Description</th>
+                <th class="text-center">Type</th>
+                <th class="text-center col-auto">Machine Types</th>
+                <th class="text-center">Cost</th>
+                <th class="text-center col-1">On Shelf</th>
+                <th class="text-center col-1">Pending</th>
+                <th class="text-center col-1">Total</th>
+                <th class="text-center no-export">View</th> <!-- ✅ ไม่ export -->
+              </tr>
+            </thead>
+            <tbody>
+              <% summary.forEach(item => { %>
+                <tr>
+                  <td><%= item.sku %></td>
+                  <td><%= item.description %></td>
+                  <td class="text-center"><%= item.type %></td>
+                  <td class="text-center">
+                    <%= (item.machineTypes && item.machineTypes.length > 0) ? item.machineTypes.join(", ") : "-" %>
+                  </td>
+                  <td class="text-end">
+                    <%= (item.cost ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+                  </td>
+                  <td class="text-center"><%= item.onHand %></td>
+                  <td class="text-center"><%= item.pending %></td>
+                  <td class="text-center"><%= item.onHand + item.pending %></td>
+                  <td class="text-center no-export">
+                    <a
+                      href="/product/<%= encodeURIComponent(item.sku) %>"
+                      class="btn btn-outline-dark btn-sm"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="View <%= item.sku %>">
+                      View
+                    </a>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 
+  <!-- Libs -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
+    // ✅ Export โดยตัดคอลัมน์ที่มี class .no-export ออก (ทั้งหัวตารางและแถวข้อมูล)
     function exportTableToExcel(tableId, filename = 'Stock_Summary') {
-      const table = document.getElementById(tableId);
-      const wb = XLSX.utils.table_to_book(table, { sheet: "Summary" });
+      const original = document.getElementById(tableId);
+      const clone = original.cloneNode(true);
+
+      // ลบหัวตารางที่ไม่ต้อง export
+      clone.querySelectorAll('th.no-export').forEach(th => th.remove());
+      // ลบ cell ที่ไม่ต้อง export ในแต่ละแถว
+      clone.querySelectorAll('td.no-export').forEach(td => td.remove());
+
+      const wb = XLSX.utils.table_to_book(clone, { sheet: 'Summary' });
       XLSX.writeFile(wb, `${filename}.xlsx`);
     }
   </script>
-  
-
 </body>
-
 </html>

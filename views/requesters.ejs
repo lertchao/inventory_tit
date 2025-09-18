@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Manage Requesters</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="icon" href="/images/storage.png" sizes="32x32">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    .table thead th { vertical-align: middle; }
+    .alias-badge { margin-right: .25rem; }
+  </style>
+</head>
+<body>
+
+<!-- ✅ Form แยกนอก modal (ใช้กับลบ) -->
+<form method="POST" id="deleteForm"></form>
+
+<!-- ✅ Modal: Confirm Delete -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">ยืนยันการลบ</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="deleteModalAlert"></div>
+        <p>คุณแน่ใจหรือไม่ว่าต้องการลบผู้เบิก: <strong id="reqToDelete">---</strong> ?</p>
+        <div class="small text-muted">แนะนำ: โดยทั่วไปให้ <b>ปิดใช้งาน (Inactive)</b> แทนการลบถาวร</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">ยกเลิก</button>
+        <button type="submit" class="btn btn-danger" form="deleteForm">ยืนยันลบ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ✅ Modal: Add/Edit Requester -->
+<div class="modal fade" id="reqModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="reqModalLabel">เพิ่มผู้เบิก</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="reqModalAlert"></div>
+        <form id="reqForm" autocomplete="off">
+          <input type="hidden" id="_id">
+          <div class="mb-3">
+            <label class="form-label fw-bold" for="shortName">Short Name</label>
+            <input type="text" id="shortName" class="form-control" placeholder="เช่น Aod, Korn" required>
+            <div class="form-text">ต้องไม่ซ้ำ (ใช้เป็นค่าที่เลือกในฟอร์ม IN/OUT)</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-bold" for="aliases">Suffix (คั่นด้วย ,)</label>
+            <input type="text" id="aliases" class="form-control" placeholder="เช่น Aoddy, Aod-CHP">
+            <div class="form-text">เอาไว้จับสะกดชื่อเก่า/ชื่อจริงหรืออื่นๆในอนาคต (ไม่จำเป็น) </div>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="active" checked />
+            <label class="form-check-label" for="active">Active</label>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">ปิด</button>
+        <button class="btn btn-primary" id="btnSave" type="button">บันทึก</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="desktop-sidebar col-lg-2 col-12 d-none d-lg-block">
+      <%- include('sidebar') %>
+    </div>
+    <%- include('sidebarMobile') %>
+
+    <div class="col-lg-10 col-12">
+      <h2 class="text-center p-4">
+        Manage Requesters
+        <img src="/images/edit.png" alt="logo" class="img-fluid" style="max-width:40px; vertical-align:middle" />
+      </h2>
+
+      <!-- Actions + Search -->
+      <div class="container-fluid">
+        <div class="p-3">
+          <div class="row gy-2 align-items-center">
+            <div class="col-lg-6 col-12 mx-auto">
+              <form class="d-flex" onsubmit="event.preventDefault();">
+                <input type="text" id="searchInput" class="form-control me-2" placeholder="กรอก Name หรือ Suffix">
+                <button type="button" id="btnSearch" class="btn btn-success">ค้นหา</button>
+              </form>
+            </div>
+            <div class="col-lg-6 col-12 text-lg-end text-center">
+              <button class="btn btn-primary" id="btnAddReq">
+                <i class="bi bi-plus-lg"></i> เพิ่มผู้เบิก
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="alertWrap" class="px-3"></div>
+
+      <!-- ตาราง -->
+      <div class="table-responsive px-3">
+        <table class="table table-striped table-bordered table-hover">
+          <thead>
+            <tr class="table-dark">
+              <th class="text-center col-3">Name</th>
+              <th class="text-center col-5">Suffix</th>
+              <th class="text-center col-1">สถานะ</th>
+              <th class="text-center col-2">จัดการสถานะ</th>
+              <th class="text-center col-1">แก้ไข</th>
+              <th class="text-center col-1">ลบ</th>
+            </tr>
+          </thead>
+          <tbody id="reqTbody">
+            <!-- rows by JS -->
+          </tbody>
+        </table>
+        <div id="noResult" class="alert alert-warning text-center d-none">ไม่พบข้อมูลที่ตรงกับคำค้นหา</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  // -------- State / Helper ----------
+  let cache = [];        // เก็บรายการทั้งหมดจาก /api/requesters
+  let keyword = '';      // คีย์เวิร์ดค้นหา (shortName/aliases)
+
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => document.querySelectorAll(sel);
+
+  function showAlertIn(containerSel, type, text, timeout = 2500) {
+    const wrap = document.querySelector(containerSel);
+    if (!wrap) return;
+    wrap.innerHTML = `
+      <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+        ${text}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>`;
+    if (timeout) setTimeout(() => { if (wrap) wrap.innerHTML = ''; }, timeout);
+  }
+
+  function showAlert(type, text, timeout = 2500) {
+    const wrap = $('#alertWrap');
+    wrap.innerHTML = `
+      <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+        ${text}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>`;
+    if (timeout) setTimeout(() => wrap.innerHTML = '', timeout);
+  }
+
+  async function fetchJSON(url, options = {}) {
+    const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...options });
+    let data = {};
+    try { data = await res.json(); } catch(e) {}
+    if (!res.ok || data.ok === false) {
+      const msg = data.message || data.error || res.statusText || 'เกิดข้อผิดพลาด';
+      throw new Error(msg);
+    }
+    return data;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  // -------- Render ----------
+  function renderRows(items) {
+    const tbody = $('#reqTbody');
+    tbody.innerHTML = '';
+
+    if (!items || items.length === 0) {
+      $('#noResult').classList.remove('d-none');
+      return;
+    }
+    $('#noResult').classList.add('d-none');
+
+    items.forEach(item => {
+      const tr = document.createElement('tr');
+      const aliasHtml = (item.aliases || [])
+        .map(a => `<span class="badge text-bg-secondary alias-badge">${escapeHtml(a)}</span>`)
+        .join(' ');
+
+      tr.innerHTML = `
+        <td class="text-start">${escapeHtml(item.shortName || '')}</td>
+        <td class="text-start">${aliasHtml || '<span class="text-muted">-</span>'}</td>
+        <td class="text-center">
+          ${item.active
+            ? '<span class="badge bg-success">Active</span>'
+            : '<span class="badge bg-secondary">Inactive</span>'}
+        </td>
+        <td class="text-center">
+          <button class="btn btn-outline-secondary btn-sm btn-toggle" data-id="${item.id}">
+            ${item.active ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
+          </button>
+        </td>
+        <td class="text-center">
+          <button class="btn btn-warning btn-sm btn-edit" data-id="${item.id}">แก้ไข</button>
+        </td>
+        <td class="text-center">
+          <button class="btn btn-danger btn-sm btn-del"
+                  data-id="${item.id}"
+                  data-label="${escapeHtml(item.shortName || '')}">
+            ลบ
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function applyFilter() {
+    const kw = (keyword || '').trim().toLowerCase();
+    if (!kw) { renderRows(cache); return; }
+
+    const filtered = cache.filter(x => {
+      const name = String(x.shortName || '').toLowerCase();
+      const aliases = (x.aliases || []).map(s => String(s).toLowerCase());
+      return name.includes(kw) || aliases.some(a => a.includes(kw));
+    });
+
+    renderRows(filtered);
+  }
+
+  // -------- Modal helpers ----------
+  const reqModalEl = document.getElementById('reqModal');
+  const reqModal = new bootstrap.Modal(reqModalEl);
+  const deleteModalEl = document.getElementById('deleteModal');
+  const deleteModal = new bootstrap.Modal(deleteModalEl);
+
+  function setForm(data = {}) {
+    document.getElementById('_id').value = data.id || '';
+    document.getElementById('shortName').value = data.shortName || '';
+    document.getElementById('aliases').value = (data.aliases || []).join(', ');
+    document.getElementById('active').checked = data.active !== undefined ? !!data.active : true;
+  }
+
+  function getForm() {
+    return {
+      id: document.getElementById('_id').value,
+      shortName: document.getElementById('shortName').value.trim(),
+      aliases: document.getElementById('aliases').value.trim(),
+      active: document.getElementById('active').checked
+    };
+  }
+
+  // -------- Init ----------
+  document.addEventListener('DOMContentLoaded', async () => {
+    // โหลดข้อมูลเริ่มต้น (admin เห็นทั้งหมด -> active= เว้นว่าง)
+    try {
+      const list = await fetchJSON('/api/requesters?active=');
+      cache = Array.isArray(list) ? list : (list.results || []);
+      renderRows(cache);
+    } catch (err) {
+      showAlert('danger', err.message || 'โหลดข้อมูลไม่สำเร็จ');
+    }
+
+    // ค้นหา
+    $('#btnSearch').addEventListener('click', () => {
+      keyword = $('#searchInput').value || '';
+      applyFilter();
+    });
+    $('#searchInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); $('#btnSearch').click(); }
+    });
+
+    // เพิ่ม
+    $('#btnAddReq').addEventListener('click', () => {
+      setForm({});
+      document.getElementById('reqModalLabel').textContent = 'เพิ่มผู้เบิก';
+      showAlertIn('#reqModalAlert', 'info', '', 1);
+      reqModal.show();
+    });
+
+    // แก้ไข (event delegation)
+    $('#reqTbody').addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-edit');
+      if (!btn) return;
+      const id = btn.getAttribute('data-id');
+      const found = cache.find(x => x.id === id);
+      if (!found) return showAlert('danger', 'ไม่พบรายการที่ต้องการแก้ไข');
+      setForm(found);
+      document.getElementById('reqModalLabel').textContent = 'แก้ไขผู้เบิก';
+      showAlertIn('#reqModalAlert', 'info', '', 1);
+      reqModal.show();
+    });
+
+    // Toggle active
+    $('#reqTbody').addEventListener('click', async (e) => {
+      const btn = e.target.closest('.btn-toggle');
+      if (!btn) return;
+      const id = btn.getAttribute('data-id');
+      try {
+        await fetchJSON(`/api/requesters/${id}/toggle`, { method: 'POST' });
+        showAlert('success', 'อัปเดตสถานะเรียบร้อย');
+        const list = await fetchJSON('/api/requesters?active=');
+        cache = Array.isArray(list) ? list : (list.results || []);
+        applyFilter();
+      } catch (err) {
+        showAlert('danger', err.message || 'อัปเดตสถานะไม่สำเร็จ');
+      }
+    });
+
+    // ลบ (เปิด modal)
+    $('#reqTbody').addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-del');
+      if (!btn) return;
+      const id = btn.getAttribute('data-id');
+      const label = btn.getAttribute('data-label') || '---';
+
+      document.getElementById('reqToDelete').textContent = label;
+      const form = document.getElementById('deleteForm');
+      form.setAttribute('data-id', id);
+      showAlertIn('#deleteModalAlert', 'info', '', 1);
+      deleteModal.show();
+    });
+
+    // ยืนยันลบ → intercept form submit แล้วยิง DELETE
+    document.getElementById('deleteForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = e.target.getAttribute('data-id');
+      if (!id) return;
+      try {
+        await fetchJSON(`/api/requesters/${id}`, { method: 'DELETE' });
+        showAlert('success', 'ลบสำเร็จ');
+        deleteModal.hide();
+        const list = await fetchJSON('/api/requesters?active=');
+        cache = Array.isArray(list) ? list : (list.results || []);
+        applyFilter();
+      } catch (err) {
+        showAlertIn('#deleteModalAlert', 'danger', err.message || 'ลบไม่สำเร็จ');
+      }
+    });
+
+    // บันทึก (เพิ่ม/แก้ไข)
+    document.getElementById('btnSave').addEventListener('click', async () => {
+      const { id, shortName, aliases, active } = getForm();
+      if (!shortName) return showAlertIn('#reqModalAlert', 'warning', 'กรุณากรอก Name');
+
+      try {
+        if (id) {
+          await fetchJSON(`/api/requesters/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ shortName, aliases, active })
+          });
+          reqModal.hide();
+          const list = await fetchJSON('/api/requesters?active=');
+          cache = Array.isArray(list) ? list : (list.results || []);
+          applyFilter();
+          showAlert('success', 'บันทึกการแก้ไขสำเร็จ');
+        } else {
+          await fetchJSON('/api/requesters', {
+            method: 'POST',
+            body: JSON.stringify({ shortName, aliases, active })
+          });
+          reqModal.hide();
+          const list = await fetchJSON('/api/requesters?active=');
+          cache = Array.isArray(list) ? list : (list.results || []);
+          applyFilter();
+          showAlert('success', 'เพิ่มผู้เบิกสำเร็จ');
+        }
+      } catch (err) {
+        showAlertIn('#reqModalAlert', 'danger', err.message || 'บันทึกไม่สำเร็จ');
+      }
+    });
+  });
+</script>
+</body>
+</html>

@@ -30,7 +30,7 @@
           <h2 class="text-success text-center p-4">Receive Parts <img src="images/goods.png" alt="logo"
               class="img-fluid" style="max-width: 40px; vertical-align: middle;"></h2>
 
-
+          <div id="status-banner" class="alert d-none mt-2"></div>
           <!-- ฟอร์มสำหรับกรอกข้อมูลเบิกและคืนสินค้า -->
           <form method="POST" action="/add_trans-in">
 
@@ -45,32 +45,8 @@
                 <label class="form-label">ชื่อผู้เบิก</label>
                 <select class="select2" id="requesterName" name="name" required tabindex="0">
                   <option value="" disabled selected>กรุณาเลือกชื่อผู้เบิก</option>
-                  <option value="Aod">Aod</option>
-                  <option value="Arng">Arng</option>
-                  <option value="Big">Big</option>
-                  <option value="Bu">Bu</option>
-                  <option value="CHP">CHP</option>
-                  <option value="Dan">Dan</option>
-                  <option value="Dax">Dax</option>
-                  <option value="Gale">Gale</option>
-                  <option value="Ham">Ham</option>
-                  <option value="Home">Home</option>
-                  <option value="Hut">Hut</option>
-                  <option value="Korn">Korn</option>
-                  <option value="Lert">Lert</option>
-                  <option value="Mummie">Mummie</option>
-                  <option value="New">New</option>
-                  <option value="Night">Night</option>
-                  <option value="Noi">Noi</option>
-                  <option value="Organ">Organ</option>
-                  <option value="Pao">Pao</option>
-                  <option value="Peet">Peet</option>
-                  <option value="Phet">Phet</option>
-                  <option value="Sanya">Sanya</option>
-                  <option value="Top">Top</option>
-                  <option value="Udom">Udom</option>
-                  <option value="Witt">Witt</option>
                 </select>
+                
                 
                 
               </div>
@@ -191,9 +167,9 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
 
-  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/timezone.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/utc.js"></script>
 <script>
@@ -210,20 +186,44 @@
 
 <script>
 $(document).ready(function () {
-
   $('#requesterName').select2({
     theme: 'bootstrap-5',
     placeholder: 'กรุณาเลือกชื่อผู้เบิก',
     allowClear: true,
     width: '100%',
-    minimumResultsForSearch: 0
+    minimumResultsForSearch: 0,
+    ajax: {
+      url: '/api/requesters',
+      dataType: 'json',
+      delay: 250,
+      data: function (params) {
+        return {
+          q: params.term || '',
+          active: true,
+          format: 'select2',
+          page: params.page || 1,
+          limit: 20
+        };
+      },
+      processResults: function (data, params) {
+        // แปลงผลลัพธ์ให้ "id = shortName" เพื่อให้ส่งค่าเป็น string ที่ backend ต้องการ
+        const results = (data.results || []).map(it => ({
+          id: it.text,   // <-- shortName
+          text: it.text
+        }));
+        return {
+          results,
+          pagination: data.pagination || { more: false }
+        };
+      },
+      cache: true
+    }
   });
 
-  // ป้องกัน Enter ส่งฟอร์มก่อนเวลา
-  $('#requesterName').on('keypress', function (e) {
-    if (e.which === 13) e.preventDefault();
-  });
+  // กันกด Enter แล้ว submit
+  $('#requesterName').on('keypress', function (e) { if (e.which === 13) e.preventDefault(); });
 });
+
 
 </script>
 

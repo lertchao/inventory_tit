@@ -76,6 +76,9 @@
   
         <% if (user.role === 'admin') { %>
           <a href="/trans-out" class="text-wrap"><i class="fa-solid fa-right-from-bracket me-2"></i>Issue Parts</a>
+
+          <a href="/stock-summary"><i class="fa-solid fa-table-list me-2"></i>Stock Summary</a>
+
           <a href="/trans-in" class="text-wrap"><i class="fa-solid fa-right-to-bracket me-2"></i>Receive Parts</a>
   
           <div class="dropdown custom-dropdown">
@@ -92,7 +95,9 @@
   
           <a href="/workorder"><i class="fa-solid fa-clipboard-check me-2"></i>Manage Repair Work</a>
 
-          <a href="/stock-summary"><i class="fa-solid fa-table-list me-2"></i>Stock Summary</a>
+          <a href="/stores"><i class="fa-solid fa-store me-2"></i>Manage Stores</a>
+
+          <a href="/requesters"><i class="fa-solid fa-user me-2"></i>Manage Requesters</a>
         <% } %>
   
         <!-- Logout -->
