@@ -2,308 +2,865 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Work Detail</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css">
-  <link rel="icon" href="images/storage.png" sizes="32x32">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="icon" href="images/storage.png" sizes="32x32" />
+  <style>
+    .sku-input,.qty-input{font-family:inherit}
+    .btn-remove{min-width:56px}
+    .table-sm td,.table-sm th{vertical-align:middle}
+  </style>
 </head>
 
 <body>
-
   <div class="container mt-5">
-    <h2 class="text-center section-title">Request ID: <%= requestId %>
-    </h2>
+    <h2 class="text-center section-title">Request ID: <%= requestId %></h2>
 
-
-    <!-- แสดง storeId ด้านล่างของ Request ID -->
     <% if (transactions.length > 0) { %>
       <h5>
         Store : <%= String(transactions[0].storeId).padStart(3, '0') %> - <%= transactions[0].storename %>
       </h5>
     <% } %>
     
+    <div class="d-flex justify-content-between align-items-center my-3">
+      <a href="/workorder" class="btn btn-lg btn-secondary mb-3">Back</a>
+    </div>
 
-      
+    <!-- Top controls -->
     <div class="container mt-4">
       <div class="row g-3 align-items-end justify-content-end">
-        
         <div class="col-md-3 col-sm-6">
           <label for="requesterNameInput" class="form-label fw-bold">ชื่อผู้เบิก</label>
-          <input id="requesterNameInput" class="form-control" value="<%= transactions[0].requesterName %>">
+          <input id="requesterNameInput" class="form-control" value="<%= transactions[0].requesterName %>" />
         </div>
-    
+
         <div class="col-md-3 col-sm-6">
           <label for="newRequestId" class="form-label fw-bold">เลขที่ใบเบิก</label>
-          <input id="newRequestId" class="form-control" value="<%= requestId %>">
+          <input id="newRequestId" class="form-control" value="<%= requestId %>" />
         </div>
-    
+
         <div class="col-md-2 col-sm-6">
           <label for="storeIdInput" class="form-label fw-bold">รหัสสาขา</label>
-          <input id="storeIdInput" type="text" class="form-control"
-            value="<%= String(transactions[0].storeId).padStart(3, '0') %>"
-            pattern="\d{3}" maxlength="3"
-            oninput="this.value = this.value.replace(/\D/g, '').slice(0, 3)">
+          <input id="storeIdInput" class="form-control" value="<%= transactions[0].storeId %>" />
         </div>
-    
+
         <div class="col-md-2 col-sm-6">
           <label for="workStatusSelect" class="form-label fw-bold">สถานะใบงาน</label>
           <select id="workStatusSelect" class="form-select">
             <option value="Pending">Pending</option>
             <option value="Finish">Finish</option>
+            <option value="Cancel">Cancel</option>
           </select>
         </div>
-    
+
         <div class="col-md-2 col-sm-12">
           <label class="form-label fw-bold invisible">Update</label>
           <button id="updateWorkStatus" class="btn btn-primary w-100">Update</button>
         </div>
-        
-    
       </div>
-    
+
       <div class="mt-3 text-end text-muted small">
-        Created At: <%= transactions[0].createdAtFormatted %><br>
+        Created At: <%= transactions[0].createdAtFormatted %><br />
         Last Updated: <%= transactions[0].updatedAtFormatted %>
       </div>
     </div>
-    
-      
-      
-      
 
-      
+    <div id="alertMessage" class="alert d-none alert-dismissible fade show mt-3 text-center" role="alert">
+      <span id="alertText">ข้อความแจ้งเตือนที่นี่</span>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
 
-          <!-- ✅ Modal แจ้งเตือนหาก Request ID ซ้ำ -->
-          <div class="modal fade" id="duplicateModal" tabindex="-1" aria-labelledby="duplicateModalLabel"
-            aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-              <div class="modal-content">
-                <div class="modal-header bg-warning text-dark">
-                  <h5 class="modal-title" id="duplicateModalLabel">คำเตือน</h5>
-                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                  Request ID นี้มีอยู่แล้วในระบบ<br>คุณต้องการใช้ซ้ำหรือไม่?
-                </div>
-                <div class="modal-footer">
-                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                  <button id="confirmDuplicateBtn" type="button" class="btn btn-primary">ยืนยันใช้ซ้ำ</button>
-                </div>
+    <!-- Duplicate RequestId Modal -->
+    <div class="modal fade" id="duplicateModal" tabindex="-1" aria-labelledby="duplicateModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header bg-warning text-dark">
+            <h5 class="modal-title" id="duplicateModalLabel">คำเตือน</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            Request ID นี้มีอยู่แล้วในระบบ<br />คุณต้องการใช้ซ้ำหรือไม่?
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+            <button id="confirmDuplicateBtn" type="button" class="btn btn-primary">ยืนยันใช้ซ้ำ</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cancel Confirmation Modal -->
+    <div class="modal fade" id="cancelConfirmModal" tabindex="-1" aria-labelledby="cancelConfirmModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header bg-danger text-white">
+            <h5 class="modal-title" id="cancelConfirmModalLabel">ยืนยันการยกเลิกใบงาน (Cancel)</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p class="mb-2">รายการที่จะคืนเข้าคลังจากใบงานนี้:</p>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered">
+                <thead class="table-light">
+                  <tr>
+                    <th class="text-center" style="width:60px">#</th>
+                    <th>SKU</th>
+                    <th>Description</th>
+                    <th class="text-center">Return Qty.</th>
+                  </tr>
+                </thead>
+                <tbody id="cancelListBody"></tbody>
+              </table>
+            </div>
+            <div class="alert alert-warning small">
+              เมื่อยืนยัน ระบบจะสร้าง Transaction ประเภท <b>IN</b> ตามจำนวนด้านบน
+              และตั้งสถานะใบงานเป็น <b>Cancel</b><br>
+              ***ไม่สามารถเปลี่ยนแปลงสถานะใบงานได้อีก***
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">กลับ</button>
+            <button id="confirmCancelBtn" type="button" class="btn btn-danger">ยืนยันยกเลิก & คืนของ</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Return Confirmation Modal (เดิม) -->
+    <div class="modal fade" id="returnConfirmModal" tabindex="-1" aria-labelledby="returnConfirmModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header bg-info text-dark">
+            <h5 class="modal-title" id="returnConfirmModalLabel">ยืนยันการคืนของบางส่วน (Partial Return)</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p class="mb-2">ตรวจสอบรายการคืนต่อไปนี้:</p>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered">
+                <thead class="table-light">
+                  <tr>
+                    <th class="text-center col-1" style="width:60px">#</th>
+                    <th class="col-2">SKU</th>
+                    <th class="col-3">Description</th>
+                    <th class="text-center col-2">Net (Current)</th>
+                    <th class="text-center col-2">Return Qty</th>
+                    <th class="text-center col-2">Net After Return</th>
+                  </tr>
+                </thead>
+                <tbody id="returnListBody"></tbody>
+              </table>
+            </div>
+            <div class="alert alert-warning small mb-0">
+              เมื่อยืนยัน ระบบจะสร้าง Transaction ประเภท <b>IN</b> สำหรับรายการด้านบน
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">กลับ</button>
+            <button id="confirmReturnBtn" type="button" class="btn btn-primary">ยืนยันคืนของ</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transactions List -->
+    <h3 class="mt-3 text-center">Transactions</h3>
+    <div class="table-responsive mt-3">
+      <table class="table table-bordered mt-3">
+        <thead class="table-secondary">
+          <tr>
+            <th class="text-center align-middle">#</th>
+            <th class="text-center align-middle">SKU</th>
+            <th class="text-center align-middle">Quantity</th>
+            <th class="text-center align-middle">Transaction Type</th>
+            <th class="text-center align-middle">Work Status</th>
+            <th class="text-center align-middle">Created At</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% transactions.forEach((transaction, tIndex) => { %>
+            <% transaction.products.forEach((product, pIndex) => { %>
+              <tr>
+                <td class="text-center"><%= pIndex === 0 ? tIndex + 1 : '' %></td>
+                <td class="text-center"><%= product.sku %></td>
+                <td class="text-center"><%= product.quantity %></td>
+                <td class="text-center"><%= (transaction.transactionType || '').toUpperCase() %></td>
+                <td class="text-center">
+                  <span class="badge <%= transaction.workStatus === 'Cancel' ? 'bg-danger' : (transaction.workStatus === 'Finish' ? 'bg-success' : 'bg-secondary') %>">
+                    <%= transaction.workStatus %>
+                  </span>
+                </td>
+                <td class="text-center"><%= transaction.createdAtFormatted %></td>
+              </tr>
+            <% }) %>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <% /* Build summary (net by SKU) */ %>
+    <% let summary = {}; transactions.forEach(transaction => {
+         transaction.products.forEach(product => {
+           const sku = product.sku;
+           const desc = product.description || '';
+           const qty = Number(product.quantity);
+           if (!summary[sku]) summary[sku] = { description: desc, net: 0 };
+           if ((transaction.transactionType || '').toLowerCase() === 'in') {
+             summary[sku].net += qty;
+           } else if ((transaction.transactionType || '').toLowerCase() === 'out') {
+             summary[sku].net -= qty;
+           }
+         });
+       }); %>
+
+<%
+  // For cancel auto-return preview
+  const cancelReturn = [];
+  Object.keys(summary || {}).forEach((sku) => {
+    const net = Number(summary[sku].net) || 0;
+    if (net < 0) {
+      cancelReturn.push({ sku, description: summary[sku].description || '', qty: Math.abs(net) });
+    }
+  });
+%>
+
+<script id="cancelReturnData" type="application/json"><%- JSON.stringify(cancelReturn || []) %></script>
+<script>
+  const cancelReturnItems = JSON.parse(document.getElementById('cancelReturnData').textContent || '[]');
+</script>
+
+    <!-- Summary table -->
+    <h3 class="mt-3 text-center">Summary (ยอดใช้อะไหล่จริง)</h3>
+    <div class="table-responsive mt-3">
+      <table class="table table-bordered mt-3" id="summaryTable">
+        <thead class="table-dark">
+          <tr>
+            <th class="text-center align-middle">#</th>
+            <th class="text-center align-middle">SKU</th>
+            <th class="text-center align-middle">Description</th>
+            <th class="text-center align-middle">Net Quantity</th>
+            <th class="text-center align-middle">Return Quantity</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% Object.keys(summary).forEach((sku, index) => { 
+               const net = Number(summary[sku].net) || 0;
+               const maxReturn = net < 0 ? Math.abs(net) : 0;
+          %>
+            <tr data-sku="<%= sku %>" data-description="<%= summary[sku].description %>" data-net="<%= net %>" data-max="<%= maxReturn %>">
+              <td class="text-center align-middle"><%= index + 1 %></td>
+              <td class="text-center align-middle"><%= sku %></td>
+              <td class="text-center align-middle"><%= summary[sku].description %></td>
+              <td class="text-center align-middle"><%= net %></td>
+              <td class="text-center align-middle">
+                <input 
+                  type="number"
+                  class="form-control return-input text-center"
+                  value="0"
+                  min="0"
+                  step="1"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                  <%= net < 0 ? ('max="'+ maxReturn +'" data-max="'+ maxReturn +'"') : 'disabled data-max="0"' %>
+                  style="max-width:120px;margin:0 auto;text-align:center;"
+                />
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Additional OUT section (new) -->
+    <div class="mt-4">
+      <div class="d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">เบิกเพิ่ม (Additional OUT)</h4>
+        <div>
+          <button id="btnAddOutRow" type="button" class="btn btn-outline-success btn-sm">+ เพิ่มรายการ OUT</button>
+          <button id="btnClearOutRows" type="button" class="btn btn-outline-secondary btn-sm ms-2">ล้างรายการ</button>
+        </div>
+      </div>
+      <div class="table-responsive mt-2">
+        <table class="table table-bordered table-sm" id="addOutTable">
+          <thead class="table-light">
+            <tr>
+              <th class="text-center" style="width:60px">#</th>
+              <th class="text-center" style="width:220px">SKU</th>
+              <th class="text-center">Description</th>
+              <th class="text-center" style="width:160px">Issue Qty</th>
+              <th class="text-center" style="width:90px">ลบ</th>
+            </tr>
+          </thead>
+          <tbody id="addOutTbody">
+            <tr class="text-center text-muted"><td colspan="5">ยังไม่มีรายการ</td></tr>
+          </tbody>
+        </table>
+        <small class="text-muted">พิมพ์ SKU แล้วกด Tab/Enter หรือพิมพ์ต่อเนื่องเพื่อเช็คสินค้าและเติมรายละเอียดอัตโนมัติ</small>
+      </div>
+    </div>
+
+    <!-- Update Confirmation Modal (new: combine OUT+Return) -->
+    <div class="modal fade" id="updateConfirmModal" tabindex="-1" aria-labelledby="updateConfirmModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title" id="updateConfirmModalLabel">ตรวจสอบก่อนบันทึก (Review Changes)</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div id="reviewOutSection" class="mb-4 d-none">
+              <h6 class="mb-2">A) Additional OUT</h6>
+              <div class="table-responsive">
+                <table class="table table-sm table-bordered">
+                  <thead class="table-light">
+                    <tr>
+                      <th class="text-center col-1" style="width:60px">#</th>
+                      <th class="col-2">SKU</th>
+                      <th class="col-3">Description</th>
+                      <th class="text-center col-2">Net (Current)</th>
+                      <th class="text-center col-2">Issue Qty</th>
+                      <th class="text-center col-2">Net After Issue</th>
+                    </tr>
+                  </thead>
+                  <tbody id="reviewOutBody"></tbody>
+                </table>
+              </div>
+              <div class="alert alert-warning small mb-0">
+                เมื่อยืนยัน ระบบจะสร้าง Transaction ประเภท <b>OUT</b> สำหรับรายการด้านบน
+              </div>
+            </div>
+
+            <div id="reviewReturnSection" class="mb-2 d-none">
+              <h6 class="mb-2">B) Partial Return</h6>
+              <div class="table-responsive">
+                <table class="table table-sm table-bordered">
+                  <thead class="table-light">
+                    <tr>
+                      <th class="text-center col-1" style="width:60px">#</th>
+                      <th class="col-2">SKU</th>
+                      <th class="col-3">Description</th>
+                      <th class="text-center col-2">Net (Current)</th>
+                      <th class="text-center col-2">Return Qty</th>
+                      <th class="text-center col-2">Net After Return</th>
+                    </tr>
+                  </thead>
+                  <tbody id="reviewReturnBody"></tbody>
+                </table>
+              </div>
+              <div class="alert alert-warning small mb-0">
+                เมื่อยืนยัน ระบบจะสร้าง Transaction ประเภท <b>IN</b> สำหรับรายการด้านบน
               </div>
             </div>
           </div>
-
-          <div id="alertMessage" class="alert d-none alert-dismissible fade show mt-3 text-center" role="alert">
-            <span id="alertText">ข้อความแจ้งเตือนที่นี่</span>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">กลับ</button>
+            <button id="confirmUpdateAllBtn" type="button" class="btn btn-primary">ยืนยันบันทึก</button>
           </div>
+        </div>
+      </div>
+    </div>
 
-          <!-- ตารางรายการธุรกรรม -->
-          <div class="table-responsive mt-3">
-            <table class="table table-bordered">
-              <thead class="table-secondary">
-                <tr>
-                  <th class="text-center align-middle">#</th>
-                  <th class="text-center align-middle">SKU</th>
-                  <th class="text-center align-middle">Quantity</th>
-                  <th class="text-center align-middle">Transaction Type</th>
-                  <th class="text-center align-middle">Work Status</th>
-                  <th class="text-center align-middle">Created At</th>
-                </tr>
-              </thead>
-              <tbody>
-                <% transactions.forEach((transaction, tIndex)=> { %>
-                  <% transaction.products.forEach((product, pIndex)=> { %>
-                    <tr>
-                      <td class="text-center">
-                        <%= pIndex===0 ? tIndex + 1 : '' %>
-                      </td>
-                      <td class="text-center">
-                        <%= product.sku %>
-                      </td>
-                      <td class="text-center">
-                        <%= product.quantity %>
-                      </td>
-                      <td class="text-center">
-                        <%= transaction.transactionType %>
-                      </td>
-                      <td class="text-center">
-                        <span class="badge bg-<%= transaction.workStatus === 'Finish' ? 'success' : 'secondary' %>">
-                          <%= transaction.workStatus %>
-                        </span>
-                      </td>
-                      <td class="text-center">
-                        <%= transaction.createdAtFormatted %>
-                      </td>
-                    </tr>
-                  <% }) %>
-                <% }) %>
-              </tbody>
-            </table>
-          </div>
-          
 
-          <% let summary={}; transactions.forEach(transaction=> {
-            transaction.products.forEach(product => {
-            const sku = product.sku;
-            const desc = product.description || ''; // ตรวจสอบว่า product.description มีค่าหรือไม่
-            const qty = Number(product.quantity);
 
-            // ถ้ายังไม่มี key สำหรับ SKU นี้ใน summary ให้สร้าง key ใหม่
-            if (!summary[sku]) {
-            summary[sku] = { description: desc, net: 0 };
+  </div> <!-- /.container -->
+
+  <script>
+    // ===== Variables =====
+    const updateBtn = document.getElementById('updateWorkStatus');
+    const alertMessage = document.getElementById('alertMessage');
+    const alertText = document.getElementById('alertText');
+    const confirmDuplicateBtn = document.getElementById('confirmDuplicateBtn');
+
+    const workStatusSelect = document.getElementById('workStatusSelect');
+    const reqIdInput = document.getElementById('newRequestId');
+    const storeIdInput = document.getElementById('storeIdInput');
+    const requesterInput = document.getElementById('requesterNameInput');
+
+    // Add OUT elements
+    const btnAddOutRow = document.getElementById('btnAddOutRow');
+    const btnClearOutRows = document.getElementById('btnClearOutRows');
+    const addOutTbody = document.getElementById('addOutTbody');
+
+    let duplicateModal;
+
+    // ===== Utilities =====
+    function disableControls() {
+      workStatusSelect.disabled = true;
+      reqIdInput.disabled = true;
+      storeIdInput.disabled = true;
+      requesterInput.disabled = true;
+      updateBtn.disabled = true;
+      document.querySelectorAll('.return-input').forEach(i => i.disabled = true);
+      if (btnAddOutRow) btnAddOutRow.disabled = true;
+      if (btnClearOutRows) btnClearOutRows.disabled = true;
+      document.querySelectorAll('#addOutTbody input, #addOutTbody button').forEach(el => el.disabled = true);
+    }
+
+    function setCancelInputLock(lock) {
+      reqIdInput.disabled = lock;
+      storeIdInput.disabled = lock;
+      requesterInput.disabled = lock;
+      if (btnAddOutRow) btnAddOutRow.disabled = lock;
+      if (btnClearOutRows) btnClearOutRows.disabled = lock;
+      document.querySelectorAll('#addOutTbody input, #addOutTbody button').forEach(el => el.disabled = lock);
+    }
+
+    function clampReturnInput(input) {
+      if (input.disabled) return;
+      let raw = (input.value ?? '').toString().replace(/[^0-9]/g, '');
+      if (raw === '') raw = '0';
+      let n = parseInt(raw, 10);
+      if (!Number.isFinite(n) || n < 0) n = 0;
+
+      const tr = input.closest('tr');
+      const maxFromRow = Number(tr?.dataset?.max ?? 0);
+      const maxFromAttr = Number(input.getAttribute('max') || 0);
+      const max = Number.isFinite(maxFromRow) && maxFromRow > 0 ? maxFromRow : maxFromAttr;
+
+      if (max > 0 && n > max) n = max;
+      input.value = String(n);
+    }
+    function blockNonNumericKey(e) {
+      const allowed = ['Backspace','Delete','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Tab','Home','End'];
+      const isDigit = e.key >= '0' && e.key <= '9';
+      if (!isDigit && !allowed.includes(e.key)) e.preventDefault();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.return-input').forEach(inp => {
+        ['input','change','keyup','blur'].forEach(ev => inp.addEventListener(ev, () => clampReturnInput(inp)));
+        inp.addEventListener('keydown', blockNonNumericKey);
+        inp.addEventListener('wheel', e => e.preventDefault(), { passive: false });
+      });
+      const defaultStatus = "<%= transactions[0]?.workStatus || 'Pending' %>";
+      workStatusSelect.value = defaultStatus;
+      updateRemoveButtons();
+    });
+
+    // ===== SKU helpers (ใช้ /get-product-details?sku=...) =====
+    async function fetchProductBySku(sku) {
+      if (!sku) return null;
+      try {
+        const res = await fetch(`/get-product-details?sku=${encodeURIComponent(sku)}`);
+        const data = await res.json();
+        if (!res.ok || !data || !data.product) return null;
+        return { sku, description: data.product.description || '' };
+      } catch (_) { return null; }
+    }
+
+    // ===== Collectors =====
+    function collectReturnItems() {
+      const rows = Array.from(document.querySelectorAll('#summaryTable tbody tr'));
+      const items = [];
+      rows.forEach(tr => {
+        const net = Number(tr.dataset.net || 0);
+        const sku = tr.dataset.sku;
+        const description = tr.dataset.description || '';
+        const input = tr.querySelector('.return-input');
+        if (!input || input.disabled) return;
+
+        const max = net < 0 ? Math.abs(net) : 0;
+        let qty = parseInt((input.value || '0'), 10);
+        if (!Number.isFinite(qty)) qty = 0;
+        if (qty > max) qty = max;
+        if (qty <= 0) return;
+
+        items.push({ sku, description, net, quantity: qty });
+      });
+      return items;
+    }
+
+    function getCurrentNetForSku(sku) {
+      const row = document.querySelector(`#summaryTable tbody tr[data-sku="${CSS.escape(sku)}"]`);
+      if (!row) return 0;
+      const net = Number(row.dataset.net || 0);
+      return Number.isFinite(net) ? net : 0;
+    }
+
+    function renumberAddOutRows() {
+      const rows = Array.from(addOutTbody.querySelectorAll('tr.data-row'));
+      rows.forEach((tr, idx) => {
+        const cell = tr.querySelector('td.seq');
+        if (cell) cell.textContent = String(idx + 1);
+      });
+      if (rows.length === 0) {
+        addOutTbody.innerHTML = '<tr class="text-center text-muted"><td colspan="5">ยังไม่มีรายการ</td></tr>';
+      }
+    }
+
+    function updateRemoveButtons() {
+      const btns = addOutTbody.querySelectorAll('tr.data-row .remove-row');
+      const show = btns.length > 1 ? 'inline-block' : 'none';
+      btns.forEach(b => b.style.display = show);
+    }
+
+    function makeRemoveButton() {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-danger btn-sm btn-remove remove-row';
+      btn.innerHTML = '<i class="bi bi-trash"></i> <span class="d-none d-md-inline">ลบ</span>';
+      return btn;
+    }
+
+    function createAddOutRow(prefill = {}) {
+      const empt = addOutTbody.querySelector('tr.text-muted');
+      if (empt) empt.remove();
+
+      const tr = document.createElement('tr');
+      tr.className = 'data-row';
+      tr.innerHTML = `
+        <td class="seq text-center"></td>
+        <td class="text-center">
+          <input type="text" class="form-control sku-input" placeholder="ระบุ SKU" value="${prefill.sku || ''}" />
+        </td>
+        <td class="description-cell text-center"></td>
+        <td class="text-center">
+          <input type="number" class="form-control qty-input text-center" min="1" step="1" value="${prefill.quantity || 1}" inputmode="numeric" pattern="[0-9]*" style="max-width:120px;margin:0 auto;text-align:center;" />
+        </td>
+        <td class="text-center btn-cell"></td>
+      `;
+
+      const skuInput = tr.querySelector('.sku-input');
+      const qtyInput = tr.querySelector('.qty-input');
+      const descCell = tr.querySelector('.description-cell');
+      const btnCell = tr.querySelector('.btn-cell');
+
+      function setInvalid() {
+        descCell.textContent = 'ไม่พบข้อมูล SKU';
+        descCell.classList.remove('text-dark'); 
+        descCell.classList.add('text-danger');
+        tr.dataset.valid = '0';
+        tr.dataset.sku = '';
+        tr.dataset.description = '';
+      }
+      function setValid(data) {
+        descCell.textContent = data.description || '';
+        descCell.classList.remove('text-danger'); 
+        descCell.classList.add('text-dark');
+        tr.dataset.valid = '1';
+        tr.dataset.sku = data.sku;
+        tr.dataset.description = data.description || '';
+      }
+
+      async function validateSkuLive(value) {
+        const sku = (value ?? '').trim();
+        if (!sku) {
+          descCell.textContent = '';
+          descCell.classList.remove('text-danger','text-dark');
+          tr.dataset.valid = '0';
+          tr.dataset.sku = '';
+          tr.dataset.description = '';
+          return;
+        }
+        const data = await fetchProductBySku(sku);
+        if (!data) setInvalid();
+        else setValid(data);
+      }
+
+      // Live check
+      skuInput.addEventListener('input', (e) => validateSkuLive(e.target.value));
+      ['change','blur'].forEach(ev => skuInput.addEventListener(ev, (e) => validateSkuLive(e.target.value)));
+      skuInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === 'Tab') setTimeout(() => validateSkuLive(skuInput.value), 0);
+      });
+
+      qtyInput.addEventListener('keydown', blockNonNumericKey);
+      qtyInput.addEventListener('wheel', e => e.preventDefault(), { passive: false });
+
+      const rm = makeRemoveButton();
+      rm.addEventListener('click', () => { tr.remove(); renumberAddOutRows(); updateRemoveButtons(); });
+      btnCell.appendChild(rm);
+
+      addOutTbody.appendChild(tr);
+      renumberAddOutRows();
+      updateRemoveButtons();
+    }
+
+    function clearAddOutRows() {
+      addOutTbody.innerHTML = '<tr class="text-center text-muted"><td colspan="5">ยังไม่มีรายการ</td></tr>';
+    }
+
+    async function validateAllAddOutRows() {
+      const rows = Array.from(addOutTbody.querySelectorAll('tr.data-row'));
+      const jobs = rows.map(async tr => {
+        const sku = (tr.querySelector('.sku-input')?.value || '').trim();
+        const descCell = tr.querySelector('.description-cell');
+        if (!sku) {
+          tr.dataset.valid = '0';
+          if (descCell) { descCell.textContent = ''; descCell.classList.remove('text-dark'); }
+          return;
+        }
+        const data = await fetchProductBySku(sku);
+        if (!data) {
+          tr.dataset.valid = '0';
+          if (descCell) { descCell.textContent = 'ไม่พบข้อมูล SKU'; descCell.classList.add('text-danger'); }
+        } else {
+          tr.dataset.valid = '1';
+          tr.dataset.sku = data.sku;
+          tr.dataset.description = data.description || '';
+          if (descCell) { descCell.textContent = data.description || ''; descCell.classList.add('text-dark'); }
+        }
+      });
+      return Promise.all(jobs);
+    }
+
+    function collectAddOutItems() {
+      const rows = Array.from(addOutTbody.querySelectorAll('tr.data-row'));
+      const map = new Map(); // sku -> { sku, quantity, description }
+      rows.forEach(tr => {
+        const valid = tr.dataset.valid === '1';
+        const sku = (tr.dataset.sku || tr.querySelector('.sku-input')?.value || '').trim();
+        const qty = parseInt(tr.querySelector('.qty-input')?.value || '0', 10);
+        const description = tr.dataset.description || '';
+
+        if (!sku || !Number.isFinite(qty) || qty <= 0 || !valid) return;
+        const prev = map.get(sku) || { sku, quantity: 0, description };
+        prev.quantity += qty;
+        prev.description = description || prev.description;
+        map.set(sku, prev);
+      });
+      return Array.from(map.values());
+    }
+
+    // ===== Review Modal (combined) =====
+    function buildUpdateReview(addOutItems, returnItems) {
+      const hasOut = addOutItems.length > 0;
+      const hasRet = returnItems.length > 0;
+
+      const secOut = document.getElementById('reviewOutSection');
+      const secRet = document.getElementById('reviewReturnSection');
+      const bodyOut = document.getElementById('reviewOutBody');
+      const bodyRet = document.getElementById('reviewReturnBody');
+
+      secOut.classList.toggle('d-none', !hasOut);
+      secRet.classList.toggle('d-none', !hasRet);
+
+      if (hasOut) {
+        bodyOut.innerHTML = '';
+        addOutItems.forEach((it, idx) => {
+          const netNow = getCurrentNetForSku(it.sku);
+          const netAfter = netNow - Number(it.quantity || 0);
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="text-center">${idx + 1}</td>
+            <td>${it.sku}</td>
+            <td>${it.description || ''}</td>
+            <td class="text-center">${netNow}</td>
+            <td class="text-center">${it.quantity}</td>
+            <td class="text-center">${netAfter}</td>
+          `;
+          bodyOut.appendChild(tr);
+        });
+      }
+
+      if (hasRet) {
+        bodyRet.innerHTML = '';
+        returnItems.forEach((it, idx) => {
+          const netNow = Number(it.net) || 0;
+          const qtyRet = Number(it.quantity) || 0;
+          const netAfter = Math.min(0, netNow + qtyRet);
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="text-center">${idx + 1}</td>
+            <td>${it.sku}</td>
+            <td>${it.description || ''}</td>
+            <td class="text-center">${netNow}</td>
+            <td class="text-center">${qtyRet}</td>
+            <td class="text-center">${netAfter}</td>
+          `;
+          bodyRet.appendChild(tr);
+        });
+      }
+    }
+
+    // ===== API glue =====
+    async function sendUpdate(force = false, extra = {}) {
+      const newStatus = workStatusSelect.value;
+      const newRequestId = reqIdInput.value.trim();
+      const requesterName = requesterInput.value.trim();
+      const storeId = storeIdInput.value.trim();
+
+      const originalText = updateBtn.innerHTML;
+      updateBtn.disabled = true;
+      updateBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Updating...`;
+
+      try {
+        const encodedRequestId = encodeURIComponent("<%= requestId %>");
+        const response = await fetch(`/workorder/${encodedRequestId}/update-status`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workStatus: newStatus,
+            newRequestId,
+            requesterName,
+            storeId,
+            forceUpdate: force,
+            ...extra
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.duplicate && !force) {
+          duplicateModal = new bootstrap.Modal(document.getElementById('duplicateModal'));
+          duplicateModal.show();
+          updateBtn.disabled = false;
+          updateBtn.innerHTML = originalText;
+          return;
+        }
+
+        if (response.ok) {
+          if (result.message === 'No transactions found to update.') {
+            alertMessage.className = 'alert alert-warning alert-dismissible fade show mt-3';
+            alertText.innerText = result.message;
+            alertMessage.classList.remove('d-none');
+            updateBtn.disabled = false;
+            updateBtn.innerHTML = originalText;
+            return;
+          }
+
+          alertMessage.className = 'alert alert-success alert-dismissible fade show mt-3';
+          alertText.innerText = result.message;
+          alertMessage.classList.remove('d-none');
+
+          if (result.finalStatus === 'Cancel' || newStatus === 'Cancel') {
+            disableControls();
+          }
+
+          setTimeout(() => {
+            if (result.newRequestId) {
+              window.location.href = `/workorder/${encodeURIComponent(result.newRequestId)}`;
+            } else {
+              location.reload();
             }
+          }, 1200);
+        } else {
+          throw new Error(result.message || 'Update failed.');
+        }
+      } catch (error) {
+        alertMessage.className = 'alert alert-danger alert-dismissible fade show mt-3';
+        alertText.innerText = error.message || 'An unexpected error occurred.';
+        alertMessage.classList.remove('d-none');
+        updateBtn.disabled = false;
+        updateBtn.innerHTML = originalText;
+      }
+    }
 
-            // คำนวณยอดรวมตาม transactionType
-            if (transaction.transactionType.toLowerCase() === 'in') {
-            summary[sku].net += qty;
-            } else if (transaction.transactionType.toLowerCase() === 'out') {
-            summary[sku].net -= qty;
-            }
-            });
-            });
-            %>
+    // ===== Button wiring =====
+    if (btnAddOutRow) btnAddOutRow.addEventListener('click', () => createAddOutRow());
+    if (btnClearOutRows) btnClearOutRows.addEventListener('click', () => { clearAddOutRows(); updateRemoveButtons(); });
 
-            <!-- ตาราง Summary ด้านล่าง -->
-            <h3 class="mt-3 text-center">Summary (ยอดใช้อะไหล่จริง)</h3>
+    // Delegate remove clicks
+    addOutTbody.addEventListener('click', (e) => {
+      const btn = e.target.closest('.remove-row');
+      if (!btn) return;
+      const tr = btn.closest('tr.data-row');
+      if (tr) { tr.remove(); renumberAddOutRows(); updateRemoveButtons(); }
+    });
 
-            <div class="table-responsive mt-3">
-              <table class="table table-bordered mt-3">
-                <thead class="table-dark">
-                  <tr>
-                    <th class="text-center align-middle">#</th>
-                    <th class="text-center align-middle">SKU</th>
-                    <th class="text-center align-middle">Description</th>
-                    <th class="text-center align-middle">Net Quantity</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <% Object.keys(summary).forEach((sku, index)=> { %>
-                    <tr>
-                      <td class="text-center">
-                        <%= index + 1 %>
-                      </td>
-                      <td class="text-center">
-                        <%= sku %>
-                      </td>
-                      <td class="text-center">
-                        <%= summary[sku].description %>
-                      </td>
-                      <td class="text-center">
-                        <%= summary[sku].net %>
-                      </td>
-                    </tr>
-                    <% }) %>
-                </tbody>
-              </table>
-            </div>
+    updateBtn.addEventListener('click', async () => {
+      const selected = workStatusSelect.value;
 
-          
-            <a href="/workorder" class="btn btn-lg btn-secondary mb-3">Back</a>
-            
-            <script>
-              document.addEventListener("DOMContentLoaded", function () {
-                const defaultStatus = "<%= transactions[0]?.workStatus || 'Pending' %>";
-                document.getElementById("workStatusSelect").value = defaultStatus;
-              });
-            </script>
+      if (selected === 'Cancel') {
+        const tbody = document.getElementById('cancelListBody');
+        tbody.innerHTML = '';
+        if (!cancelReturnItems || cancelReturnItems.length === 0) {
+          tbody.innerHTML = `<tr><td class="text-center" colspan="4">ไม่มีรายการค้างคืน</td></tr>`;
+        } else {
+          cancelReturnItems.forEach((it, idx) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td class="text-center">${idx + 1}</td>
+              <td>${it.sku}</td>
+              <td>${it.description || ''}</td>
+              <td class="text-center">${it.qty}</td>`;
+            tbody.appendChild(tr);
+          });
+        }
+        const cancelModal = new bootstrap.Modal(document.getElementById('cancelConfirmModal'));
+        cancelModal.show();
+        document.getElementById('confirmCancelBtn').onclick = () => {
+          cancelModal.hide();
+          sendUpdate(false, { isCancel: true, returnItems: cancelReturnItems });
+        };
+        return;
+      }
 
-            <script>
-              const updateBtn = document.getElementById("updateWorkStatus");
-              const alertMessage = document.getElementById("alertMessage");
-              const alertText = document.getElementById("alertText");
-              const confirmDuplicateBtn = document.getElementById("confirmDuplicateBtn");
-              let duplicateModal;
-            
-              async function sendUpdate(force = false) {
-                const newStatus = document.getElementById("workStatusSelect").value;
-                const newRequestId = document.getElementById("newRequestId").value.trim();
-                const requesterName = document.getElementById("requesterNameInput").value.trim();
-                const storeId = document.getElementById("storeIdInput").value.trim();
-            
-                const originalText = updateBtn.innerHTML;
-                updateBtn.disabled = true;
-                updateBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Updating...`;
-            
-                try {
-                  const encodedRequestId = encodeURIComponent("<%= requestId %>");
-                  const response = await fetch(`/workorder/${encodedRequestId}/update-status`, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      workStatus: newStatus,
-                      newRequestId: newRequestId,
-                      requesterName: requesterName,
-                      storeId: storeId,
-                      forceUpdate: force
-                    }),
-                  });
-            
-                  const result = await response.json();
-            
-                  // ⚠️ เจอ requestId ซ้ำ => เปิด modal
-                  if (result.duplicate && !force) {
-                    duplicateModal = new bootstrap.Modal(document.getElementById("duplicateModal"));
-                    duplicateModal.show();
-                    updateBtn.disabled = false;
-                    updateBtn.innerHTML = originalText;
-                    return;
-                  }
-            
-                  if (response.ok) {
-                    if (result.message === "No transactions found to update.") {
-                      alertMessage.className = "alert alert-warning alert-dismissible fade show mt-3";
-                      alertText.innerText = result.message;
-                      alertMessage.classList.remove("d-none");
-                      updateBtn.disabled = false;
-                      updateBtn.innerHTML = originalText;
-                      return;
-                    }
-            
-                    // ✅ สำเร็จ
-                    alertMessage.className = "alert alert-success alert-dismissible fade show mt-3";
-                    alertText.innerText = result.message;
-                    alertMessage.classList.remove("d-none");
-            
-                    setTimeout(() => {
-                      if (result.newRequestId) {
-                        window.location.href = `/workorder/${encodeURIComponent(result.newRequestId)}`;
-                      } else {
-                        location.reload();
-                      }
-                    }, 2000);
-                  } else {
-                    // ❌ Response ไม่สำเร็จ
-                    throw new Error(result.message || "Update failed.");
-                  }
-                } catch (error) {
-                  alertMessage.className = "alert alert-danger alert-dismissible fade show mt-3";
-                  alertText.innerText = error.message || "An unexpected error occurred.";
-                  alertMessage.classList.remove("d-none");
-                  updateBtn.disabled = false;
-                  updateBtn.innerHTML = originalText;
-                }
-              }
-            
-              // ✅ ครั้งแรกที่กด
-              updateBtn.addEventListener("click", () => {
-                sendUpdate(false);
-              });
-            
-              // ✅ เมื่อยืนยันซ้ำจาก modal
-              confirmDuplicateBtn.addEventListener("click", () => {
-                if (duplicateModal) duplicateModal.hide();
-                sendUpdate(true);
-              });
-            </script>
-            
-            
-            
+      // Validate แถว OUT ทั้งหมดก่อน
+      await validateAllAddOutRows();
 
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+      const returnItems = collectReturnItems();
+      const addOutItems = collectAddOutItems();
 
+      const hasAnyRow = addOutTbody.querySelectorAll('tr.data-row').length > 0;
+      const hasInvalid = hasAnyRow && addOutTbody.querySelectorAll('tr.data-row[data-valid="0"]').length > 0;
+
+      if (hasInvalid) {
+        alertMessage.className = 'alert alert-warning alert-dismissible fade show mt-3';
+        alertText.innerText = 'กรุณาแก้ไข SKU ที่ไม่พบ หรือเอาแถวที่ไม่ถูกต้องออกก่อนบันทึก';
+        alertMessage.classList.remove('d-none');
+        const bad = addOutTbody.querySelector('tr.data-row[data-valid="0"] .sku-input');
+        bad?.focus();
+        bad?.closest('tr')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
+      if (returnItems.length === 0 && addOutItems.length === 0) {
+        if (hasAnyRow) {
+          alertMessage.className = 'alert alert-warning alert-dismissible fade show mt-3';
+          alertText.innerText = 'มีรายการ OUT เพิ่ม แต่ยังไม่สมบูรณ์ กรุณากรอก SKU ให้ถูกต้องหรือเอาแถวออก';
+          alertMessage.classList.remove('d-none');
+          return;
+        }
+        // ไม่มีทั้ง OUT/Return → อัพเดตข้อมูลทั่วไป
+        sendUpdate(false);
+        return;
+      }
+
+      // Build combined review modal
+      buildUpdateReview(addOutItems, returnItems);
+      const reviewModal = new bootstrap.Modal(document.getElementById('updateConfirmModal'));
+      reviewModal.show();
+      document.getElementById('confirmUpdateAllBtn').onclick = () => {
+        reviewModal.hide();
+        const payload = {
+          ...(addOutItems.length > 0 ? { addOutItems } : {}),
+          ...(returnItems.length > 0 ? { isReturn: true, returnItems: returnItems.map(x => ({ sku: x.sku, quantity: x.quantity })) } : {})
+        };
+        sendUpdate(false, payload);
+      };
+    });
+
+    // Duplicate → ส่งซ้ำพร้อม payload ปัจจุบัน
+    confirmDuplicateBtn.addEventListener('click', () => {
+      if (duplicateModal) duplicateModal.hide();
+      const returnItems = collectReturnItems();
+      const addOutItems = collectAddOutItems();
+      const extra = {
+        ...(addOutItems.length > 0 ? { addOutItems } : {}),
+        ...(returnItems.length > 0 ? { isReturn: true, returnItems: returnItems.map(x => ({ sku: x.sku, quantity: x.quantity })) } : {})
+      };
+      sendUpdate(true, extra);
+    });
+
+    // Lock UI ถ้า default เป็น Cancel
+    document.addEventListener('DOMContentLoaded', () => {
+      const isCancel = workStatusSelect.value === 'Cancel';
+      setCancelInputLock(isCancel);
+      if (isCancel) disableControls();
+    });
+    workStatusSelect.addEventListener('change', (e) => {
+      const isCancel = e.target.value === 'Cancel';
+      setCancelInputLock(isCancel);
+    });
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+  
 </body>
 
 </html>

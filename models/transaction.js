@@ -20,7 +20,7 @@ const transactionSchema = new mongoose.Schema({
       remaining: Number
     }
   ],
-  workStatus: { type: String, enum: ["Pending", "Finish"] },
+  workStatus: { type: String, enum: ["Pending", "Finish","Cancel"] },
   storeId: { type: Number },
   storename: String,
   username: { type: String, required: true }
@@ -28,12 +28,10 @@ const transactionSchema = new mongoose.Schema({
   timestamps: true // ✅ เปิดใช้งาน createdAt และ updatedAt อัตโนมัติ
 });
 
-module.exports = mongoose.model("transaction", transactionSchema);
-
-
 
 //บันทึกข้อ transaction
 module.exports.savetransaction=function(model,data){
     model.save(data)
 }
 
+module.exports = mongoose.model("transaction", transactionSchema);

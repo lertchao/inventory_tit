@@ -34,19 +34,15 @@
             <!-- Machine Type filter -->
             <div class="col-lg-6 col-12 mx-auto mb-2">
               <select class="select2" id="MachineType" multiple tabindex="0" name="machineTypes-ui-only">
-                <!-- ✅ empty option เพื่อให้ allowClear ทำงาน และไม่เด้งไปตัวแรกหลังเคลียร์ -->
                 <option value=""></option>
-                <%
-                  const ALL_TYPES = [
-                    "Clover","E2S","Grind Master","Macro Tab","Mastrena I","Mastrena II","Ditting",
-                    "NGO","Nitro","Nitro Single","Oviso","Other","Vitamix",
-                  ].sort();
-                %>
-                <% ALL_TYPES.forEach(t => { %>
-                  <option value="<%= t %>" <%= (Array.isArray(machineTypesSelected) && machineTypesSelected.includes(t)) ? 'selected' : '' %>><%= t %></option>
+                <% (machineTypeOptions || []).forEach(t => { %>
+                  <option value="<%= t %>" <%= (Array.isArray(machineTypesSelected) && machineTypesSelected.includes(t)) ? 'selected' : '' %>>
+                    <%= t %>
+                  </option>
                 <% }) %>
               </select>
             </div>
+            
 
             <!-- Search -->
             <div class="col-lg-6 col-12 mx-auto mb-2">
