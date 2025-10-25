@@ -173,12 +173,12 @@
       <table class="table table-bordered mt-3">
         <thead class="table-secondary">
           <tr>
-            <th class="text-center align-middle">#</th>
-            <th class="text-center align-middle">SKU</th>
-            <th class="text-center align-middle">Quantity</th>
-            <th class="text-center align-middle">Transaction Type</th>
-            <th class="text-center align-middle">Work Status</th>
-            <th class="text-center align-middle">Created At</th>
+            <th class="text-center col-1 align-middle">#</th>
+            <th class="text-center col-3 align-middle">SKU</th>
+            <th class="text-center col-1 align-middle">Quantity</th>
+            <th class="text-center col-2 align-middle">Transaction Type</th>
+            <th class="text-center col-2 align-middle">Work Status</th>
+            <th class="text-center col-3 align-middle">Created At</th>
           </tr>
         </thead>
         <tbody>
@@ -239,11 +239,11 @@
       <table class="table table-bordered mt-3" id="summaryTable">
         <thead class="table-dark">
           <tr>
-            <th class="text-center align-middle">#</th>
-            <th class="text-center align-middle">SKU</th>
-            <th class="text-center align-middle">Description</th>
-            <th class="text-center align-middle">Net Quantity</th>
-            <th class="text-center align-middle">Return Quantity</th>
+            <th class="text-center col-1 align-middle">#</th>
+            <th class="text-center col-3 align-middle">SKU</th>
+            <th class="text-center col-4 align-middle">Description</th>
+            <th class="text-center col-2 align-middle">Net Quantity</th>
+            <th class="text-center col-2 align-middle">Return Quantity</th>
           </tr>
         </thead>
         <tbody>
@@ -254,7 +254,7 @@
             <tr data-sku="<%= sku %>" data-description="<%= summary[sku].description %>" data-net="<%= net %>" data-max="<%= maxReturn %>">
               <td class="text-center align-middle"><%= index + 1 %></td>
               <td class="text-center align-middle"><%= sku %></td>
-              <td class="text-center align-middle"><%= summary[sku].description %></td>
+              <td class="align-middle"><%= summary[sku].description %></td>
               <td class="text-center align-middle"><%= net %></td>
               <td class="text-center align-middle">
                 <input 
@@ -275,24 +275,35 @@
       </table>
     </div>
 
-    <!-- Additional OUT section (new) -->
+    <!-- Additional OUT section (Bootstrap-only) -->
     <div class="mt-4">
-      <div class="d-flex justify-content-between align-items-center">
-        <h4 class="mb-0">เบิกเพิ่ม (Additional OUT)</h4>
-        <div>
-          <button id="btnAddOutRow" type="button" class="btn btn-outline-success btn-sm">+ เพิ่มรายการ OUT</button>
-          <button id="btnClearOutRows" type="button" class="btn btn-outline-secondary btn-sm ms-2">ล้างรายการ</button>
+      <div class="row align-items-center g-2">
+        <div class="col-12 col-sm">
+          <h4 class="mb-0">เบิกเพิ่ม (Additional OUT)</h4>
+        </div>
+
+        
+        <div class="col-12 col-sm-auto">
+          <div class="d-grid gap-2 d-sm-flex">
+            <button id="btnAddOutRow" type="button" class="btn btn-outline-success btn-sm">
+              + เพิ่มรายการ OUT
+            </button>
+            <button id="btnClearOutRows" type="button" class="btn btn-outline-secondary btn-sm">
+              ล้างรายการ
+            </button>
+          </div>
         </div>
       </div>
+
       <div class="table-responsive mt-2">
         <table class="table table-bordered table-sm" id="addOutTable">
           <thead class="table-light">
             <tr>
-              <th class="text-center" style="width:60px">#</th>
-              <th class="text-center" style="width:220px">SKU</th>
-              <th class="text-center">Description</th>
-              <th class="text-center" style="width:160px">Issue Qty</th>
-              <th class="text-center" style="width:90px">ลบ</th>
+              <th class="text-center col-1">#</th>
+              <th class="text-center col-3">SKU</th>
+              <th class="text-center col-4">Description</th>
+              <th class="text-center col-2">Issue Qty</th>
+              <th class="text-center col-2">ลบ</th>
             </tr>
           </thead>
           <tbody id="addOutTbody">
@@ -302,6 +313,7 @@
         <small class="text-muted">พิมพ์ SKU แล้วกด Tab/Enter หรือพิมพ์ต่อเนื่องเพื่อเช็คสินค้าและเติมรายละเอียดอัตโนมัติ</small>
       </div>
     </div>
+
 
     <!-- Update Confirmation Modal (new: combine OUT+Return) -->
     <div class="modal fade" id="updateConfirmModal" tabindex="-1" aria-labelledby="updateConfirmModalLabel" aria-hidden="true">
@@ -366,7 +378,7 @@
 
 
 
-  </div> <!-- /.container -->
+  </div> 
 
   <script>
     // ===== Variables =====
@@ -517,7 +529,7 @@
         <td class="text-center">
           <input type="text" class="form-control sku-input" placeholder="ระบุ SKU" value="${prefill.sku || ''}" />
         </td>
-        <td class="description-cell text-center"></td>
+        <td class="description-cell"></td>
         <td class="text-center">
           <input type="number" class="form-control qty-input text-center" min="1" step="1" value="${prefill.quantity || 1}" inputmode="numeric" pattern="[0-9]*" style="max-width:120px;margin:0 auto;text-align:center;" />
         </td>

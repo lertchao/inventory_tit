@@ -586,42 +586,15 @@ router.get('/trans-out',isAuthenticated, isAdmin,(req,res)=>{
 })
 
 
-router.get('/onhand', isAuthenticated, async (req, res) => {
-  const perPage = 12;
-  const page = parseInt(req.query.page) || 1;
-  const searchQueryRaw = req.query.search || '';
-
-  function escapeRegex(str) {
-      return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  }
-  const escapedQuery = escapeRegex(searchQueryRaw);
-  const condition = searchQueryRaw ? {
-      $or: [
-          { sku: { $regex: escapedQuery, $options: 'i' } },
-          { description: { $regex: escapedQuery, $options: 'i' } }
-      ]
-  } : {};
-
-  const total = await Product.countDocuments(condition);
-  const products = await Product.find(condition)
-      .sort({ sku: 1 })
-      .skip((page - 1) * perPage)
-      .limit(perPage);
-
-  res.render('onhand', {
-      products,
-      search: searchQueryRaw,
-      current: page,
-      pages: Math.ceil(total / perPage)
-  });
-});
-
-
-router.get('/public-onhand', async (req, res) => {
+router.get('/onhand',isAuthenticated, async (req, res) => {
   const perPage = 12;
   const page = parseInt(req.query.page) || 1;
   const searchQueryRaw = (req.query.search || '').trim();
 
+  // รับค่า filter: 'all' | 'available' | 'out' (ค่าเริ่มต้น = 'all')
+  const filter = (req.query.filter || 'all').toString();
+
+  // machineTypes (array)
   let machineTypes = req.query.machineTypes || [];
   if (!Array.isArray(machineTypes)) machineTypes = [machineTypes];
   machineTypes = machineTypes
@@ -629,6 +602,7 @@ router.get('/public-onhand', async (req, res) => {
     .map(v => v.trim())
     .filter(Boolean);
 
+  // เงื่อนไขค้นหา
   const condition = {};
   if (searchQueryRaw) {
     const escaped = searchQueryRaw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -641,13 +615,82 @@ router.get('/public-onhand', async (req, res) => {
     condition.machineTypes = { $in: machineTypes };
   }
 
+  // ✅ เงื่อนไข filter ตามสวิตช์
+  if (filter === 'available') {
+    condition.quantity = { $gt: 0 };       // เฉพาะมีของ
+  } else if (filter === 'out') {
+    condition.quantity = { $lte: 0 };      // เฉพาะของหมด
+  } // 'all' = ไม่ใส่เงื่อนไข quantity
+
   const total = await Product.countDocuments(condition);
   const products = await Product.find(condition)
     .sort({ sku: 1 })
     .skip((page - 1) * perPage)
     .limit(perPage);
 
-  // ✅ ดึงรายการ machineTypes ที่มีอยู่จริงทั้งหมด
+  // รายการ Machine Types ทั้งหมด
+  let machineTypeOptions = await Product.distinct("machineTypes");
+  machineTypeOptions = (machineTypeOptions || [])
+    .filter(Boolean)
+    .map(s => s.trim())
+    .filter(s => s.length > 0)
+    .sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
+
+  res.render('onhand', {
+    products,
+    search: searchQueryRaw,
+    current: page,
+    pages: Math.ceil(total / perPage),
+    machineTypesSelected: machineTypes,
+    machineTypeOptions,
+    filter   // 👉 ส่งค่านี้ให้ EJS ตั้งค่าสวิตช์ + สร้างลิงก์เพจ
+  });
+});
+
+
+router.get('/public-onhand', async (req, res) => {
+  const perPage = 12;
+  const page = parseInt(req.query.page) || 1;
+  const searchQueryRaw = (req.query.search || '').trim();
+
+  // รับค่า filter: 'all' | 'available' | 'out' (ค่าเริ่มต้น = 'all')
+  const filter = (req.query.filter || 'all').toString();
+
+  // machineTypes (array)
+  let machineTypes = req.query.machineTypes || [];
+  if (!Array.isArray(machineTypes)) machineTypes = [machineTypes];
+  machineTypes = machineTypes
+    .flatMap(v => (typeof v === 'string' ? v.split(',') : v))
+    .map(v => v.trim())
+    .filter(Boolean);
+
+  // เงื่อนไขค้นหา
+  const condition = {};
+  if (searchQueryRaw) {
+    const escaped = searchQueryRaw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    condition.$or = [
+      { sku: { $regex: escaped, $options: 'i' } },
+      { description: { $regex: escaped, $options: 'i' } }
+    ];
+  }
+  if (machineTypes.length > 0) {
+    condition.machineTypes = { $in: machineTypes };
+  }
+
+  // ✅ เงื่อนไข filter ตามสวิตช์
+  if (filter === 'available') {
+    condition.quantity = { $gt: 0 };       // เฉพาะมีของ
+  } else if (filter === 'out') {
+    condition.quantity = { $lte: 0 };      // เฉพาะของหมด
+  } // 'all' = ไม่ใส่เงื่อนไข quantity
+
+  const total = await Product.countDocuments(condition);
+  const products = await Product.find(condition)
+    .sort({ sku: 1 })
+    .skip((page - 1) * perPage)
+    .limit(perPage);
+
+  // รายการ Machine Types ทั้งหมด
   let machineTypeOptions = await Product.distinct("machineTypes");
   machineTypeOptions = (machineTypeOptions || [])
     .filter(Boolean)
@@ -661,12 +704,211 @@ router.get('/public-onhand', async (req, res) => {
     current: page,
     pages: Math.ceil(total / perPage),
     machineTypesSelected: machineTypes,
-    machineTypeOptions   // 👉 ส่ง options ไปแทน ALL_TYPES
+    machineTypeOptions,
+    filter   // 👉 ส่งค่านี้ให้ EJS ตั้งค่าสวิตช์ + สร้างลิงก์เพจ
   });
 });
 
+router.get("/public-pending", async (req, res) => {
+  try {
+    const searchQuery = req.query.search?.trim() || ""; // รับค่าค้นหาและตัดช่องว่าง
+    let matchStage = {}; // ใช้เป็นค่าว่างถ้าไม่มีการค้นหา
+
+    if (searchQuery) {
+      matchStage = { requestId: searchQuery }; // ค้นหาตาม Request ID
+    }
+
+// ดึงข้อมูลสำหรับกราฟ (เฉพาะงานที่ยัง Pending)
+const pendingWorkOrders = await Transaction.aggregate([
+  { $match: { workStatus: "Pending" } },                 // เฉพาะ Pending
+  { $unwind: "$products" },
+  {
+    $lookup: {
+      from: "products",
+      localField: "products.sku",
+      foreignField: "sku",
+      as: "productInfo",
+    },
+  },
+  { $unwind: "$productInfo" },
+
+  // กลุ่มตาม requesterName + typeparts + requestId เพื่อคำนวณ totalCost ต่อใบงาน
+  {
+    $group: {
+      _id: {
+        requesterName: "$requesterName",
+        typeparts: "$productInfo.typeparts",
+        requestId: "$requestId",
+      },
+      totalCost: {
+        $sum: {
+          $cond: [
+            { $eq: ["$transactionType", "OUT"] },
+            { $multiply: ["$products.quantity", "$productInfo.cost"] },
+            { $multiply: ["$products.quantity", "$productInfo.cost", -1] }
+          ]
+        }
+      }
+    }
+  },
+
+  // กลับมารวมตาม requesterName อีกครั้ง:
+  // - รวม cost แยก CM/PM
+  // - เก็บ requestId ไม่ซ้ำ เพื่อนับจำนวนใบงานจริง
+  {
+    $group: {
+      _id: "$_id.requesterName",
+      cmTotalCost: {
+        $sum: {
+          $cond: [{ $eq: ["$_id.typeparts", "CM"] }, "$totalCost", 0]
+        }
+      },
+      pmTotalCost: {
+        $sum: {
+          $cond: [{ $eq: ["$_id.typeparts", "PM"] }, "$totalCost", 0]
+        }
+      },
+      requestIds: { $addToSet: "$_id.requestId" }  // ✅ เก็บชุด requestId ไม่ซ้ำ
+    }
+  },
+
+  // คำนวณรวม/นับจำนวนใบงาน
+  {
+    $addFields: {
+      totalCombinedCost: { $add: ["$cmTotalCost", "$pmTotalCost"] },
+      pendingJobs: { $size: "$requestIds" }          // ✅ จำนวนใบงานตาม requestId (unique)
+    }
+  },
+
+  { $sort: { totalCombinedCost: -1 } }
+]);
 
 
+    let pendingWorkOrdersTable = await Transaction.aggregate([
+      { $match: { workStatus: "Pending" } },
+      { $unwind: "$products" },
+      {
+        $lookup: {
+          from: "products",
+          localField: "products.sku",
+          foreignField: "sku",
+          as: "productInfo",
+        },
+      },
+      { $unwind: "$productInfo" },
+      {
+        $lookup: {
+          from: "stores",
+          localField: "storeId",
+          foreignField: "storeId",
+          as: "storeInfo",
+        },
+      },
+      { $unwind: { path: "$storeInfo", preserveNullAndEmptyArrays: true } },
+
+      // 🔹 Group by requestId + typeparts
+      {
+        $group: {
+          _id: {
+            requestId: "$requestId",
+            requesterName: "$requesterName",
+            storeId: "$storeId",
+            storename: "$storeInfo.storename",
+            typeparts: "$productInfo.typeparts",
+          },
+          totalCost: {
+            $sum: {
+              $cond: {
+                if: { $eq: ["$transactionType", "OUT"] },
+                then: {
+                  $multiply: ["$products.quantity", "$productInfo.cost"],
+                },
+                else: {
+                  $multiply: ["$products.quantity", "$productInfo.cost", -1],
+                },
+              },
+            },
+          },
+          earliestTransactionDate: { $min: "$createdAt" }, // ✅ เปลี่ยนจาก $max เป็น $min
+        },
+      },
+
+      // 🔸 รวม typeparts กลับเป็นใบงานเดียว
+      {
+        $group: {
+          _id: {
+            requestId: "$_id.requestId",
+            requesterName: "$_id.requesterName",
+            storeId: "$_id.storeId",
+            storename: "$_id.storename",
+          },
+          cmTotalCost: {
+            $sum: {
+              $cond: {
+                if: { $eq: ["$_id.typeparts", "CM"] },
+                then: "$totalCost",
+                else: 0,
+              },
+            },
+          },
+          pmTotalCost: {
+            $sum: {
+              $cond: {
+                if: { $eq: ["$_id.typeparts", "PM"] },
+                then: "$totalCost",
+                else: 0,
+              },
+            },
+          },
+          earliestTransactionDate: { $min: "$earliestTransactionDate" }, // ✅ เปลี่ยนจาก $max เป็น $min
+        },
+      },
+
+      {
+        $addFields: {
+          totalCombinedCost: { $add: ["$cmTotalCost", "$pmTotalCost"] },
+        },
+      },
+      {
+        $sort: {
+          "_id.requesterName": 1,
+          "_id.requestId": 1,
+        },
+      },
+    ]);
+
+    const current = new Date();
+
+    pendingWorkOrdersTable = pendingWorkOrdersTable.map((item) => {
+      const earliest = item.earliestTransactionDate
+        ? new Date(item.earliestTransactionDate)
+        : null;
+      const pendingDays = earliest
+        ? Math.floor((current - earliest) / (1000 * 60 * 60 * 24))
+        : null;
+
+      return {
+        ...item,
+        earliestTransactionDate: earliest,
+        pendingDays,
+      };
+    });
+
+    res.render("pending-public", {
+      pendingWorkOrders,
+      searchQuery,
+
+      pendingWorkOrdersTable,
+    });
+  } catch (error) {
+    console.error("Error fetching work orders:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+router.get('/public-home', async (req,res)=>{
+  res.render('home-public')
+})
 
 router.post('/delete/:id', isAuthenticated, isAdmin, async (req, res) => {
   try {
@@ -1309,6 +1551,84 @@ router.put('/workorder/:requestId/update-status', isAuthenticated, async (req, r
   } catch (error) {
     console.error('Error updating:', error);
     return res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
+
+router.get('/public-workorder/:requestId', async (req, res) => {
+  const requestId = decodeURIComponent(req.params.requestId || '');
+  try {
+    res.set('Cache-Control', 'no-store'); // กัน cache ข้อมูลอ่อนไหว
+
+    const transactions = await Transaction.aggregate([
+      { $match: { requestId } },
+      { $unwind: '$products' },
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'products.sku',
+          foreignField: 'sku',
+          as: 'productInfo'
+        }
+      },
+      { $unwind: { path: '$productInfo', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'stores',
+          localField: 'storeId',
+          foreignField: 'storeId',
+          as: 'storeInfo'
+        }
+      },
+      { $unwind: { path: '$storeInfo', preserveNullAndEmptyArrays: true } },
+
+      // ✅ เพิ่ม cost จาก productInfo
+      {
+        $group: {
+          _id: '$_id',
+          requesterName:   { $first: '$requesterName' },
+          requestId:       { $first: '$requestId' },
+          createdAt:       { $first: '$createdAt' },
+          updatedAt:       { $first: '$updatedAt' },
+          transactionType: { $first: '$transactionType' },
+          workStatus:      { $first: '$workStatus' },
+          storeId:         { $first: '$storeId' },
+          storename:       { $first: '$storeInfo.storename' },
+          products: {
+            $push: {
+              sku: '$products.sku',
+              quantity: '$products.quantity',
+              description: '$productInfo.description',
+              cost: '$productInfo.cost' // ✅ เพิ่มตรงนี้
+            }
+          }
+        }
+      },
+      { $sort: { createdAt: 1 } }
+    ]);
+
+    if (!transactions?.length)
+      return res.status(404).send('No transactions found for this Request ID');
+
+    // format เวลาแบบเดิม
+    const dayjs = require('dayjs');
+    const utc = require('dayjs/plugin/utc');
+    const tz = require('dayjs/plugin/timezone');
+    dayjs.extend(utc);
+    dayjs.extend(tz);
+
+    transactions.forEach(tx => {
+      tx.createdAtFormatted = tx.createdAt
+        ? dayjs(tx.createdAt).tz('Asia/Bangkok').format('DD MMM YYYY, HH:mm')
+        : '-';
+      tx.updatedAtFormatted = tx.updatedAt
+        ? dayjs(tx.updatedAt).tz('Asia/Bangkok').format('DD MMM YYYY, HH:mm')
+        : '-';
+    });
+
+    res.render('work-detail-public', { transactions, requestId });
+  } catch (e) {
+    console.error('public-workorder error:', e);
+    res.status(500).send('Internal Server Error');
   }
 });
 
