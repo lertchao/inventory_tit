@@ -32,7 +32,7 @@ app.use(
       collectionName: "sessions",
     }),
     cookie: {
-      maxAge: 1000 * 60 * 60, // อายุ session 1 ชั่วโมง
+      maxAge: 1000 * 60 * 60 * 3, // อายุ session 1 ชั่วโมง
       httpOnly: true,
     },
   })

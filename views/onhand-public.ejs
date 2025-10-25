@@ -21,62 +21,103 @@
 
 <div class="container-fluid">
   <div class="row">
-    <div class="col-12">
+
+    <div class="desktop-sidebar col-lg-2 col-12 d-none d-lg-block">
+      <%- include('sidebar-public') %>
+  </div>
+  <%- include('sidebarMobile-public') %>
+
+    <div class="col-lg-10 col-12">
 
       <h2 class="text-center p-4">
-        Stock on-shelf (Public View)
-        <img src="/images/procurement.png" alt="logo" class="img-fluid" style="max-width: 40px; vertical-align: middle"/>
+        Stock on-shelf
+        <img src="/images/procurement.png" alt="logo" class="img-fluid"
+          style="max-width: 40px; vertical-align: middle" />
       </h2>
 
       <div class="container-fluid">
         <div class="p-2">
-          <div class="row">
+          <!-- ✅ ให้ทั้ง MachineType / Switches / Search อยู่ฟอร์มเดียวกัน จะได้ submit พร้อมกัน -->
+          <form method="get" action="/public-onhand" class="row g-2 align-items-start">
+
             <!-- Machine Type filter -->
-            <div class="col-lg-6 col-12 mx-auto mb-2">
+            <div class="col-lg-6 col-12">
               <select class="select2" id="MachineType" multiple tabindex="0" name="machineTypes-ui-only">
                 <option value=""></option>
-                <% (machineTypeOptions || []).forEach(t => { %>
-                  <option value="<%= t %>" <%= (Array.isArray(machineTypesSelected) && machineTypesSelected.includes(t)) ? 'selected' : '' %>>
+                <% (machineTypeOptions || []).forEach(t=> { %>
+                  <option value="<%= t %>" <%=(Array.isArray(machineTypesSelected) && machineTypesSelected.includes(t))
+                    ? 'selected' : '' %>>
                     <%= t %>
                   </option>
-                <% }) %>
+                  <% }) %>
               </select>
             </div>
-            
 
             <!-- Search -->
-            <div class="col-lg-6 col-12 mx-auto mb-2">
-              <form method="get" action="/public-onhand" class="d-flex">
-                <input type="text" name="search" class="form-control me-2" value="<%= search %>" placeholder="กรอก SKU หรือ Description"/>
+            <div class="col-lg-6 col-12 ms-lg-auto">
+              <div class="d-flex">
+                <input type="text" name="search" class="form-control me-2" value="<%= search %>"
+                  placeholder="กรอก SKU หรือ Description" />
                 <button type="submit" class="btn btn-success w-sm-auto">ค้นหา</button>
-              </form>
+              </div>
             </div>
-          </div>
+
+            <!-- Switches -->
+            <div class="col-lg-12 col-12">
+              <div class="row g-2 justify-content-lg-end align-items-center">
+                <div class="col-auto">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="hideOutOfStock">
+                    <label class="form-check-label me-2 text-nowrap" for="hideOutOfStock">
+                      Hide <span class="text-danger-emphasis fw-semibold">Out Of Stock </span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="col-auto">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="onlyOutOfStock">
+                    <label class="form-check-label me-2 text-nowrap" for="onlyOutOfStock">
+                      Show Only <span class="text-danger-emphasis fw-semibold">Out Of Stock </span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+
+            <!-- 🔒 ตัวแปร filter ที่จะส่งให้ backend: 'all' | 'available' | 'out' -->
+            <input type="hidden" name="filter" id="filterInput" value="<%= filter %>">
+          </form>
         </div>
       </div>
 
       <!-- Cards -->
       <div class="row">
-        <% if (products.length > 0) { %>
-          <% products.forEach(product => { %>
+        <% if (products.length> 0) { %>
+          <% products.forEach(product=> { %>
             <div class="col-md-4 product-card mb-4">
               <div class="card h-100 card-hover">
                 <a>
                   <img class="card-img-top img-fluid fixed-size"
-                       src="https://res.cloudinary.com/dzuw4hsd7/image/upload/f_auto,q_auto/<%= product.image %>?v=<%= Date.now() %>"
-                       alt="Product Image"
-                       loading="lazy"
-                       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                  <div style="display:none; justify-content:center; align-items:center; height:160px;" class="text-muted">
+                    src="https://res.cloudinary.com/dzuw4hsd7/image/upload/f_auto,q_auto/<%= product.image %>?v=<%= Date.now() %>"
+                    alt="Product Image" loading="lazy"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <div style="display:none; justify-content:center; align-items:center; height:160px;"
+                    class="text-muted">
                     <i class="fas fa-image fa-3x"></i>
                   </div>
                 </a>
                 <div class="card-body">
-                  <h5 class="card-title text-center pb-3"><%= product.sku %></h5>
-                  <p class="card-text">Description: <%= product.description %></p>
+                  <h5 class="card-title text-center pb-3">
+                    <%= product.sku %>
+                  </h5>
+                  <p class="card-text">Description: <%= product.description %>
+                  </p>
                   <p class="card-text">
                     Cost:
-                    <%= new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(product.cost) %>
+                    <%= new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2
+                      }).format(product.cost) %>
                   </p>
                   <h4 class="card-text text-end <%= product.quantity <= 0 ? 'text-danger' : 'text-dark' %>">
                     Quantity: <%= product.quantity %>
@@ -84,65 +125,74 @@
                 </div>
               </div>
             </div>
-          <% }) %>
-        <% } else { %>
-          <div class="alert alert-warning text-center" role="alert">ไม่พบข้อมูลที่ตรงกับคำค้นหา</div>
-        <% } %>
+            <% }) %>
+              <% } else { %>
+                <div class="alert alert-warning text-center" role="alert">ไม่พบข้อมูลที่ตรงกับคำค้นหา</div>
+                <% } %>
       </div>
 
       <!-- Pagination -->
       <div class="overflow-auto">
-        <%
-          const pageWindow = 2;
-          let startPage = Math.max(1, current - pageWindow);
-          let endPage = Math.min(pages, current + pageWindow);
-          if (current <= pageWindow) endPage = Math.min(pages, startPage + 4);
-          if (current + pageWindow > pages) startPage = Math.max(1, pages - 4);
+        <% const pageWindow=2; let startPage=Math.max(1, current - pageWindow); let endPage=Math.min(pages, current +
+          pageWindow); if (current <=pageWindow) endPage=Math.min(pages, startPage + 4); if (current + pageWindow>
+          pages) startPage = Math.max(1, pages - 4);
 
           const mtQuery = (Array.isArray(machineTypesSelected) && machineTypesSelected.length)
-            ? '&' + machineTypesSelected.map(mt => 'machineTypes=' + encodeURIComponent(mt)).join('&')
-            : '';
+          ? '&' + machineTypesSelected.map(mt => 'machineTypes=' + encodeURIComponent(mt)).join('&')
+          : '';
           const searchQuery = search ? '&search=' + encodeURIComponent(search) : '';
-        %>
+          const filterQuery = (filter && filter !== 'all') ? '&filter=' + encodeURIComponent(filter) : '';
+          %>
 
-        <nav aria-label="Page navigation" class="mt-4">
-          <ul class="pagination justify-content-center flex-wrap">
-            <li class="page-item <%= current <= 1 ? 'disabled' : '' %>">
-              <a class="page-link" href="?page=<%= current - 1 %><%= searchQuery %><%= mtQuery %>">Previous</a>
-            </li>
-
-            <% if (startPage > 1) { %>
-              <li class="page-item"><a class="page-link" href="?page=1<%= searchQuery %><%= mtQuery %>">1</a></li>
-              <% if (startPage > 2) { %>
-                <li class="page-item disabled"><span class="page-link">...</span></li>
-              <% } %>
-            <% } %>
-
-            <% for (let i = startPage; i <= endPage; i++) { %>
-              <li class="page-item <%= current === i ? 'active' : '' %>">
-                <a class="page-link" href="?page=<%= i %><%= searchQuery %><%= mtQuery %>"><%= i %></a>
+          <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center flex-wrap">
+              <li class="page-item <%= current <= 1 ? 'disabled' : '' %>">
+                <a class="page-link"
+                  href="?page=<%= current - 1 %><%= searchQuery %><%= mtQuery %><%= filterQuery %>">Previous</a>
               </li>
-            <% } %>
 
-            <% if (endPage < pages) { %>
-              <% if (endPage < pages - 1) { %>
-                <li class="page-item disabled"><span class="page-link">...</span></li>
-              <% } %>
-              <li class="page-item">
-                <a class="page-link" href="?page=<%= pages %><%= searchQuery %><%= mtQuery %>"><%= pages %></a>
-              </li>
-            <% } %>
+              <% if (startPage> 1) { %>
+                <li class="page-item"><a class="page-link"
+                    href="?page=1<%= searchQuery %><%= mtQuery %><%= filterQuery %>">1</a></li>
+                <% if (startPage> 2) { %>
+                  <li class="page-item disabled"><span class="page-link">...</span></li>
+                  <% } %>
+                    <% } %>
 
-            <li class="page-item <%= current >= pages ? 'disabled' : '' %>">
-              <a class="page-link" href="?page=<%= current + 1 %><%= searchQuery %><%= mtQuery %>">Next</a>
-            </li>
-          </ul>
-        </nav>
-        <p class="text-center">หน้าที่ <%= current %> จากทั้งหมด <%= pages %> หน้า</p>
+                      <% for (let i=startPage; i <=endPage; i++) { %>
+                        <li class="page-item <%= current === i ? 'active' : '' %>">
+                          <a class="page-link" href="?page=<%= i %><%= searchQuery %><%= mtQuery %><%= filterQuery %>">
+                            <%= i %>
+                          </a>
+                        </li>
+                        <% } %>
+
+                          <% if (endPage < pages) { %>
+                            <% if (endPage < pages - 1) { %>
+                              <li class="page-item disabled"><span class="page-link">...</span></li>
+                              <% } %>
+                                <li class="page-item">
+                                  <a class="page-link"
+                                    href="?page=<%= pages %><%= searchQuery %><%= mtQuery %><%= filterQuery %>">
+                                    <%= pages %>
+                                  </a>
+                                </li>
+                                <% } %>
+
+                                  <li class="page-item <%= current >= pages ? 'disabled' : '' %>">
+                                    <a class="page-link"
+                                      href="?page=<%= current + 1 %><%= searchQuery %><%= mtQuery %><%= filterQuery %>">Next</a>
+                                  </li>
+            </ul>
+          </nav>
+          <p class="text-center">หน้าที่ <%= current %> จากทั้งหมด <%= pages %> หน้า</p>
       </div>
 
     </div>
+
+
   </div>
+  
 </div>
 
 <!-- autofocus + select text on reload -->
@@ -150,6 +200,39 @@
   window.addEventListener('DOMContentLoaded', function () {
     const searchInput = document.querySelector('input[name="search"]');
     if (searchInput && searchInput.value) { searchInput.focus(); searchInput.select(); }
+
+    // === Init switch states จากค่าที่ backend ส่งมาใน hidden input ===
+    const filterVal = document.getElementById('filterInput')?.value || 'all';
+    const hideSw = document.getElementById('hideOutOfStock');
+    const onlySw = document.getElementById('onlyOutOfStock');
+
+    if (filterVal === 'available') { hideSw.checked = true; onlySw.checked = false; }
+    else if (filterVal === 'out') { onlySw.checked = true; hideSw.checked = false; }
+    else { hideSw.checked = false; onlySw.checked = false; }
+
+    function setFilterAndSubmit(newVal) {
+      document.getElementById('filterInput').value = newVal;
+      document.querySelector('form[action="/public-onhand"]').requestSubmit();
+    }
+
+    // Exclusive logic
+    hideSw.addEventListener('change', () => {
+      if (hideSw.checked) {
+        onlySw.checked = false;
+        setFilterAndSubmit('available'); // Quantity > 0
+      } else {
+        setFilterAndSubmit( onlySw.checked ? 'out' : 'all' );
+      }
+    });
+
+    onlySw.addEventListener('change', () => {
+      if (onlySw.checked) {
+        hideSw.checked = false;
+        setFilterAndSubmit('out'); // Quantity = 0
+      } else {
+        setFilterAndSubmit( hideSw.checked ? 'available' : 'all' );
+      }
+    });
   });
 </script>
 
@@ -172,49 +255,39 @@ $(function () {
     minimumResultsForSearch: 0
   });
 
-  // ---- กัน “เคลียร์แล้วเผลอเลือก Clover” (Safari/บางเบราว์เซอร์) ----
+  
   let isClearing = false;
-  let clearedAt = 0;      // timestamp เมื่อเคลียร์ล่าสุด
+  let clearedAt = 0;
   let submitTimer = null;
 
   function doClear() {
     isClearing = true;
     clearedAt = Date.now();
-
-    // ล้างค่า + แจ้ง change
     $mt.val(null).trigger('change');
-
-    // ปิด dropdown ทันที
     $mt.select2('close');
 
-    // โฟกัสไปช่องค้นหาเพื่อกัน key event ตกค้าง
     const $search = $('input[name="search"]');
     if ($search.length) $search.focus();
 
-    // หน่วงก่อน submit เล็กน้อย ให้ event เงียบลง
     clearTimeout(submitTimer);
     submitTimer = setTimeout(() => { $form.trigger('submit'); }, 160);
 
-    // ปลดธงหลังจบเฟรม
     setTimeout(() => { isClearing = false; }, 0);
   }
 
-  // 1) ดักปุ่ม clear แบบ "capture" ให้ชนะ Select2 เสมอ
   document.addEventListener('mousedown', function (e) {
     const clearBtn = e.target.closest('.select2-selection__clear');
     if (!clearBtn) return;
     e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
     doClear();
-  }, true); // capture = true
+  }, true);
 
   document.addEventListener('click', function (e) {
     const clearBtn = e.target.closest('.select2-selection__clear');
     if (!clearBtn) return;
     e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-    // doClear เรียกใน mousedown แล้ว
   }, true);
 
-  // 2) กันคลิกที่ตัวกล่อง select2 ภายใน 250ms หลังเคลียร์ (กันเปิด dropdown)
   document.addEventListener('mousedown', function (e) {
     const sel = e.target.closest('.select2-selection');
     if (!sel) return;
@@ -223,7 +296,6 @@ $(function () {
     }
   }, true);
 
-  // 3) หากระหว่างเคลียร์มีอีเวนต์เปิด/เลือกเด้งมา ให้ยกเลิก
   $mt.on('select2:opening select2:open select2:select select2:unselect', function (ev) {
     if (isClearing || (Date.now() - clearedAt < 250)) {
       ev.preventDefault();
@@ -231,12 +303,10 @@ $(function () {
     }
   });
 
-  // 4) ปิด dropdown อีกรอบเมื่อ select2 แจ้ง clear
   $mt.on('select2:clear', function () { $mt.select2('close'); });
 
-  // 5) change ปกติ (เลือก/ยกเลิกเอง) ให้ debounce submit
   $mt.on('change', function () {
-    if (isClearing) return; // เคลียร์จะ submit ใน doClear()
+    if (isClearing) return;
     clearTimeout(submitTimer);
     submitTimer = setTimeout(() => $form.trigger('submit'), 120);
   });
