@@ -1,37 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Work Detail (Read-only)</title>
 
-  <!-- Same stack as your existing page -->
+  <!-- Stack เดิม -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" />
+  <link rel="icon" href="/images/storage.png" sizes="32x32" />
   <link rel="stylesheet" href="/css/styles.css" />
-  <link rel="icon" href="images/storage.png" sizes="32x32" />
 
   <style>
     .table-sm td, .table-sm th { vertical-align: middle; }
-    .section-title { font-weight: 700; }
     .badge-status { min-width: 76px; }
+    .section-title { font-weight: 700; }
+    /* ปรับขนาดตัวอักษรให้กระชับบนจอเล็ก */
+    @media (max-width: 420px) {
+      .fs-h4-sm { font-size: 1.15rem !important; }
+      .fs-meta-sm { font-size: .9rem !important; }
+    }
   </style>
 </head>
-
 <body>
-  <div class="container mt-5">
+  <div class="container py-4">
 
     <!-- Work Info Card -->
-    <div class="card border rounded-4 shadow-sm mt-4" style="border-color: #dee2e6 !important; background-color: #fff;">
-        <div class="card-body py-4 px-4">
-          <div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
-            <h4 class="mb-0 fw-bold text-dark">
+    <div class="card border rounded-4 shadow-sm mb-4" style="border-color:#dee2e6 !important; background:#fff;">
+      <div class="card-body py-4 px-3 px-md-4">
+
+        <!-- แถวบน: Request ID + สถานะ (เรียงซ้อนบนจอเล็ก) -->
+        <div class="row align-items-center gy-2 mb-3">
+          <div class="col-12 col-md">
+            <h4 class="mb-0 fw-bold text-dark fs-h4-sm">
               <i class="bi bi-card-list me-2 text-secondary"></i>
-              Request ID:
-              <span class="text-secondary"><%= requestId %></span>
+              Request ID: <span class="text-secondary"><%= requestId %></span>
             </h4>
-            <span class="badge px-3 py-2 fs-6
+          </div>
+          <div class="col-12 col-md-auto text-md-end">
+            <span class="badge px-3 py-2 fs-6 badge-status
               <%= transactions[0]?.workStatus === 'Cancel'
                 ? 'bg-danger'
                 : (transactions[0]?.workStatus === 'Finish'
@@ -40,39 +47,51 @@
               <%= transactions[0]?.workStatus || '-' %>
             </span>
           </div>
-      
-          <div class="row g-4 mb-2">
-            <div class="col-md-6 col-lg-3">
-              <div class="text-muted small">Store</div>
-              <div class="fw-semibold text-dark">
-                <%= (transactions[0].storeId != null)
-                      ? String(transactions[0].storeId).padStart(3, '0')
-                      : '-' %> – <%= transactions[0].storename || 'N/A' %>
-              </div>
-            </div>
-      
-            <div class="col-md-6 col-lg-3">
-              <div class="text-muted small">Name</div>
-              <div class="fw-semibold text-dark"><%= transactions[0]?.requesterName || '-' %></div>
-            </div>
-      
-          </div>
-      
-          <hr class="my-3" style="border-top: 1px solid #797878;" />
-      
-          <div class="text-end text-muted small">
-            <i class="bi bi-clock me-1"></i>
-            Created At: <%= transactions[0]?.createdAtFormatted || '-' %> &nbsp;&nbsp;
-            <i class="bi bi-arrow-repeat me-1"></i>
-            Last Updated: <%= transactions[0]?.updatedAtFormatted || '-' %>
-          </div>
         </div>
-      </div>
-      
-  
 
-      <%
-      // รวมข้อมูลสินค้าเพื่อทำ summary ต่อ SKU
+        <!-- รายละเอียด (เป็นกริด 2 คอลัมน์บน md ขึ้นไป / 1 คอลัมน์บนมือถือ) -->
+        <div class="row g-3 g-md-4 mb-2">
+          <div class="col-12 col-md-6 col-lg-4">
+            <div class="text-muted small">Store</div>
+            <div class="fw-semibold text-dark fs-meta-sm">
+              <%= (transactions[0].storeId != null)
+                    ? String(transactions[0].storeId).padStart(3, '0')
+                    : '-' %> – <%= transactions[0].storename || 'N/A' %>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6 col-lg-4">
+            <div class="text-muted small">Name</div>
+            <div class="fw-semibold text-dark fs-meta-sm">
+              <%= transactions[0]?.requesterName || '-' %>
+            </div>
+          </div>
+
+          <!-- เผื่ออนาคตใส่ช่องเพิ่ม ให้คง layout -->
+          <div class="col-12 col-lg-4 d-none d-lg-block"></div>
+        </div>
+
+        <hr class="my-3" style="border-top:1px solid #e0e0e0;" />
+
+<!-- วันที่ (สองคอลัมน์บน md; ซ้อนบนจอเล็ก) -->
+<div class="row gy-2 text-muted small text-end text-md-end justify-content-md-end">
+  <div class="col-12 col-md-auto">
+    <i class="bi bi-clock me-1"></i>
+    Created At:
+    <span class="text-dark"><%= transactions[0]?.createdAtFormatted || '-' %></span>
+  </div>
+  <div class="col-12 col-md-auto">
+    <i class="bi bi-arrow-repeat me-1"></i>
+    Last Updated:
+    <span class="text-dark"><%= transactions[0]?.updatedAtFormatted || '-' %></span>
+  </div>
+</div>
+
+      </div>
+    </div>
+
+    <% // ===== Summary Calculation ===== %>
+    <%
       const summary = {};
       (transactions || []).forEach(tx => {
         (tx.products || []).forEach(p => {
@@ -80,44 +99,45 @@
           const desc = p.description || '';
           const qty  = Number(p.quantity) || 0;
           const cost = Number(p.cost) || 0;
-    
-          // ถ้า transactionType เป็น IN ให้นับกลับ (+) ถ้า OUT ให้เป็น (-)
           const signedQty = (tx.transactionType === 'IN') ? qty : -qty;
-    
-          if (!summary[sku]) {
-            summary[sku] = { description: desc, net: 0, cost };
-          }
-          summary[sku].net += signedQty;
-          summary[sku].cost = cost; // อัปเดตราคาล่าสุด
+
+          if (!summary[sku]) summary[sku] = { description: desc, net: 0, cost };
+          summary[sku].net  += signedQty;
+          summary[sku].cost  = cost; // last price
         });
       });
-    
       const summaryKeys = Object.keys(summary);
-    
-      // ✅ รวมต้นทุนทั้งหมดของรายการเบิกออก
-      // กรณี net < 0 (เบิกออก) → คำนวณเป็นจำนวนบวก
       let totalCost = 0;
     %>
-    
-    <h3 class="mt-4">Summary (รายการเบิก)</h3>
+
+    <!-- Summary Header -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <h3 class="section-title mb-0">Summary (รายการเบิก)</h3>
+      <% if (summaryKeys.length) { %>
+        <div class="text-muted small">
+          Items: <span class="fw-semibold"><%= summaryKeys.length %></span>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- Summary Table -->
     <div class="table-responsive mt-3">
-      <table class="table table-bordered mt-3" id="summaryTable">
+      <table class="table table-bordered table-sm" id="summaryTable">
         <thead class="table-dark">
           <tr>
-            <th class="text-center col-1 align-middle">#</th>
-            <th class="text-center col-2 align-middle">SKU</th>
-            <th class="text-center col-4 align-middle">Description</th>
-            <th class="text-center col-2 align-middle">Net Quantity</th>
-            <th class="text-center col-1 align-middle">Cost/pcs</th>
-            <th class="text-center col-2 align-middle">Amount Cost</th>
+            <th class="text-center align-middle" style="width:56px;">#</th>
+            <th class="text-center align-middle" style="min-width:120px;">SKU</th>
+            <th class="text-center align-middle" style="min-width:200px;">Description</th>
+            <th class="text-center align-middle" style="min-width:110px;">Net Quantity</th>
+            <th class="text-center align-middle" style="min-width:110px;">Cost/pcs</th>
+            <th class="text-center align-middle" style="min-width:130px;">Amount Cost</th>
           </tr>
         </thead>
         <tbody>
           <% if (summaryKeys.length) { %>
-            <% summaryKeys.forEach((sku, idx) => { 
+            <% summaryKeys.forEach((sku, idx) => {
                  const net   = Number(summary[sku].net || 0);
                  const cost  = Number(summary[sku].cost || 0);
-                 // คิดเฉพาะ OUT เป็นค่าใช้จ่าย (net ติดลบ)
                  const amountCost = net < 0 ? (-net) * cost : 0;
                  totalCost += amountCost;
             %>
@@ -135,30 +155,27 @@
               </tr>
             <% }) %>
           <% } else { %>
-            <tr><td class="text-center" colspan="6">No summary available.</td></tr>
+            <tr>
+              <td class="text-center" colspan="6">No summary available.</td>
+            </tr>
           <% } %>
         </tbody>
-    
+
         <% if (summaryKeys.length) { %>
-            <tfoot class="table-warning">
-                <tr>
-                    <th colspan="5" class="text-end">Total Cost</th>
-                    <th class="text-center fw-bold bg-warning-subtle text-dark">
-                        <%= totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
-                    </th>
-                </tr>
-            </tfoot>
+          <tfoot class="table-warning">
+            <tr>
+              <th colspan="5" class="text-end">Total Cost</th>
+              <th class="text-center fw-bold bg-warning-subtle text-dark">
+                <%= totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+              </th>
+            </tr>
+          </tfoot>
         <% } %>
       </table>
     </div>
-    
-
-    
 
   </div>
 
-  <!-- Only Bootstrap JS (no update scripts) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-
 </html>

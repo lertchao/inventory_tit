@@ -4,6 +4,7 @@ const Product = require('../models/products')
 const Transaction = require('../models/transaction')
 const Store = require('../models/store')
 const Requester = require('../models/requester')
+const Announcement = require('../models/announcement')
 const fs = require('fs');
 const path = require('path');
 const { cloudinary, upload } = require('../config/cloudinary');
@@ -454,35 +455,52 @@ router.get("/", isAuthenticated, async (req, res) => {
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     
-    const top10Movement = await Transaction.aggregate([
+    const top20Movement = await Transaction.aggregate([
+      // 1) เลือกเฉพาะธุรกรรมในเดือนนี้ และใบงานที่ Finish
       {
         $match: {
           createdAt: { $gte: firstDayOfMonth, $lte: lastDayOfMonth },
-          workStatus: "Finish"
+          workStatus: "Finish",
         }
       },
+    
+      // 2) แตกสินค้าแต่ละบรรทัด
       { $unwind: "$products" },
+    
+      // 3) ปรับ transactionType ให้เป็นตัวพิมพ์ใหญ่กันพลาด
+      { $addFields: { normType: { $toUpper: "$transactionType" } } },
+    
+      // 4) สรุป "ยอดสุทธิรายใบงาน–ราย SKU"
       {
         $group: {
-          _id: { sku: "$products.sku", type: "$transactionType" },
-          totalQty: { $sum: "$products.quantity" }
-        }
-      },
-      {
-        $group: {
-          _id: "$_id.sku",
-          inQty: {
-            $sum: {
-              $cond: [{ $eq: ["$_id.type", "IN"] }, "$totalQty", 0]
-            }
+          _id: {
+            requestId: "$requestId",
+            sku: "$products.sku",
           },
-          outQty: {
+          netQtyPerWO: {
             $sum: {
-              $cond: [{ $eq: ["$_id.type", "OUT"] }, "$totalQty", 0]
+              $cond: [
+                { $eq: ["$normType", "OUT"] },
+                "$products.quantity",
+                { $multiply: ["$products.quantity", -1] }
+              ]
             }
           }
         }
       },
+    
+      // 5) ตัดทิ้งกรณีสุทธิ ≤ 0 (ไม่ได้ “ใช้จริง”)
+      { $match: { netQtyPerWO: { $gt: 0 } } },
+    
+      // 6) รวมสุทธิรายเดือน "ต่อ SKU" จากหลายใบงานที่จบแล้ว
+      {
+        $group: {
+          _id: "$_id.sku",
+          totalIssuedNet: { $sum: "$netQtyPerWO" },
+        }
+      },
+    
+      // 7) ดึงรายละเอียดสินค้า
       {
         $lookup: {
           from: "products",
@@ -492,15 +510,19 @@ router.get("/", isAuthenticated, async (req, res) => {
         }
       },
       { $unwind: "$productInfo" },
+    
+      // 8) เตรียมข้อมูลส่งออก
       {
         $project: {
           sku: "$_id",
           description: "$productInfo.description",
-          totalIssued: "$outQty"
+          totalIssued: "$totalIssuedNet" // ← “สุทธิรายเดือน”
         }
       },
-      { $sort: { totalIssued: -1 } }, // ✅ เรียงจากการเบิกมากที่สุด
-      { $limit: 15 }
+    
+      // 9) เรียงและจำกัด 15 อันดับ
+      { $sort: { totalIssued: -1 } },
+      { $limit: 20 }
     ]);
     
     
@@ -564,7 +586,7 @@ router.get("/", isAuthenticated, async (req, res) => {
       pendingWorkOrdersTable,
       totalSKUs,
       totalStockQty: totalStockQty[0]?.totalQty || 0,
-      top10Movement,
+      top20Movement,
       totalStockValue: totalStockValue[0]?.totalValue || 0,
     });
   } catch (error) {
@@ -906,9 +928,6 @@ const pendingWorkOrders = await Transaction.aggregate([
   }
 });
 
-router.get('/public-home', async (req,res)=>{
-  res.render('home-public')
-})
 
 router.post('/delete/:id', isAuthenticated, isAdmin, async (req, res) => {
   try {
@@ -1001,9 +1020,6 @@ router.get("/transaction", isAuthenticated, async (req, res) => {
 
 router.get('/workorder', isAuthenticated, isAdmin, async (req, res) => {
   try {
-    const perPage = 20;
-    const page = parseInt(req.query.page) || 1;
-
     const searchQuery  = (req.query.search || '').trim();
     const statusFilter = (req.query.statusFilter || '').trim();
     const storeIdRaw   = (req.query.storeId || '').trim();
@@ -1011,116 +1027,25 @@ router.get('/workorder', isAuthenticated, isAdmin, async (req, res) => {
     const matchStage = {};
     const orConds = [];
 
-    // ✅ เงื่อนไขจากช่องคำค้น (requestId / requesterName) แบบไม่ใช้ helper แยก
     if (searchQuery) {
-      // escape อักขระพิเศษของ RegExp ให้เรียบร้อยก่อน
       const safe = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const rx = new RegExp(safe, 'i');
-
-      orConds.push(
-        { requestId:     { $regex: rx } },
-        { requesterName: { $regex: rx } }
-      );
+      orConds.push({ requestId: { $regex: rx } }, { requesterName: { $regex: rx } });
     }
-    if (orConds.length > 0) {
-      matchStage.$or = orConds;
-    }
+    if (orConds.length > 0) matchStage.$or = orConds;
 
-    // ✅ เงื่อนไขจากรหัสสาขา (ถ้ากรอกมา)
     if (storeIdRaw) {
       const digits = storeIdRaw.replace(/\D/g, '').slice(0, 3);
-      if (digits.length > 0) {
+      if (digits) {
         const storeIdNum = parseInt(digits, 10);
-        if (!Number.isNaN(storeIdNum)) {
-          matchStage.storeId = storeIdNum;
-        }
+        if (!Number.isNaN(storeIdNum)) matchStage.storeId = storeIdNum;
       }
     }
 
-    if (statusFilter) {
-      matchStage.workStatus = statusFilter;
-    }
+    if (statusFilter) matchStage.workStatus = statusFilter;
 
-    const result = await Transaction.aggregate([
+    const rows = await Transaction.aggregate([
       { $match: matchStage },
-      { $sort: { createdAt: -1 } }, // ให้ $last ได้สถานะล่าสุดจริง
-      {
-        $facet: {
-          total: [
-            { $group: { _id: "$requestId" } },
-            { $count: "count" }
-          ],
-          data: [
-            {
-              $lookup: {
-                from: "stores",
-                localField: "storeId",
-                foreignField: "storeId",
-                as: "storeInfo"
-              }
-            },
-            { $unwind: { path: "$storeInfo", preserveNullAndEmptyArrays: true } },
-            {
-              $group: {
-                _id: "$requestId",
-                requesterName:    { $first: "$requesterName" },
-                createdAt:        { $min: "$createdAt" },
-                workStatus:       { $last: "$workStatus" },
-                transactionCount: { $sum: 1 },
-                storeId:          { $last: "$storeId" },
-                storeName:        { $last: "$storeInfo.storename" }
-              }
-            },
-            { $sort: { createdAt: -1 } },
-            { $skip: (page - 1) * perPage },
-            { $limit: perPage }
-          ]
-        }
-      }
-    ]);
-
-    const totalDocs = result?.[0]?.total?.[0]?.count || 0;
-    const transactions = result?.[0]?.data || [];
-
-    transactions.forEach(tx => {
-      tx.createdAtFormatted = dayjs(tx.createdAt)
-        .tz('Asia/Bangkok')
-        .format('DD MMM YYYY, HH:mm');
-    });
-
-    res.render('workorder', {
-      transactions,
-      searchQuery,
-      statusFilter,
-      storeId: storeIdRaw,           // ส่งกลับไปเติมในช่อง input
-      current: page,
-      pages: Math.ceil(totalDocs / perPage),
-      limit: perPage
-    });
-
-  } catch (err) {
-    console.error('Error fetching grouped work orders:', err);
-    res.status(500).send('Internal Server Error');
-  }
-});
-
-
-
-router.get('/workorder/:requestId', isAuthenticated, async (req, res) => {
-  const requestId = decodeURIComponent(req.params.requestId);
-  try {
-    const transactions = await Transaction.aggregate([
-      { $match: { requestId } },
-      { $unwind: '$products' },
-      {
-        $lookup: {
-          from: 'products',
-          localField: 'products.sku',
-          foreignField: 'sku',
-          as: 'productInfo'
-        }
-      },
-      { $unwind: '$productInfo' },
       {
         $lookup: {
           from: 'stores',
@@ -1130,17 +1055,97 @@ router.get('/workorder/:requestId', isAuthenticated, async (req, res) => {
         }
       },
       { $unwind: { path: '$storeInfo', preserveNullAndEmptyArrays: true } },
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: '$requestId',
+          requesterName:    { $first: '$requesterName' },
+          lastTxn:          { $max: '$createdAt' },   // ล่าสุดจริง
+          workStatus:       { $last: '$workStatus' },
+          transactionCount: { $sum: 1 },
+          storeId:          { $last: '$storeId' },
+          storeName:        { $last: '$storeInfo.storename' }
+        }
+      },
+      { $sort: { lastTxn: -1 } }
+    ]);
+
+    const transactions = rows.map(r => {
+      const last = r.lastTxn ? new Date(r.lastTxn) : null;
+      return {
+        _id: r._id,
+        requesterName: r.requesterName || '-',
+        // สำหรับแสดงผล
+        createdAtFormatted: last
+          ? dayjs(last).tz('Asia/Bangkok').format('DD MMM YYYY, HH:mm')
+          : '-',
+        // สำหรับ sort (เหมือนหน้าที่คุณยกตัวอย่าง)
+        lastTxnISO: last ? last.toISOString() : '',
+        workStatus: r.workStatus || '-',
+        transactionCount: r.transactionCount ?? 0,
+        storeId: r.storeId ?? null,
+        storeName: r.storeName || '-'
+      };
+    });
+
+    res.render('workorder', {
+      transactions,
+      searchQuery,
+      statusFilter,
+      storeId: storeIdRaw
+    });
+
+  } catch (err) {
+    console.error('Error fetching work orders:', err);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+
+
+
+
+router.get('/workorder/:requestId', isAuthenticated, async (req, res) => {
+  const requestId = decodeURIComponent(req.params.requestId || '');
+  try {
+    const transactions = await Transaction.aggregate([
+      { $match: { requestId } },
+      { $unwind: '$products' },
+
+      // ดึงรายละเอียดสินค้าเพื่อแสดง description
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'products.sku',
+          foreignField: 'sku',
+          as: 'productInfo'
+        }
+      },
+      { $unwind: { path: '$productInfo', preserveNullAndEmptyArrays: true } },
+
+      // ดึงชื่อสาขา
+      {
+        $lookup: {
+          from: 'stores',
+          localField: 'storeId',
+          foreignField: 'storeId',
+          as: 'storeInfo'
+        }
+      },
+      { $unwind: { path: '$storeInfo', preserveNullAndEmptyArrays: true } },
+
+      // รวมกลับเป็น 1 เอกสารต่อ Transaction เดิม
       {
         $group: {
           _id: '$_id',
-          requesterName: { $first: '$requesterName' },
-          requestId: { $first: '$requestId' },
-          createdAt: { $first: '$createdAt' },
-          updatedAt: { $first: '$updatedAt' }, 
+          requesterName:   { $first: '$requesterName' },
+          requestId:       { $first: '$requestId' },
+          createdAt:       { $first: '$createdAt' },
+          updatedAt:       { $first: '$updatedAt' },
           transactionType: { $first: '$transactionType' },
-          workStatus: { $first: '$workStatus' },
-          storeId: { $first: '$storeId' },
-          storename: { $first: '$storeInfo.storename' },
+          workStatus:      { $first: '$workStatus' },
+          storeId:         { $first: '$storeId' },
+          storename:       { $first: '$storeInfo.storename' },
           products: {
             $push: {
               sku: '$products.sku',
@@ -1150,30 +1155,48 @@ router.get('/workorder/:requestId', isAuthenticated, async (req, res) => {
           }
         }
       },
-      { $sort: { createdAt: 1 } }
+
+      // ✅ คีย์ “วินาทีเดียวกัน” สำหรับจับกลุ่มในฝั่ง EJS
+      {
+        $addFields: {
+          createdAtSecond: {
+            $dateToString: {
+              date: '$createdAt',
+              format: '%Y-%m-%d %H:%M:%S',
+              timezone: 'Asia/Bangkok'
+            }
+          }
+        }
+      },
+
+      // ✅ เรียงเวลา + `_id` เป็นตัวคั่นกรณีวินาทีเท่ากัน
+      { $sort: { createdAt: 1, _id: 1 } }
     ]);
 
     if (!transactions || transactions.length === 0) {
       return res.status(404).send('No transactions found for this Request ID');
     }
 
-    // ✅ แปลงวันที่สำหรับทุก transaction
+    // ฟอร์แมตเวลาแสดงผล
     transactions.forEach(tx => {
       tx.createdAtFormatted = tx.createdAt
-        ? dayjs(tx.createdAt).tz("Asia/Bangkok").format("DD MMM YYYY, HH:mm")
-        : "-";
-
+        ? dayjs(tx.createdAt).tz('Asia/Bangkok').format('DD MMM YYYY, HH:mm')
+        : '-';
       tx.updatedAtFormatted = tx.updatedAt
-        ? dayjs(tx.updatedAt).tz("Asia/Bangkok").format("DD MMM YYYY, HH:mm")
-        : "-";
+        ? dayjs(tx.updatedAt).tz('Asia/Bangkok').format('DD MMM YYYY, HH:mm')
+        : '-';
     });
-    
+
+    // ส่งให้ EJS ใช้งาน (หน้า work-detail)
     res.render('work-detail', { transactions, requestId });
   } catch (error) {
     console.error('Error fetching transactions for Request ID:', error);
     res.status(500).send('Internal Server Error');
   }
 });
+
+
+
 
 
 router.put('/workorder/:requestId/update-status', isAuthenticated, async (req, res) => {
@@ -1187,7 +1210,7 @@ router.put('/workorder/:requestId/update-status', isAuthenticated, async (req, r
     isCancel,
     isReturn,
     returnItems,
-    addOutItems = []            // 👈 เพิ่มรับรายการ OUT
+    addOutItems = [] // รายการ OUT เพิ่ม
   } = req.body;
 
   try {
@@ -1206,17 +1229,28 @@ router.put('/workorder/:requestId/update-status', isAuthenticated, async (req, r
       });
     }
 
-    // กันไม่ให้ส่ง isCancel + isReturn พร้อมกัน
+    // 🚧 กัน conflict flags
     if (isCancel && isReturn) {
       return res.status(400).json({ message: 'Cannot perform cancel and partial return in the same request.' });
     }
-
-    // กันไม่ให้ส่ง OUT พร้อม Cancel
     if (isCancel && Array.isArray(addOutItems) && addOutItems.length > 0) {
       return res.status(400).json({ message: 'Cannot add OUT items when canceling the work order.' });
     }
 
-    // ======================= CANCEL FLOW (เดิม) =======================
+    // ⛳️==================== EARLY DUPLICATE CHECK ====================
+    // เช็ก newRequestId ซ้ำ "ก่อน" ทำ OUT/IN/Update ใดๆ ทั้งสิ้น
+    if (newRequestId && newRequestId !== requestId && !forceUpdate) {
+      const exists = await Transaction.findOne({ requestId: newRequestId }).lean();
+      if (exists) {
+        return res.status(200).json({
+          message: 'This Request ID already exists. Do you still want to use it?',
+          duplicate: true,
+        });
+      }
+    }
+    // ================================================================
+
+    // ======================= CANCEL FLOW =======================
     if (workStatus === 'Cancel' || isCancel === true) {
       // ห้ามเปลี่ยน requestId / storeId ตอน Cancel
       if (newRequestId && newRequestId !== requestId) {
@@ -1313,7 +1347,7 @@ router.put('/workorder/:requestId/update-status', isAuthenticated, async (req, r
     }
     // ===================== END CANCEL FLOW =====================
 
-    // ================== PARTIAL RETURN FLOW (เดิม) ==================
+    // ================== PARTIAL RETURN FLOW ==================
     let partialReturnResult = null; // เก็บผลตอบกลับบางส่วน
     if (isReturn === true) {
       // ตรวจ input
@@ -1405,9 +1439,10 @@ router.put('/workorder/:requestId/update-status', isAuthenticated, async (req, r
     }
     // ================= END PARTIAL RETURN FLOW =================
 
-    // ============== ADDITIONAL OUT FLOW (ใหม่) =================
+    // ============== ADDITIONAL OUT FLOW =================
     let additionalOutResult = null;
     const hasOut = Array.isArray(addOutItems) && addOutItems.length > 0;
+    // ตอนนี้ปลอดภัยแล้ว (duplicate เคลียร์ก่อนหน้า)
     const targetRequestId = (newRequestId && newRequestId !== requestId) ? newRequestId : requestId;
 
     if (hasOut) {
@@ -1484,20 +1519,9 @@ router.put('/workorder/:requestId/update-status', isAuthenticated, async (req, r
         session.endSession();
       }
     }
-    // ============ END ADDITIONAL OUT FLOW (ใหม่) ==============
+    // ============ END ADDITIONAL OUT FLOW ==============
 
-    // =================== NORMAL UPDATE FLOW (เดิม) ====================
-    // เปลี่ยน Request ID → เช็กซ้ำ (ถ้าไม่ force ให้ถาม)
-    if (newRequestId && newRequestId !== requestId && !forceUpdate) {
-      const exists = await Transaction.findOne({ requestId: newRequestId }).lean();
-      if (exists) {
-        return res.status(200).json({
-          message: 'This Request ID already exists. Do you still want to use it?',
-          duplicate: true,
-        });
-      }
-    }
-
+    // =================== NORMAL UPDATE FLOW ====================
     const updateFields = {
       workStatus,               // 'Pending' | 'Finish'
       updatedAt: new Date(),
@@ -1553,6 +1577,7 @@ router.put('/workorder/:requestId/update-status', isAuthenticated, async (req, r
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 });
+
 
 router.get('/public-workorder/:requestId', async (req, res) => {
   const requestId = decodeURIComponent(req.params.requestId || '');
@@ -2599,7 +2624,123 @@ router.get('/product/:sku', isAuthenticated, async (req, res) => {
   }
 });
 
+router.get("/public-home", async (req, res) => {
+  const q = (req.query.q || "").trim();
+  const category = (req.query.category || "").trim();
 
+  const filter = {};
+  if (category) filter.category = category;
+  if (q) filter.title = new RegExp(q, "i");
+
+  const list = await Announcement
+    .find(filter)
+    .sort({ isPinned: -1, publishedAt: -1 })
+    .lean();
+
+  const featured = list[0] || null;
+  const posts = list.slice(1);
+
+  res.render("home-public", {
+    q,
+    category,
+    featured,
+    posts,
+    currentPage: 1,
+    totalPages: 1,
+    isAdmin: req.session?.user?.role === "admin", // ใช้ตรวจฝั่ง EJS
+  });
+});
+
+router.get("/public-announcement/:id", async (req, res) => {
+  const post = await Announcement.findById(req.params.id).lean();
+  if (!post) return res.status(404).render("404", { message: "ไม่พบประกาศ" });
+
+  res.render("announcement-detail", {
+    post,
+    isAdmin: req.session?.user?.role === "admin",
+  });
+});
+
+// เพิ่มประกาศ (เฉพาะ admin)
+router.post("/api/announcements", isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const {
+      title,
+      excerpt,
+      content,
+      imageUrl,
+      category,
+      isPinned,
+      isUrgent,
+    } = req.body || {};
+
+    if (!title) {
+      return res.status(400).json({ ok: false, message: "Title is required" });
+    }
+
+    // แปลงค่า checkbox/string ให้เป็น boolean ชัวร์ ๆ
+    const toBool = (v) =>
+      v === true || v === "true" || v === "on" || v === 1 || v === "1";
+
+    // (ถ้าอยากกัน category นอก enum)
+    const allowedCats = ["general", "policy", "urgent"];
+    const safeCategory = allowedCats.includes(category) ? category : "general";
+
+    const newDoc = await Announcement.create({
+      title,
+      excerpt,
+      content,
+      imageUrl,
+      category: safeCategory,
+      isPinned: toBool(isPinned),
+      isUrgent: toBool(isUrgent),
+      author: req.user?.username || "admin",
+      publishedAt: new Date(),
+    });
+
+    return res.json({ ok: true, data: newDoc });
+  } catch (err) {
+    console.error("Create announcement error:", err);
+    return res.status(500).json({ ok: false, message: "Server error" });
+  }
+});
+
+
+// ลบประกาศ (เฉพาะ admin)
+router.delete("/api/announcements/:id", isAuthenticated, isAdmin, async (req, res) => {
+  const result = await Announcement.findByIdAndDelete(req.params.id);
+  if (!result) return res.status(404).json({ ok: false, message: "Not found" });
+  res.json({ ok: true });
+});
+
+// แก้ไขประกาศ (เฉพาะ admin)
+router.put("/api/announcements/:id", isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // อนุญาตอัปเดตเฉพาะคีย์เหล่านี้
+    const allow = ["title", "excerpt", "content", "imageUrl", "category", "isUrgent", "isPinned", "publishedAt"];
+    const patch = {};
+    for (const k of allow) {
+      if (req.body[k] !== undefined) patch[k] = req.body[k];
+    }
+
+    // เผื่อ client ส่ง boolean มาเป็น string
+    if (patch.isUrgent !== undefined) patch.isUrgent = patch.isUrgent === true || patch.isUrgent === "true";
+    if (patch.isPinned !== undefined) patch.isPinned = patch.isPinned === true || patch.isPinned === "true";
+
+    const updated = await Announcement.findByIdAndUpdate(id, patch, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!updated) return res.status(404).json({ ok: false, message: "Not found" });
+    return res.json({ ok: true, data: updated });
+  } catch (err) {
+    console.error("PUT /api/announcements/:id error:", err);
+    return res.status(400).json({ ok: false, message: err.message || "Update failed" });
+  }
+});
 
 
 

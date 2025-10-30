@@ -5,16 +5,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Work Order</title>
+
+  <!-- Bootstrap / Icons -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+
+  <!-- App styles -->
   <link rel="stylesheet" href="css/styles.css">
   <link rel="icon" href="images/storage.png" sizes="32x32">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+  <!-- DataTables -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 </head>
 
 <body>
-
-
   <div class="container-fluid">
     <div class="row">
       <div class="desktop-sidebar col-lg-2 col-12 d-none d-lg-block">
@@ -23,221 +28,193 @@
 
       <%- include('sidebarMobile') %>
 
-        <div class="col-lg-10 col-12">
-          <h2 class="text-center p-4">
-            Manage Repair Work
-            <img src="images/completed-task.png" alt="logo" class="img-fluid"
-              style="max-width: 40px; vertical-align: middle" />
-          </h2>
-  
-  
-          <div class="container-fluid">
-            <div class="p-3">
-              <div class="row mb-1">
-                <div class="col-lg-3 col-sm-12 mx-auto p-1">
-                  <form method="get" action="/workorder">
-                    <input type="text" name="search" class="form-control" value="<%= searchQuery || '' %>"
-                      placeholder="กรอก RP number หรือ ชื่อ" />
+      <div class="col-lg-10 col-12">
+        <h2 class="text-center p-4">
+          Manage Repair Work
+          <img src="images/completed-task.png" alt="logo" class="img-fluid" style="max-width:40px;vertical-align:middle" />
+        </h2>
+
+        <!-- Search form -->
+        <div class="container-fluid">
+          <div class="p-3">
+            <form method="get" action="/workorder">
+              <div class="row g-2 align-items-end">
+                <div class="col-lg-3 col-sm-12">
+                  <input type="text" name="search" class="form-control" value="<%= searchQuery || '' %>"
+                    placeholder="กรอก RP number หรือ ชื่อ" />
                 </div>
 
-                <div class="col-lg-3 col-sm-12 mx-auto p-1">
+                <div class="col-lg-3 col-sm-12">
                   <input type="text" name="storeId" class="form-control" value="<%= storeId || '' %>"
                     inputmode="numeric" pattern="\d{1,3}" maxlength="3"
                     placeholder="รหัสสาขา (เช่น 1 หรือ 001)" />
                 </div>
-            
 
-                <div class="col-lg-3 col-sm-12 mx-auto p-1">
+                <div class="col-lg-3 col-sm-12">
                   <select name="statusFilter" class="form-select">
                     <option value="">-- เลือก Work Status --</option>
                     <option value="Pending" <%= statusFilter === 'Pending' ? 'selected' : '' %>>Pending</option>
-                    <option value="Finish" <%= statusFilter === 'Finish' ? 'selected' : '' %>>Finish</option>
+                    <option value="Finish"  <%= statusFilter === 'Finish'  ? 'selected' : '' %>>Finish</option>
                     <option value="Cancel"  <%= statusFilter === 'Cancel'  ? 'selected' : '' %>>Cancel</option>
                   </select>
                 </div>
 
-                <div class="col-lg-3 col-md-3 col-sm-12 p-1">
-                  <button type="submit" class="btn btn-success">ค้นหา</button>
+                <div class="col-lg-3 col-sm-12">
+                  <div class="d-grid gap-2 d-lg-flex">
+                    <button type="submit" class="btn btn-success w-100 w-lg-auto">ค้นหา</button>
+                    <button type="button" id="resetFilters" class="btn btn-outline-secondary w-100 w-lg-auto">
+                      ล้างตัวกรอง
+                    </button>
+                  </div>
                 </div>
-                
-
               </div>
-            </div>
-          </div>
-          
-  
-            <div class="table-responsive">
-              <% if (transactions.length === 0) { %>
-                <div class="alert alert-warning text-center" role="alert">
-                  ไม่พบข้อมูลที่ตรงกับคำค้นหา
-                </div>
-              <% } else { %>
-                <table class="table table-bordered table-hover">
-                  <thead class="table-dark">
-                    <tr>
-                      <th class="col-auto align-middle">#</th>
-                      <th class="col-auto align-middle">Request ID</th>
-                      <th class="col-auto text-center align-middle">Store</th>
-                      <th class="col-1 text-center align-middle">Requester Name</th>
-                      <th class="col-2 text-center align-middle">Last transaction</th>
-                      <th class="col-2 text-center align-middle">Work Status</th>
-                      <th class="col-1 text-center align-middle">Transaction Count</th>
-                      <th class="text-center align-middle">Details</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <% transactions.forEach((transaction, index) => { %>
-                      <tr>
-                        <td><%= (current - 1) * limit + index + 1 %></td>
-                        <td><%= transaction._id %></td> 
-                        <td class="text-start">
-                          <%= String(transaction.storeId).padStart(3, '0') %> - <%= transaction.storeName || '-' %>
-                        </td>                        
-                        <td class="text-center"><%= transaction.requesterName %></td>
-                        <td class="text-center">
-                          <%= transaction.createdAtFormatted %>
-                        </td>
-                        <td class="text-center">
-                          <% if (transaction.workStatus) { %>
-                            <% const badgeClass =
-                                 transaction.workStatus === 'Finish' ? 'success' :
-                                 transaction.workStatus === 'Cancel' ? 'danger'  :
-                                 'secondary'; %>
-                            <span class="badge bg-<%= badgeClass %>"><%= transaction.workStatus %></span>
-                          <% } %>
-                          
-                        </td>
-                        <td class="text-center"><%= transaction.transactionCount %></td>
-                        <td class="text-center">
-                          <a href="/workorder/<%= encodeURIComponent(transaction._id) %>" 
-                            class="btn btn-outline-dark btn-sm"  
-                            >View</a>
-                        </td>
-                      </tr>
-                    <% }) %>
-                  </tbody>
-                </table>
-              <% } %>
-            </div>
-            
-
-<% if (pages > 1) { %>
-  <div class="overflow-auto">
-    <%
-    const pageWindow = 2;
-    let startPage = Math.max(1, current - pageWindow);
-    let endPage   = Math.min(pages, current + pageWindow);
-  
-    if (current <= pageWindow)        endPage   = Math.min(pages, startPage + 4);
-    if (current + pageWindow > pages) startPage = Math.max(1, pages - 4);
-  
-    const qsBase = `search=${encodeURIComponent(searchQuery || '')}`
-                 + `&statusFilter=${encodeURIComponent(statusFilter || '')}`
-                 + `&storeId=${encodeURIComponent(storeId || '')}`;
-  %>
-  
-
-    <nav aria-label="Page navigation" class="mt-4">
-      <ul class="pagination justify-content-center flex-wrap">
-
-        <!-- Previous -->
-        <li class="page-item <%= current <= 1 ? 'disabled' : '' %>">
-          <a class="page-link" href="?<%= qsBase %>&page=<%= current - 1 %>">Previous</a>
-        </li>
-
-        <!-- First + … -->
-        <% if (startPage > 1) { %>
-          <li class="page-item"><a class="page-link" href="?<%= qsBase %>&page=1">1</a></li>
-          <% if (startPage > 2) { %>
-            <li class="page-item disabled"><span class="page-link">…</span></li>
-          <% } %>
-        <% } %>
-
-        <!-- หมายเลขหน้า -->
-        <% for (let i = startPage; i <= endPage; i++) { %>
-          <li class="page-item <%= current === i ? 'active' : '' %>">
-            <a class="page-link" href="?<%= qsBase %>&page=<%= i %>"><%= i %></a>
-          </li>
-        <% } %>
-
-        <!-- … + Last -->
-        <% if (endPage < pages) { %>
-          <% if (endPage < pages - 1) { %>
-            <li class="page-item disabled"><span class="page-link">…</span></li>
-          <% } %>
-          <li class="page-item"><a class="page-link" href="?<%= qsBase %>&page=<%= pages %>"><%= pages %></a></li>
-        <% } %>
-
-        <!-- Next -->
-        <li class="page-item <%= current >= pages ? 'disabled' : '' %>">
-          <a class="page-link" href="?<%= qsBase %>&page=<%= current + 1 %>">Next</a>
-        </li>
-
-      </ul>
-    </nav>
-
-    <p class="text-center">หน้าที่ <%= current %> จากทั้งหมด <%= pages %> หน้า</p>
-  </div>
-<% } %>
-
-
-
-  
+            </form>
           </div>
         </div>
+
+        <!-- Table -->
+        <div class="table-responsive">
+          <% if ((transactions || []).length === 0) { %>
+            <div class="alert alert-warning text-center" role="alert">
+              ไม่พบข้อมูลที่ตรงกับคำค้นหา
+            </div>
+          <% } else { %>
+            <table id="workTable" class="table table-bordered table-hover text-center align-middle">
+              <thead class="table-dark">
+                <tr>
+                  <th>#</th>
+                  <th class="text-center">Request ID</th>
+                  <th class="col-3 text-center">Store</th>
+                  <th class="col-1 text-center">Name</th>
+                  <th class="col-2 text-center">Last Transaction</th>
+                  <th class="col-2 text-center">Work Status</th>
+                  <th class="col-1 text-center">Transaction Count</th>
+                  <th class="col-1 text-center">Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% transactions.forEach((t) => { %>
+                  <tr>
+                    <td class="row-index"></td>
+                    <td class="text-start"><%= t._id %></td>
+                    <td class="text-start"><%= String(t.storeId || '').padStart(3, '0') %> - <%= t.storeName || '-' %></td>
+                    <td><%= t.requesterName %></td>
+
+                    <!-- ✅ คีย์เรียงเป็น ISO -->
+                    <td data-order="<%= t.lastTxnISO %>"><%= t.createdAtFormatted %></td>
+
+                    <td>
+                      <% const badgeClass =
+                          t.workStatus === 'Finish' ? 'success' :
+                          t.workStatus === 'Cancel' ? 'danger' : 'secondary'; %>
+                      <span class="badge bg-<%= badgeClass %>"><%= t.workStatus %></span>
+                    </td>
+                    <td><%= t.transactionCount %></td>
+                    <td>
+                      <a href="/workorder/<%= encodeURIComponent(t._id) %>" class="btn btn-outline-dark btn-sm">View</a>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          <% } %>
+        </div>
+
+      </div>
     </div>
   </div>
 
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js">
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const dt = new DataTable("#workTable", {
+        dom: 'lrtip',
+        pageLength: 25,
+        order: [[4, "desc"]],  // ใช้คอลัมน์ 4 (Last Transaction) ซึ่งมี data-order เป็น ISO
+        columnDefs: [
+          { targets: [0, 7], orderable: false }
+        ],
+        language: {
+          search: "ค้นหาในหน้านี้:",
+          lengthMenu: "แสดง _MENU_ รายการต่อหน้า",
+          info: "แสดง _START_ ถึง _END_ จากทั้งหมด _TOTAL_ รายการ",
+          infoEmpty: "ไม่มีรายการที่จะแสดง",
+          zeroRecords: "ไม่พบข้อมูลที่ตรงกับคำค้นหา",
+          paginate: { previous: "ก่อนหน้า", next: "ถัดไป" }
+        },
+        drawCallback: function () {
+          const api = this.api();
+          const start = api.page.info().start;
+          api.column(0, { page: 'current' }).nodes().each((cell, i) => {
+            cell.innerHTML = start + i + 1;
+          });
+        }
+      });
+    });
   </script>
 
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const searchInput   = document.querySelector("input[name='search']");
-    const storeIdInput  = document.querySelector("input[name='storeId']");
-    const statusFilter  = document.querySelector("select[name='statusFilter']");
+  <!-- จำค่าฟิลเตอร์ด้วย sessionStorage -->
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const form       = document.querySelector('form[action="/workorder"]');
+      const searchInp  = form.querySelector('input[name="search"]');
+      const storeIdInp = form.querySelector('input[name="storeId"]');
+      const statusSel  = form.querySelector('select[name="statusFilter"]');
+      const resetBtn   = document.getElementById('resetFilters');
 
-    // โหลดค่าที่เคยค้นหา
-    const savedSearchQuery = sessionStorage.getItem("searchQuery") || "";
-    const savedStatusFilter = sessionStorage.getItem("statusFilter") || "";
-    const savedStoreId = sessionStorage.getItem("storeId") || "";
+      const KEY_S = 'wo.search';
+      const KEY_T = 'wo.status';
+      const KEY_I = 'wo.storeId';
 
-    // ถ้า URL ยังว่าง ให้เติมค่าจาก sessionStorage แล้วโหลดผลลัพธ์
-    const urlParams = new URLSearchParams(window.location.search);
-    if (!urlParams.get("search") && !urlParams.get("statusFilter") && !urlParams.get("storeId")) {
-      if (savedSearchQuery || savedStatusFilter || savedStoreId) {
-        if (savedSearchQuery) urlParams.set("search", savedSearchQuery);
-        if (savedStatusFilter) urlParams.set("statusFilter", savedStatusFilter);
-        if (savedStoreId) urlParams.set("storeId", savedStoreId);
-        window.location.href = `/workorder?${urlParams.toString()}`;
-        return; // ป้องกันรันต่อ
+      const url = new URL(window.location.href);
+      const qsSearch = url.searchParams.get('search') || '';
+      const qsStatus = url.searchParams.get('statusFilter') || '';
+      const qsStore  = url.searchParams.get('storeId') || '';
+
+      if (qsSearch || qsStatus || qsStore) {
+        sessionStorage.setItem(KEY_S, qsSearch);
+        sessionStorage.setItem(KEY_T, qsStatus);
+        sessionStorage.setItem(KEY_I, qsStore);
+      } else {
+        const savedSearch = sessionStorage.getItem(KEY_S) || '';
+        const savedStatus = sessionStorage.getItem(KEY_T) || '';
+        const savedStore  = sessionStorage.getItem(KEY_I) || '';
+        if (savedSearch || savedStatus || savedStore) {
+          if (!searchInp.value)  searchInp.value  = savedSearch;
+          if (!statusSel.value)  statusSel.value  = savedStatus;
+          if (!storeIdInp.value) storeIdInp.value = savedStore;
+          form.submit();
+          return;
+        }
       }
-    }
 
-    // ตั้งค่า input ให้เท่ากับค่าที่บันทึกไว้
-    searchInput.value = savedSearchQuery;
-    statusFilter.value = savedStatusFilter;
-    storeIdInput.value = savedStoreId;
+      searchInp.addEventListener('input', () => {
+        sessionStorage.setItem(KEY_S, searchInp.value.trim());
+      });
+      statusSel.addEventListener('change', () => {
+        sessionStorage.setItem(KEY_T, statusSel.value);
+      });
+      storeIdInp.addEventListener('input', () => {
+        const digits = storeIdInp.value.replace(/\D/g, '').slice(0,3);
+        storeIdInp.value = digits;
+        sessionStorage.setItem(KEY_I, digits);
+      });
 
-    // บันทึกค่าลง sessionStorage เมื่อเปลี่ยน
-    searchInput.addEventListener("input", () => {
-      sessionStorage.setItem("searchQuery", searchInput.value);
+      if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+          sessionStorage.removeItem(KEY_S);
+          sessionStorage.removeItem(KEY_T);
+          sessionStorage.removeItem(KEY_I);
+          window.location.href = '/workorder';
+        });
+      }
     });
-    statusFilter.addEventListener("change", () => {
-      sessionStorage.setItem("statusFilter", statusFilter.value);
-    });
-    storeIdInput.addEventListener("input", () => {
-      // เก็บเฉพาะตัวเลข 1–3 หลัก
-      const digits = storeIdInput.value.replace(/\D/g, '').slice(0, 3);
-      sessionStorage.setItem("storeId", digits);
-    });
-  });
-</script>
-
-
-
+  </script>
 
 </body>
-
 </html>
