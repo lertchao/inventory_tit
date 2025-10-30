@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
   <!-- DataTables -->
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
   <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
 </head>  
 
@@ -50,7 +50,7 @@
         <canvas id="pendingWorkChart"></canvas>
         
         <% if (pendingWorkOrdersTable.length > 0) { %>
-          <table id="pendingTable" class="table table-bordered table-striped display nowrap" style="width:100%">
+          <table id="pendingTable" class="table table-bordered table-hover" style="width:100%">
             <thead class="table-dark">
               <tr>
                 <th>Repair Number</th>
@@ -177,9 +177,9 @@
                   <% } %>
                 </div>
 
-        <!-- Top 15 Movement -->
+        <!-- Top 20 Movement -->
         <div>
-          <h4 class="m-3 section-title">Top 15 Parts Movement (This Month)</h4>
+          <h4 class="m-3 section-title">Top 20 SKU Issue Out (This Month)</h4>
           <div class="table-responsive">
             <table class="table table-bordered table-hover text-center">
               <thead class="table-secondary">
@@ -191,7 +191,7 @@
                 </tr>
               </thead>
               <tbody>
-                <% top10Movement.forEach((item, index) => { %>
+                <% top20Movement.forEach((item, index) => { %>
                 <tr>
                   <td><%= index + 1 %></td>
                   <td class="text-start"><%= item.sku %></td>
@@ -217,8 +217,13 @@
     <%- JSON.stringify(pendingWorkOrders || []) %>
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-  <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+<!-- เพิ่ม JS integration ของ Bootstrap 5 -->
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
   <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>

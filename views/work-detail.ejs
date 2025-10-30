@@ -168,7 +168,7 @@
     </div>
 
     <!-- Transactions List -->
-    <h3 class="mt-3 text-center">Transactions</h3>
+    <h3 class="mt-3 text-decoration-underline">Transactions</h3>
     <div class="table-responsive mt-3">
       <table class="table table-bordered mt-3">
         <thead class="table-secondary">
@@ -181,24 +181,35 @@
             <th class="text-center col-3 align-middle">Created At</th>
           </tr>
         </thead>
-        <tbody>
-          <% transactions.forEach((transaction, tIndex) => { %>
-            <% transaction.products.forEach((product, pIndex) => { %>
-              <tr>
-                <td class="text-center"><%= pIndex === 0 ? tIndex + 1 : '' %></td>
-                <td class="text-center"><%= product.sku %></td>
-                <td class="text-center"><%= product.quantity %></td>
-                <td class="text-center"><%= (transaction.transactionType || '').toUpperCase() %></td>
-                <td class="text-center">
-                  <span class="badge <%= transaction.workStatus === 'Cancel' ? 'bg-danger' : (transaction.workStatus === 'Finish' ? 'bg-success' : 'bg-secondary') %>">
-                    <%= transaction.workStatus %>
-                  </span>
-                </td>
-                <td class="text-center"><%= transaction.createdAtFormatted %></td>
-              </tr>
-            <% }) %>
-          <% }) %>
-        </tbody>
+
+<tbody>
+  <% let seq = 0; let lastSec = null; %>
+  <% transactions.forEach((tx) => { 
+       const secKey = tx.createdAtSecond || tx.createdAtFormatted; // เผื่อกรณีไม่มี field ใหม่
+       const showSeq = (secKey !== lastSec) ? (++seq) : '';
+       lastSec = secKey;
+  %>
+    <% tx.products.forEach((p, pIndex) => { %>
+      <tr>
+        <td class="text-center align-middle"><%= pIndex === 0 ? showSeq : '' %></td>
+        <td class="text-center align-middle"><%= p.sku %></td>
+        <td class="text-center align-middle"><%= p.quantity %></td>
+        <td class="text-center align-middle"><%= (tx.transactionType || '').toUpperCase() %></td>
+        <td class="text-center align-middle">
+          <span class="badge <%= tx.workStatus === 'Cancel' ? 'bg-danger' : (tx.workStatus === 'Finish' ? 'bg-success' : 'bg-secondary') %>">
+            <%= tx.workStatus %>
+          </span>
+        </td>
+        <td class="text-center align-middle"><%= tx.createdAtFormatted %></td>
+      </tr>
+    <% }) %>
+  <% }) %>
+</tbody>
+
+        
+        
+        
+          
       </table>
     </div>
 
@@ -234,7 +245,7 @@
 </script>
 
     <!-- Summary table -->
-    <h3 class="mt-3 text-center">Summary (ยอดใช้อะไหล่จริง)</h3>
+    <h3 class="mt-3 text-decoration-underline">Summary (ยอดใช้อะไหล่จริง)</h3>
     <div class="table-responsive mt-3">
       <table class="table table-bordered mt-3" id="summaryTable">
         <thead class="table-dark">
