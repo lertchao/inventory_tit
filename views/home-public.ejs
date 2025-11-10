@@ -84,9 +84,14 @@
       <% if (featured) { %>
         <section class="card border rounded-4 overflow-hidden shadow-sm mb-4">
           <% if (featured.imageUrl) { %>
-            <div class="ratio ratio-21x9">
-              <img src="<%= featured.imageUrl %>" class="w-100 h-100 object-fit-cover" alt="featured">
+            <div class="ratio ratio-21x9 bg-light d-flex align-items-center justify-content-center">
+              <img
+                src="<%= featured.imageUrl %>"
+                class="w-100 h-100"
+                style="object-fit: contain;"
+                alt="featured">
             </div>
+            
           <% } %>
           <div class="card-body p-4">
             <div class="d-flex align-items-center gap-2 mb-2">
@@ -133,9 +138,14 @@
             <div class="col-12 col-md-6 col-xl-4">
               <article class="card h-100 border rounded-4 overflow-hidden shadow-sm">
                 <% if (p.imageUrl) { %>
-                  <div class="ratio ratio-16x9">
-                    <img src="<%= p.imageUrl %>" class="w-100 h-100 object-fit-cover" alt="<%= p.title %>">
+                  <div class="ratio ratio-16x9 bg-light d-flex align-items-center justify-content-center">
+                    <img
+                      src="<%= p.imageUrl %>"
+                      class="w-100 h-100"
+                      style="object-fit: contain;"
+                      alt="<%= p.title %>">
                   </div>
+                  
                 <% } %>
 
                 <div class="card-body">
