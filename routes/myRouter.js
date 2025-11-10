@@ -944,34 +944,35 @@ router.get("/transaction", isAuthenticated, async (req, res) => {
   try {
     const searchQuery = req.query.search ? req.query.search.trim() : "";
 
-    // ดึงข้อมูล Transaction และเรียงลำดับตามวันที่
+    // ดึงข้อมูล Transaction และเรียงลำดับตามวันที่ (เก่าสุด -> ใหม่สุด)
     const transactions = await Transaction.find()
-      .sort({ createdAt: 1 }) // เรียงตามเวลา เพื่อคำนวณคงเหลือ
+      .sort({ createdAt: 1 }) // ต้องเรียงเวลาเพื่อให้คำนวณคงเหลือตามลำดับถูก
       .lean();
 
-    // ดึง SKU ทั้งหมดจาก transactions
-    const allSKUs = transactions.flatMap(transaction =>
-      transaction.products.map(product => product.sku)
+    // ดึง SKU ทั้งหมดจากทุก transaction
+    const allSKUs = transactions.flatMap((transaction) =>
+      transaction.products.map((product) => product.sku)
     );
 
-    // ดึงข้อมูล Product โดยใช้ SKU
+    // ดึงข้อมูลสินค้าเพื่อเอา description มาใส่
     const productsMap = await Product.find({ sku: { $in: allSKUs } })
       .lean()
-      .then(products =>
+      .then((products) =>
         products.reduce((map, product) => {
           map[product.sku] = product;
           return map;
         }, {})
       );
 
-    // คำนวณสินค้า คงเหลือ
-    const skuBalances = {}; // ใช้เก็บคงเหลือของ SKU
+    // คำนวณคงเหลือต่อ SKU ไล่ตามเวลา
+    const skuBalances = {}; // { SKU: remaining }
 
-    const enrichedTransactions = transactions.map(transaction => {
-      const updatedProducts = transaction.products.map(product => {
+    const enrichedTransactions = transactions.map((transaction) => {
+      const updatedProducts = transaction.products.map((product) => {
         const sku = product.sku;
 
         if (!skuBalances[sku]) skuBalances[sku] = 0;
+
         if (transaction.transactionType === "IN") {
           skuBalances[sku] += product.quantity;
         } else if (transaction.transactionType === "OUT") {
@@ -994,17 +995,17 @@ router.get("/transaction", isAuthenticated, async (req, res) => {
       };
     });
 
-    // กรองตามคำค้นหา (ถ้ามี)
+    // กรองตามคำค้นหา (ถ้ามี) - กรองที่ระดับ product
     let filteredTransactions = enrichedTransactions;
     if (searchQuery) {
       filteredTransactions = enrichedTransactions
-        .map(transaction => ({
+        .map((transaction) => ({
           ...transaction,
-          products: transaction.products.filter(product =>
+          products: transaction.products.filter((product) =>
             product.sku.includes(searchQuery)
           ),
         }))
-        .filter(transaction => transaction.products.length > 0);
+        .filter((transaction) => transaction.products.length > 0);
     }
 
     res.render("transaction", {
@@ -1018,11 +1019,23 @@ router.get("/transaction", isAuthenticated, async (req, res) => {
 });
 
 
+
 router.get('/workorder', isAuthenticated, isAdmin, async (req, res) => {
   try {
+    const dayjs = require('dayjs');
+    const tz = require('dayjs/plugin/timezone');
+    const utc = require('dayjs/plugin/utc');
+    dayjs.extend(utc);
+    dayjs.extend(tz);
+
     const searchQuery  = (req.query.search || '').trim();
     const statusFilter = (req.query.statusFilter || '').trim();
     const storeIdRaw   = (req.query.storeId || '').trim();
+
+    // รับค่าหน้า (1,2,3..) จาก query ถ้าไม่ส่งมาก็หน้า 1
+    const page  = Math.max(parseInt(req.query.page || '1', 10), 1);
+    const limit = 100; // ดึงทีละ 100 แถวพอ
+    const skip  = (page - 1) * limit;
 
     const matchStage = {};
     const orConds = [];
@@ -1032,59 +1045,81 @@ router.get('/workorder', isAuthenticated, isAdmin, async (req, res) => {
       const rx = new RegExp(safe, 'i');
       orConds.push({ requestId: { $regex: rx } }, { requesterName: { $regex: rx } });
     }
-    if (orConds.length > 0) matchStage.$or = orConds;
+    if (orConds.length > 0) {
+      matchStage.$or = orConds;
+    }
 
     if (storeIdRaw) {
       const digits = storeIdRaw.replace(/\D/g, '').slice(0, 3);
       if (digits) {
         const storeIdNum = parseInt(digits, 10);
-        if (!Number.isNaN(storeIdNum)) matchStage.storeId = storeIdNum;
+        if (!Number.isNaN(storeIdNum)) {
+          matchStage.storeId = storeIdNum;
+        }
       }
     }
 
-    if (statusFilter) matchStage.workStatus = statusFilter;
+    if (statusFilter) {
+      matchStage.workStatus = statusFilter;
+    }
 
+    // pipeline หลัก
     const rows = await Transaction.aggregate([
       { $match: matchStage },
+
+      // ให้เอกสารของแต่ละ requestId เรียงจากใหม่ไปเก่า
+      { $sort: { requestId: 1, createdAt: -1 } },
+
+      // หยิบเอกสารล่าสุดของแต่ละ requestId + นับจำนวน
+      {
+        $group: {
+          _id: '$requestId',
+          latest: { $first: '$$ROOT' },
+          transactionCount: { $sum: 1 }
+        }
+      },
+
+      // ดึงชื่อร้านจาก storeId ของแถวล่าสุด
       {
         $lookup: {
           from: 'stores',
-          localField: 'storeId',
+          localField: 'latest.storeId',
           foreignField: 'storeId',
           as: 'storeInfo'
         }
       },
       { $unwind: { path: '$storeInfo', preserveNullAndEmptyArrays: true } },
-      { $sort: { createdAt: -1 } },
-      {
-        $group: {
-          _id: '$requestId',
-          requesterName:    { $first: '$requesterName' },
-          lastTxn:          { $max: '$createdAt' },   // ล่าสุดจริง
-          workStatus:       { $last: '$workStatus' },
-          transactionCount: { $sum: 1 },
-          storeId:          { $last: '$storeId' },
-          storeName:        { $last: '$storeInfo.storename' }
-        }
-      },
-      { $sort: { lastTxn: -1 } }
+
+      // เรียงตามวันที่ล่าสุด
+      { $sort: { 'latest.createdAt': -1 } },
+
+      // ตัดหน้า
+      { $skip: skip },
+      { $limit: limit },
     ]);
 
+    // เอาไว้หาจำนวนทั้งหมด เพื่อทำ pagination (อาจแยก query อีกทีจะเร็วกว่า)
+    const totalGroups = await Transaction.aggregate([
+      { $match: matchStage },
+      { $group: { _id: '$requestId' } },
+      { $count: 'total' }
+    ]);
+    const total = totalGroups[0]?.total || 0;
+    const totalPages = Math.ceil(total / limit);
+
     const transactions = rows.map(r => {
-      const last = r.lastTxn ? new Date(r.lastTxn) : null;
+      const last = r.latest?.createdAt ? new Date(r.latest.createdAt) : null;
       return {
         _id: r._id,
-        requesterName: r.requesterName || '-',
-        // สำหรับแสดงผล
+        requesterName: r.latest?.requesterName || '-',
         createdAtFormatted: last
           ? dayjs(last).tz('Asia/Bangkok').format('DD MMM YYYY, HH:mm')
           : '-',
-        // สำหรับ sort (เหมือนหน้าที่คุณยกตัวอย่าง)
         lastTxnISO: last ? last.toISOString() : '',
-        workStatus: r.workStatus || '-',
+        workStatus: r.latest?.workStatus || '-',
         transactionCount: r.transactionCount ?? 0,
-        storeId: r.storeId ?? null,
-        storeName: r.storeName || '-'
+        storeId: r.latest?.storeId ?? null,
+        storeName: r.storeInfo?.storename || '-'
       };
     });
 
@@ -1092,7 +1127,9 @@ router.get('/workorder', isAuthenticated, isAdmin, async (req, res) => {
       transactions,
       searchQuery,
       statusFilter,
-      storeId: storeIdRaw
+      storeId: storeIdRaw,
+      page,
+      totalPages
     });
 
   } catch (err) {
@@ -1100,6 +1137,7 @@ router.get('/workorder', isAuthenticated, isAdmin, async (req, res) => {
     res.status(500).send('Internal Server Error');
   }
 });
+
 
 
 

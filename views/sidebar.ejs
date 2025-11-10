@@ -53,12 +53,58 @@
     </div>
   <% } %>
   
-  <!-- <script>
-    function logoutUser() {
+  <!-- Spinner ทดสอบ -->
+<div id="sidebarSpinner" class="mt-3 text-center">
+  <div class="spinner-border text-warning" role="status" style="width:2rem;height:2rem;">
+    <span class="visually-hidden">Loading...</span>
+  </div>
+  <div class="small text-warning mt-1">Loading...</div>
+</div>
+
+<script>
+  // กันไม่ให้ init ซ้ำ ถ้า sidebar ถูก include หลายจุด (desktop + mobile)
+  if (!window.__sidebarSpinnerInit) {
+    window.__sidebarSpinnerInit = true;
+
+    const spinnerEl = document.getElementById('sidebarSpinner');
+
+    function showSidebarSpinner() {
+      console.log("🔄 show spinner");
+      if (spinnerEl) spinnerEl.classList.remove('d-none');
+    }
+    function hideSidebarSpinner() {
+      console.log("✅ hide spinner");
+      if (spinnerEl) spinnerEl.classList.add('d-none');
+    }
+
+    // 🔸 ขั้นตอนทดสอบ: ให้ spinner โชว์ก่อนทุกอย่าง
+    document.addEventListener('DOMContentLoaded', () => {
+      showSidebarSpinner();
+    });
+
+    // 🔸 ซ่อนหลังโหลดหน้าเสร็จ (จำลองหน่วงเวลาให้เห็น)
+    window.addEventListener('load', () => {
+      setTimeout(() => hideSidebarSpinner(), 500);
+    });
+
+    // ถ้ามี jQuery
+    if (window.jQuery) {
+      $(document).ajaxStart(() => showSidebarSpinner());
+      $(document).ajaxStop(() => hideSidebarSpinner());
+    }
+
+    window.logoutUser = function() {
+      showSidebarSpinner();
       window.location.href = "/logout";
-    }
-    function loginRedirect() {
+    };
+
+    window.loginRedirect = function() {
+      showSidebarSpinner();
       window.location.href = "/login";
-    }
-  </script> -->
-  
+    };
+
+    // เผื่อเรียกจากหน้าอื่นได้
+    window.showSidebarSpinner = showSidebarSpinner;
+    window.hideSidebarSpinner = hideSidebarSpinner;
+  }
+</script>

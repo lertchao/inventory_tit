@@ -83,10 +83,15 @@
   </header>
 
   <% if (post.imageUrl) { %>
-    <div class="ratio ratio-21x9 mb-3">
-      <img src="<%= post.imageUrl %>" class="w-100 h-100 object-fit-cover" alt="">
+    <div class="mb-3 bg-light d-flex align-items-center justify-content-center" style="height: 320px;">
+      <img
+        src="<%= post.imageUrl %>"
+        class="h-100"
+        style="object-fit: contain; max-width: 100%;"
+        alt="<%= post.title %>">
     </div>
   <% } %>
+  
   
 
   <% if (post.excerpt) { %>
