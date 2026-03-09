@@ -5,31 +5,134 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Work Detail (Read-only)</title>
 
-  <!-- Stack เดิม -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" />
   <link rel="icon" href="/images/storage.png" sizes="32x32" />
   <link rel="stylesheet" href="/css/styles.css" />
 
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
+
   <style>
     .table-sm td, .table-sm th { vertical-align: middle; }
     .badge-status { min-width: 76px; }
     .section-title { font-weight: 700; }
-    /* ปรับขนาดตัวอักษรให้กระชับบนจอเล็ก */
+
     @media (max-width: 420px) {
       .fs-h4-sm { font-size: 1.15rem !important; }
       .fs-meta-sm { font-size: .9rem !important; }
+    }
+
+    /* ปุ่ม expand ของ DataTables Responsive */
+    table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control,
+    table.dataTable.dtr-inline.collapsed > tbody > tr > th.dtr-control {
+      position: relative;
+      padding-left: 2rem !important;
+      cursor: pointer;
+    }
+
+    table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control:before,
+    table.dataTable.dtr-inline.collapsed > tbody > tr > th.dtr-control:before {
+      content: "▶";
+      position: absolute;
+      top: 50%;
+      left: 0.65rem;
+      transform: translateY(-50%);
+      display: inline-block;
+      width: auto;
+      height: auto;
+      line-height: 1;
+      border: 0 !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      background: transparent !important;
+      color: #6c757d !important;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    table.dataTable.dtr-inline.collapsed > tbody > tr.parent > td.dtr-control:before,
+    table.dataTable.dtr-inline.collapsed > tbody > tr.parent > th.dtr-control:before {
+      content: "▼";
+      background: transparent !important;
+      color: #6c757d !important;
+    }
+
+    .dtr-details {
+      width: 100%;
+    }
+
+    .dtr-details li {
+      display: flex;
+      gap: 8px;
+      padding: 8px 0 !important;
+      border-bottom: 1px solid #e9ecef;
+    }
+
+    .dtr-details li:last-child {
+      border-bottom: 0;
+    }
+
+    .dtr-title {
+      min-width: 110px;
+      font-weight: 700;
+    }
+
+    .dtr-data {
+      word-break: break-word;
+    }
+
+    /* ปรับ table ให้เรียบร้อย */
+    #summaryTable {
+      margin-bottom: 0 !important;
+    }
+
+    #summaryTable thead th {
+      white-space: nowrap;
+    }
+
+    /* กล่อง Total Cost แยกออกมาจาก table */
+    .summary-total-box {
+      max-width: 320px;
+      margin-left: auto;
+      margin-top: 12px;
+      border: 1px solid #f0d98c;
+      background: #fff8db;
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+
+    .summary-total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      font-weight: 700;
+      color: #212529;
+    }
+
+    .summary-total-label {
+      color: #6c757d;
+    }
+
+    .summary-total-value {
+      font-size: 1.05rem;
+    }
+
+    @media (max-width: 576px) {
+      .summary-total-box {
+        max-width: 100%;
+      }
     }
   </style>
 </head>
 <body>
   <div class="container py-4">
 
-    <!-- Work Info Card -->
     <div class="card border rounded-4 shadow-sm mb-4" style="border-color:#dee2e6 !important; background:#fff;">
       <div class="card-body py-4 px-3 px-md-4">
 
-        <!-- แถวบน: Request ID + สถานะ (เรียงซ้อนบนจอเล็ก) -->
         <div class="row align-items-center gy-2 mb-3">
           <div class="col-12 col-md">
             <h4 class="mb-0 fw-bold text-dark fs-h4-sm">
@@ -49,7 +152,6 @@
           </div>
         </div>
 
-        <!-- รายละเอียด (เป็นกริด 2 คอลัมน์บน md ขึ้นไป / 1 คอลัมน์บนมือถือ) -->
         <div class="row g-3 g-md-4 mb-2">
           <div class="col-12 col-md-6 col-lg-4">
             <div class="text-muted small">Store</div>
@@ -67,30 +169,27 @@
             </div>
           </div>
 
-          <!-- เผื่ออนาคตใส่ช่องเพิ่ม ให้คง layout -->
           <div class="col-12 col-lg-4 d-none d-lg-block"></div>
         </div>
 
         <hr class="my-3" style="border-top:1px solid #e0e0e0;" />
 
-<!-- วันที่ (สองคอลัมน์บน md; ซ้อนบนจอเล็ก) -->
-<div class="row gy-2 text-muted small text-end text-md-end justify-content-md-end">
-  <div class="col-12 col-md-auto">
-    <i class="bi bi-clock me-1"></i>
-    Created At:
-    <span class="text-dark"><%= transactions[0]?.createdAtFormatted || '-' %></span>
-  </div>
-  <div class="col-12 col-md-auto">
-    <i class="bi bi-arrow-repeat me-1"></i>
-    Last Updated:
-    <span class="text-dark"><%= transactions[0]?.updatedAtFormatted || '-' %></span>
-  </div>
-</div>
+        <div class="row gy-2 text-muted small text-end text-md-end justify-content-md-end">
+          <div class="col-12 col-md-auto">
+            <i class="bi bi-clock me-1"></i>
+            Created At:
+            <span class="text-dark"><%= transactions[0]?.createdAtFormatted || '-' %></span>
+          </div>
+          <div class="col-12 col-md-auto">
+            <i class="bi bi-arrow-repeat me-1"></i>
+            Last Updated:
+            <span class="text-dark"><%= transactions[0]?.updatedAtFormatted || '-' %></span>
+          </div>
+        </div>
 
       </div>
     </div>
 
-    <% // ===== Summary Calculation ===== %>
     <%
       const summary = {};
       (transactions || []).forEach(tx => {
@@ -103,14 +202,13 @@
 
           if (!summary[sku]) summary[sku] = { description: desc, net: 0, cost };
           summary[sku].net  += signedQty;
-          summary[sku].cost  = cost; // last price
+          summary[sku].cost = cost;
         });
       });
       const summaryKeys = Object.keys(summary);
       let totalCost = 0;
     %>
 
-    <!-- Summary Header -->
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
       <h3 class="section-title mb-0">Summary (รายการเบิก)</h3>
       <% if (summaryKeys.length) { %>
@@ -120,24 +218,23 @@
       <% } %>
     </div>
 
-    <!-- Summary Table -->
     <div class="table-responsive mt-3">
-      <table class="table table-bordered table-sm" id="summaryTable">
+      <table class="table table-bordered table-sm" id="summaryTable" style="width:100%">
         <thead class="table-dark">
           <tr>
-            <th class="text-center align-middle" style="width:56px;">#</th>
-            <th class="text-center align-middle" style="min-width:120px;">SKU</th>
-            <th class="text-center align-middle" style="min-width:200px;">Description</th>
-            <th class="text-center align-middle" style="min-width:110px;">Net Quantity</th>
-            <th class="text-center align-middle" style="min-width:110px;">Cost/pcs</th>
-            <th class="text-center align-middle" style="min-width:130px;">Amount Cost</th>
+            <th class="text-center align-middle">#</th>
+            <th class="text-center align-middle">SKU</th>
+            <th class="text-center align-middle">Description</th>
+            <th class="text-center align-middle">Net Quantity</th>
+            <th class="text-center align-middle">Cost/pcs</th>
+            <th class="text-center align-middle">Amount Cost</th>
           </tr>
         </thead>
         <tbody>
           <% if (summaryKeys.length) { %>
             <% summaryKeys.forEach((sku, idx) => {
-                 const net   = Number(summary[sku].net || 0);
-                 const cost  = Number(summary[sku].cost || 0);
+                 const net = Number(summary[sku].net || 0);
+                 const cost = Number(summary[sku].cost || 0);
                  const amountCost = net < 0 ? (-net) * cost : 0;
                  totalCost += amountCost;
             %>
@@ -160,22 +257,70 @@
             </tr>
           <% } %>
         </tbody>
-
-        <% if (summaryKeys.length) { %>
-          <tfoot class="table-warning">
-            <tr>
-              <th colspan="5" class="text-end">Total Cost</th>
-              <th class="text-center fw-bold bg-warning-subtle text-dark">
-                <%= totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
-              </th>
-            </tr>
-          </tfoot>
-        <% } %>
       </table>
     </div>
 
+    <% if (summaryKeys.length) { %>
+      <div class="summary-total-box">
+        <div class="summary-total-row">
+          <span class="summary-total-label">Total Cost</span>
+          <span class="summary-total-value">
+            <%= totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+          </span>
+        </div>
+      </div>
+    <% } %>
+
   </div>
 
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+  <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+  <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+
+  <script>
+    $(function () {
+      $('#summaryTable').DataTable({
+        paging: false,
+        searching: false,
+        info: false,
+        ordering: true,
+        responsive: {
+          details: {
+            renderer: function (api, rowIdx, columns) {
+              const data = $.map(columns, function (col) {
+                return col.hidden
+                  ? '<li class="d-flex">' +
+                      '<span class="dtr-title">' + col.title + ' :</span>' +
+                      '<span class="dtr-data">' + col.data + '</span>' +
+                    '</li>'
+                  : '';
+              }).join('');
+
+              return data
+                ? $('<ul class="dtr-details list-unstyled mb-0"/>').append(data)
+                : false;
+            }
+          }
+        },
+        columnDefs: [
+          { responsivePriority: 1, targets: 0 }, // #
+          { responsivePriority: 1, targets: 1 }, // SKU
+          { responsivePriority: 1, targets: 3 }, // Net Quantity
+          { responsivePriority: 1, targets: 5 }, // Amount Cost
+
+          { responsivePriority: 100, targets: 2 }, // Description (ซ่อนก่อน)
+          { responsivePriority: 101, targets: 4 }  // Cost/pcs (ซ่อนก่อน)
+        ],
+        language: {
+          zeroRecords: "ไม่พบข้อมูล",
+          infoEmpty: "ไม่มีข้อมูลแสดง"
+        }
+      });
+    });
+  </script>
 </body>
 </html>

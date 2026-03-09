@@ -5,6 +5,7 @@ const Transaction = require('../models/transaction')
 const Store = require('../models/store')
 const Requester = require('../models/requester')
 const Announcement = require('../models/announcement')
+const Sequence = require("../models/Sequence")
 const fs = require('fs');
 const path = require('path');
 const { cloudinary, upload } = require('../config/cloudinary');
@@ -28,6 +29,275 @@ function parseStoreId(value) {
   if (!Number.isInteger(n) || n < 0) return null;
   return n;
 }
+
+async function generateManualRequestId(session) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const yyyymm = `${year}${month}`;
+  const key = `MANUAL-ISSUE-${yyyymm}`;
+
+  const counter = await Sequence.findOneAndUpdate(
+    { key },
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true, session }
+  );
+
+  const running = String(counter.seq).padStart(4, "0");
+  return `${yyyymm}-${running}`;
+}
+
+router.get("/manual-issue-parts", isAuthenticated, isAdmin, (req, res) => {
+  res.render("manual_trans-out");
+});
+
+router.get("/api/manual-issue-next-id", isAuthenticated, isAdmin, async (req, res) => {
+  const session = await mongoose.startSession();
+  try {
+    session.startTransaction();
+
+    const manualId = await generateManualRequestId(session);
+
+    // rollback เพื่อให้เป็น preview อย่างเดียว ยังไม่ consume running จริง
+    await session.abortTransaction();
+
+    return res.json({ requestId: manualId });
+  } catch (error) {
+    console.error("❌ /api/manual-issue-next-id:", error);
+    try { await session.abortTransaction(); } catch (_) {}
+    return res.status(500).json({ error: "ไม่สามารถสร้างเลขที่ใบเบิกได้" });
+  } finally {
+    session.endSession();
+  }
+});
+
+router.post("/add_manual_trans-out", isAuthenticated, isAdmin, async (req, res) => {
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+
+    const { name, workStatus, storeId, products } = req.body;
+    const nameTrim = (name || "").trim();
+    const storeIdNum = Number(storeId);
+
+    if (!nameTrim || !storeIdNum || !Array.isArray(products) || products.length === 0) {
+      return res.status(400).json({ alert: "กรุณากรอกข้อมูลให้ครบถ้วน" });
+    }
+
+    const store = await Store.findOne({ storeId: storeIdNum }).session(session);
+    if (!store) {
+      return res.status(404).json({ alert: "ไม่พบรหัสสาขานี้" });
+    }
+
+    const requesterDoc = await Requester.findOne({
+      shortName: nameTrim,
+      active: true
+    }).session(session);
+
+    if (!requesterDoc) {
+      return res.status(400).json({
+        alert: `ไม่พบชื่อผู้เบิก "${nameTrim}" ในระบบ หรือถูกปิดใช้งาน`
+      });
+    }
+
+    // กัน SKU ซ้ำ
+    const seen = new Set();
+    const dups = new Set();
+
+    for (const item of products) {
+      const sku = (item?.sku || "").trim().toUpperCase();
+      if (!sku) continue;
+      if (seen.has(sku)) dups.add(sku);
+      else seen.add(sku);
+    }
+
+    if (dups.size > 0) {
+      return res.status(400).json({
+        alert: `พบรหัสสินค้าในคำสั่งนี้ซ้ำกัน: ${[...dups].join(", ")}\nโปรดรวมให้เหลือรหัสละ 1 แถวก่อนบันทึก`
+      });
+    }
+
+    // ตรวจ stock
+    const insufficientStock = [];
+    const validatedProducts = [];
+
+    for (const item of products) {
+      const sku = (item?.sku || "").trim();
+      const quantity = Number(item?.quantity);
+
+      if (!sku || !Number.isFinite(quantity) || quantity <= 0) {
+        return res.status(400).json({
+          alert: `SKU: ${sku || "ไม่ระบุ"} → จำนวนไม่ถูกต้อง`
+        });
+      }
+
+      const product = await Product.findOne({ sku }).session(session);
+      if (!product) {
+        return res.status(404).json({ alert: `ไม่พบสินค้า SKU: ${sku}` });
+      }
+
+      if ((product.quantity || 0) < quantity) {
+        insufficientStock.push({
+          sku,
+          available: product.quantity || 0
+        });
+      }
+
+      validatedProducts.push({
+        sku: product.sku,
+        description: product.description || "",
+        quantity,
+        cost: Number(product.cost) || 0
+      });
+    }
+
+    if (insufficientStock.length > 0) {
+      const alertMessage = insufficientStock
+        .map(item => `SKU: ${item.sku} คงเหลือ: ${item.available}`)
+        .join("<br>");
+
+      return res.status(400).json({
+        alert: `สินค้าบางรายการมีจำนวนไม่เพียงพอ<br>${alertMessage}`
+      });
+    }
+
+    // generate เลขเอกสารจริงตอน save เท่านั้น
+    const requestId = await generateManualRequestId(session);
+
+    // ตัด stock
+    for (const item of validatedProducts) {
+      await Product.updateOne(
+        { sku: item.sku },
+        { $inc: { quantity: -item.quantity } },
+        { session }
+      );
+    }
+
+    // save transaction
+    await Transaction.create([{
+      requesterName: nameTrim,
+      requestId,
+      transactionType: "OUT",
+      workStatus: workStatus || "Finish",
+      storeId: storeIdNum,
+      products: validatedProducts.map(p => ({
+        sku: p.sku,
+        quantity: p.quantity
+      })),
+      username: req.user.username,
+      remark: "Manual Issue Parts"
+    }], { session });
+
+    await session.commitTransaction();
+
+    return res.status(200).json({
+      message: "บันทึกข้อมูลเรียบร้อยแล้ว",
+      printData: {
+        requesterName: nameTrim,
+        requestId,
+        workStatus: workStatus || "Finish",
+        storeId: store.storeId,
+        storeName: store.storename,
+        createdBy: req.user.username,
+        createdAt: new Date(),
+        products: validatedProducts.map((p, i) => ({
+          no: i + 1,
+          sku: p.sku,
+          description: p.description,
+          quantity: p.quantity,
+          cost: p.cost,
+          total: p.quantity * p.cost
+        }))
+      }
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    console.error("❌ /add_manual_trans-out:", error);
+    return res.status(500).json({ alert: "ไม่สามารถบันทึกข้อมูลได้" });
+  } finally {
+    session.endSession();
+  }
+});
+
+router.get('/manual-slip/:requestId', isAuthenticated, async (req, res) => {
+  try {
+    const requestId = req.params.requestId;
+
+    const transactions = await Transaction.find({ requestId })
+      .sort({ createdAt: 1 })
+      .lean();
+
+    if (!transactions || transactions.length === 0) {
+      return res.status(404).send('ไม่พบข้อมูลใบเบิก');
+    }
+
+    const store = await Store.findOne({ storeId: transactions[0].storeId }).lean();
+
+    // summary net by sku
+    const summaryMap = {};
+
+    transactions.forEach((tx) => {
+      (tx.products || []).forEach((p) => {
+        const sku = p.sku;
+        if (!summaryMap[sku]) {
+          summaryMap[sku] = {
+            sku,
+            description: p.description || '',
+            quantity: 0,
+            cost: 0,
+            total: 0
+          };
+        }
+
+        // ใช้เฉพาะ OUT สุทธิที่ยังเหลือใช้งานจริง
+        if ((tx.transactionType || '').toUpperCase() === 'OUT') {
+          summaryMap[sku].quantity += Number(p.quantity || 0);
+        } else if ((tx.transactionType || '').toUpperCase() === 'IN') {
+          summaryMap[sku].quantity -= Number(p.quantity || 0);
+        }
+      });
+    });
+
+    // ดึง cost ล่าสุดจาก Product
+    const skuList = Object.keys(summaryMap);
+    const products = await Product.find({ sku: { $in: skuList } }).lean();
+    const productMap = new Map(products.map(p => [p.sku, p]));
+
+    const items = Object.values(summaryMap)
+      .filter(item => item.quantity > 0)
+      .map((item, index) => {
+        const productDoc = productMap.get(item.sku);
+        const cost = Number(productDoc?.cost || 0);
+        const total = cost * item.quantity;
+
+        return {
+          no: index + 1,
+          sku: item.sku,
+          description: item.description || productDoc?.description || '',
+          quantity: item.quantity,
+          cost,
+          total
+        };
+      });
+
+    const grandTotal = items.reduce((sum, item) => sum + item.total, 0);
+
+    res.render('manual-slip', {
+      requestId,
+      requesterName: transactions[0].requesterName || '',
+      storeId: transactions[0].storeId || '',
+      storeName: store?.storename || '',
+      workStatus: transactions[0].workStatus || '',
+      createdAt: transactions[0].createdAt,
+      items,
+      grandTotal
+    });
+  } catch (error) {
+    console.error('❌ /manual-slip/:requestId', error);
+    res.status(500).send('เกิดข้อผิดพลาดในการสร้างใบพิมพ์');
+  }
+});
 
 router.get('/stores', isAuthenticated, isAdmin, (req, res) => {
   res.render('stores', { user: req.user });
