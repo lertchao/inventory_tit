@@ -25,10 +25,26 @@
       <%- include('sidebarMobile') %>
         <div class="col-lg-10 col-12">
 
-          <h2 class="text-danger text-center p-4">Issue Parts <img src="images/out-of-stock.png" alt="logo"
-              class="img-fluid" style="max-width: 40px; vertical-align: middle;"></h2>
+          <div class="row align-items-center p-4">
+            <div class="col-3"></div>
+          
+            <div class="col-6 text-center">
+              <h2 class="text-danger m-0">
+                Issue Parts
+                <img src="images/out-of-stock.png" alt="logo" class="img-fluid" style="max-width: 40px; vertical-align: middle;">
+              </h2>
+            </div>
+          
+            <div class="col-3 text-end">
+              <a href="/manual-issue-parts" class="btn btn-outline-danger">
+                <i class="bi bi-box-arrow-up-right me-1"></i> Manual Issue Parts
+              </a>
+            </div>
+          </div>
 
           <div id="status-banner" class="alert d-none mt-2"></div>
+
+          
 
           <!-- ฟอร์มสำหรับกรอกข้อมูลเบิกและคืนสินค้า -->
           <form method="POST" action="/add_trans-out">
