@@ -182,7 +182,10 @@
         <div class="info-col"><strong>เลขที่ใบเบิก:</strong> <%= requestId %></div>
       </div>
       <div class="info-row">
-        <div class="info-col"><strong>รหัสสาขา:</strong> <%= storeId %></div>
+        <div class="info-col">
+          <strong>รหัสสาขา:</strong>
+          <%= String(storeId).padStart(3, '0') %>
+        </div>
         <div class="info-col"><strong>ชื่อสาขา:</strong> <%= storeName %></div>
       </div>
       <div class="info-row">

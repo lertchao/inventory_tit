@@ -86,7 +86,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const costCell = row.querySelector(".cost-cell");
 
       if (sku) {
-        fetch(`/get-product-details?sku=${sku}`)
+        fetch(`/get-product-details-in?sku=${sku}`)
           .then((response) => response.json())
           .then((data) => {
             if (data && data.product) {

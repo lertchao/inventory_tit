@@ -1,7 +1,16 @@
 document.addEventListener("DOMContentLoaded", () => {
   const raw = document.getElementById("pendingWorkOrdersData").textContent;
-  const src = JSON.parse(raw);
-  const labels           = src.map(o => o._id);
+const allData = JSON.parse(raw);
+
+// ใส่ชื่อที่ไม่ต้องการให้แสดงบนกราฟ
+const hiddenRequesters = ["Peet", "Lert",];
+
+const src = allData.filter(o => {
+  const requesterName = String(o._id || "").trim();
+  return !hiddenRequesters.includes(requesterName);
+});
+
+const labels           = src.map(o => o._id);
   const cmTotals         = src.map(o => o.cmTotalCost);
   const pmTotals         = src.map(o => o.pmTotalCost);
   const cmJobs           = src.map(o => o.cmPendingCount);

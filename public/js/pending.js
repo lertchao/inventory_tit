@@ -1,7 +1,15 @@
 // pending.js  (single-bar version: combine CM+PM)
 document.addEventListener("DOMContentLoaded", () => {
-  const raw = document.getElementById("pendingWorkOrdersData").textContent;
-  const src = JSON.parse(raw) || [];
+const raw = document.getElementById("pendingWorkOrdersData").textContent;
+const allData = JSON.parse(raw) || [];
+
+// ใส่ชื่อที่ไม่ต้องการให้แสดงบนกราฟ
+const hiddenRequesters = ["Peet", "Lert",];
+
+const src = allData.filter(o => {
+  const requesterName = String(o._id || "").trim();
+  return !hiddenRequesters.includes(requesterName);
+});
 
   // ใช้ requesterName เป็น label (_id คือ requesterName จาก pipeline)
   const labels = src.map(o => o._id);

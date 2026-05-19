@@ -132,7 +132,11 @@ router.post("/add_manual_trans-out", isAuthenticated, isAdmin, async (req, res) 
         });
       }
 
-      const product = await Product.findOne({ sku }).session(session);
+      const product = await Product.findOne({
+        sku,
+        active: { $ne: false }
+      }).session(session);
+
       if (!product) {
         return res.status(404).json({ alert: `ไม่พบสินค้า SKU: ${sku}` });
       }
@@ -168,18 +172,24 @@ router.post("/add_manual_trans-out", isAuthenticated, isAdmin, async (req, res) 
     // ตัด stock
     for (const item of validatedProducts) {
       await Product.updateOne(
-        { sku: item.sku },
+        {
+          sku: item.sku,
+          active: { $ne: false }
+        },
         { $inc: { quantity: -item.quantity } },
         { session }
       );
     }
 
     // save transaction
+    const status = workStatus || "Finish";
+
     await Transaction.create([{
       requesterName: nameTrim,
       requestId,
       transactionType: "OUT",
-      workStatus: workStatus || "Finish",
+      workStatus: status,
+      finishDate: status === "Finish" ? new Date() : null,
       storeId: storeIdNum,
       products: validatedProducts.map(p => ({
         sku: p.sku,
@@ -452,14 +462,11 @@ router.post("/login", async (req, res) => {
   }
 });
 
-
-
 router.get("/logout", (req, res) => {
   req.session.destroy(() => {
     res.json({ loggedOut: true, message: "ออกจากระบบสำเร็จ" });
   });
 });
-
 
 router.get("/", isAuthenticated, async (req, res) => {
   try {
@@ -895,7 +902,10 @@ router.get('/onhand',isAuthenticated, async (req, res) => {
     .filter(Boolean);
 
   // เงื่อนไขค้นหา
-  const condition = {};
+  const condition = {
+  active: { $ne: false }
+  };
+  
   if (searchQueryRaw) {
     const escaped = searchQueryRaw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     condition.$or = [
@@ -957,7 +967,9 @@ router.get('/public-onhand', async (req, res) => {
     .filter(Boolean);
 
   // เงื่อนไขค้นหา
-  const condition = {};
+  const condition = {
+  active: { $ne: false }
+  };
   if (searchQueryRaw) {
     const escaped = searchQueryRaw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     condition.$or = [
@@ -1262,6 +1274,10 @@ router.get("/transaction", isAuthenticated, async (req, res) => {
         createdAtFormatted: dayjs(transaction.createdAt)
           .tz("Asia/Bangkok")
           .format("DD MMM YYYY, HH:mm"),
+
+        createdAtExcel: dayjs(transaction.createdAt)
+          .tz("Asia/Bangkok")
+          .format("YYYY-MM-DD HH:mm:ss"),
       };
     });
 
@@ -1625,7 +1641,13 @@ router.put('/workorder/:requestId/update-status', isAuthenticated, async (req, r
           // เซ็ตธุรกรรมเดิมทั้งหมดเป็น Cancel
           await Transaction.updateMany(
             { requestId },
-            { $set: { workStatus: 'Cancel', updatedAt: new Date() } },
+            { 
+              $set: { 
+                workStatus: 'Cancel', 
+                finishDate: null,
+                updatedAt: new Date() 
+              } 
+            },
             { session }
           );
         });
@@ -1644,14 +1666,19 @@ router.put('/workorder/:requestId/update-status', isAuthenticated, async (req, r
           finalStatus: 'Cancel',
           returned: itemsToReturn,
         });
-      } catch (e) {
-        await session.abortTransaction();
-        if (e && e.status) return res.status(e.status).json({ message: e.message });
-        console.error('Cancel flow failed:', e);
-        return res.status(500).json({ message: 'Internal Server Error' });
-      } finally {
-        session.endSession();
-      }
+        } catch (e) {
+          if (e && e.status) {
+            return res.status(e.status).json({ message: e.message });
+          }
+
+          console.error('Additional OUT failed:', e);
+
+          return res.status(500).json({
+            message: e?.message || 'Internal Server Error'
+          });
+        } finally {
+          session.endSession();
+        }
     }
     // ===================== END CANCEL FLOW =====================
 
@@ -1717,13 +1744,19 @@ router.put('/workorder/:requestId/update-status', isAuthenticated, async (req, r
 
           // บันทึก Transaction IN สำหรับการคืนบางส่วน
           const first = txs[0];
+          const statusForReturn = workStatus || first.workStatus || 'Finish';
+          const finishDateForReturn =
+            statusForReturn === 'Finish'
+              ? (first.finishDate || new Date())
+              : null;
+
           await Transaction.create([{
             requesterName: first.requesterName,
             requestId,
             storeId: currentStoreId,
             transactionType: 'IN',
-            // ตั้งให้เป็นสถานะที่เลือกอยู่ตอนนี้ เพื่อลดความสับสนของรายงานภาพรวม
-            workStatus: (workStatus || first.workStatus || 'Finish'),
+            workStatus: statusForReturn,
+            finishDate: finishDateForReturn,
             username: (req.user && req.user.username) ? req.user.username : 'system',
             products: toReturn.map(i => ({ sku: i.sku, quantity: i.quantity })),
           }], { session });
@@ -1736,14 +1769,19 @@ router.put('/workorder/:requestId/update-status', isAuthenticated, async (req, r
           totalSkus,
           toReturn
         };
-      } catch (e) {
-        await session.abortTransaction();
-        if (e && e.status) return res.status(e.status).json({ message: e.message });
-        console.error('Partial return failed:', e);
-        return res.status(500).json({ message: 'Internal Server Error' });
-      } finally {
-        session.endSession();
-      }
+        } catch (e) {
+          if (e && e.status) {
+            return res.status(e.status).json({ message: e.message });
+          }
+
+          console.error('Partial return failed:', e);
+
+          return res.status(500).json({
+            message: e?.message || 'Internal Server Error'
+          });
+        } finally {
+          session.endSession();
+        }
     }
     // ================= END PARTIAL RETURN FLOW =================
 
@@ -1775,7 +1813,12 @@ router.put('/workorder/:requestId/update-status', isAuthenticated, async (req, r
           const missing = [];
           const shortage = [];
           for (const it of toIssue) {
-            const prod = await Product.findOne({ sku: it.sku }).session(session).select('quantity');
+            const prod = await Product.findOne({
+              sku: it.sku,
+              active: { $ne: false }
+            })
+              .session(session)
+              .select('quantity');
             if (!prod) {
               missing.push(it.sku);
               continue;
@@ -1784,7 +1827,7 @@ router.put('/workorder/:requestId/update-status', isAuthenticated, async (req, r
             if (remain < 0) shortage.push({ sku: it.sku, lack: Math.abs(remain) });
           }
           if (missing.length > 0) {
-            throw { status: 400, message: `ไม่พบสินค้าในระบบ: ${missing.join(', ')}` };
+            throw { status: 400, message: `ไม่พบสินค้าในระบบ หรือ SKU ถูกปิดใช้งาน: ${missing.join(', ')}` };
           }
           if (shortage.length > 0) {
             const msg = shortage.map(s => `${s.sku} (ขาด ${s.lack})`).join(', ');
@@ -1802,12 +1845,19 @@ router.put('/workorder/:requestId/update-status', isAuthenticated, async (req, r
 
           // บันทึก Transaction OUT
           const first = txs[0];
+          const statusForOut = workStatus || first.workStatus || 'Pending';
+          const finishDateForOut =
+            statusForOut === 'Finish'
+              ? (first.finishDate || new Date())
+              : null;
+
           await Transaction.create([{
             requesterName: requesterName || first.requesterName,
             requestId: targetRequestId,
             storeId: (Number.isFinite(parseInt(storeId, 10)) ? parseInt(storeId, 10) : currentStoreId),
             transactionType: 'OUT',
-            workStatus: (workStatus || first.workStatus || 'Pending'),
+            workStatus: statusForOut,
+            finishDate: finishDateForOut,
             username: (req.user && req.user.username) ? req.user.username : 'system',
             products: toIssue.map(i => ({ sku: i.sku, quantity: i.quantity })),
           }], { session });
@@ -1818,22 +1868,38 @@ router.put('/workorder/:requestId/update-status', isAuthenticated, async (req, r
           issuedCount,
           totalSkus: (new Set(addOutItems.map(i => String(i.sku || '').trim()))).size
         };
-      } catch (e) {
-        await session.abortTransaction();
-        if (e && e.status) return res.status(e.status).json({ message: e.message });
-        console.error('Additional OUT failed:', e);
-        return res.status(500).json({ message: 'Internal Server Error' });
-      } finally {
-        session.endSession();
-      }
+        } catch (e) {
+          if (e && e.status) {
+            return res.status(e.status).json({ message: e.message });
+          }
+
+          console.error('Additional OUT failed:', e);
+
+          return res.status(500).json({
+            message: e?.message || 'Internal Server Error'
+          });
+        } finally {
+          session.endSession();
+        }
     }
     // ============ END ADDITIONAL OUT FLOW ==============
 
     // =================== NORMAL UPDATE FLOW ====================
+    const currentStatus = txs[0].workStatus;
+    const now = new Date();
+
     const updateFields = {
-      workStatus,               // 'Pending' | 'Finish'
-      updatedAt: new Date(),
+      workStatus,
+      updatedAt: now,
     };
+
+    if (currentStatus !== 'Finish' && workStatus === 'Finish') {
+      updateFields.finishDate = now;
+    }
+
+    if (currentStatus === 'Finish' && workStatus === 'Pending') {
+      updateFields.finishDate = null;
+    }
 
     if (requesterName) updateFields.requesterName = requesterName;
 
@@ -1968,42 +2034,58 @@ router.get('/public-workorder/:requestId', async (req, res) => {
 
 
 router.get('/get-product-details', (req, res) => {
-    const sku = req.query.sku; // รับค่า sku จาก URL
-    Product.findOne({ sku: sku }, 'description cost', (err, product) => {
+  const sku = req.query.sku;
+
+  Product.findOne(
+    {
+      sku: sku,
+      active: { $ne: false }
+    },
+    'description cost',
+    (err, product) => {
+
       if (err) {
         return res.status(500).send('Error fetching product details');
       }
-  
+
       if (product) {
-        res.json({ product }); // ส่งข้อมูล product กลับ
+        res.json({ product });
       } else {
-        res.json({ product: null }); // หากไม่พบสินค้า
+        res.json({ product: null });
       }
-    });
-  });
+    }
+  );
+});
 
 
 
-router.get("/get-store-name", async (req, res) => {
+router.get("/get-store-name", isAuthenticated, async (req, res) => {
   try {
-    const { storeId } = req.query;
-    console.log("Received storeId:", storeId); // Debug: เช็คค่าที่รับมา
+    const rawStoreId = String(req.query.storeId || "").trim();
+    const storeIdNum = Number(rawStoreId);
 
-    if (!storeId) {
-      return res.status(400).json({ error: "กรุณาระบุรหัสสาขา" });
+    if (!rawStoreId || Number.isNaN(storeIdNum)) {
+      return res.status(400).json({
+        error: "Invalid storeId"
+      });
     }
 
-    const store = await Store.findOne({ storeId: Number(storeId) });
-    console.log("Store data:", store); // Debug: เช็คค่าที่ดึงจากฐานข้อมูล
+    const store = await Store.findOne({ storeId: storeIdNum });
 
     if (!store) {
-      return res.status(404).json({ error: "ไม่พบรหัสสาขานี้" });
+      return res.status(404).json({
+        error: "Store not found"
+      });
     }
 
-    res.status(200).json({ storename: store.storename });
+    res.json({
+      storename: store.storename || store.storeName || store.name || ""
+    });
   } catch (error) {
     console.error("Error fetching store name:", error);
-    res.status(500).json({ error: "เกิดข้อผิดพลาดในการค้นหาข้อมูล" });
+    res.status(500).json({
+      error: "Server error"
+    });
   }
 });
 
@@ -2038,6 +2120,27 @@ router.get("/get-transaction-details", async (req, res) => {
     console.error('Error fetching transaction details:', error);
     res.status(500).json({ error: 'เกิดข้อผิดพลาดในการค้นหาข้อมูล' });
   }
+});
+
+router.get('/get-product-details-in', (req, res) => {
+  const sku = req.query.sku;
+
+  Product.findOne(
+    { sku },
+    'description cost active',
+    (err, product) => {
+
+      if (err) {
+        return res.status(500).send('Error fetching product details');
+      }
+
+      if (product) {
+        res.json({ product });
+      } else {
+        res.json({ product: null });
+      }
+    }
+  );
 });
 
   
@@ -2107,20 +2210,38 @@ router.post("/add_trans-in", isAuthenticated, isAdmin, async (req, res) => {
     }
 
     // ✅ บันทึก transaction
+    const status = workStatus || "Pending";
+    const now = new Date();
+
     await Transaction.create([{
       requesterName: nameTrim,
       requestId: repairTrim,
       transactionType: "IN",
-      workStatus,
+      workStatus: status,
+      finishDate: status === "Finish" ? now : null,
       storeId: storeIdNum,
-      products: products.map(p => ({ sku: p.sku.trim(), quantity: Number(p.quantity) })),
+      products: products.map(p => ({ 
+        sku: p.sku.trim(), 
+        quantity: Number(p.quantity) 
+      })),
       username: req.user.username,
     }], { session });
 
     // ✅ Sync workStatus สำหรับ requestId เดียวกัน
+    const syncFields = {
+      workStatus: status,
+      updatedAt: now
+    };
+
+    if (status === "Finish") {
+      syncFields.finishDate = now;
+    } else if (status === "Pending") {
+      syncFields.finishDate = null;
+    }
+
     await Transaction.updateMany(
       { requestId: repairTrim },
-      { $set: { workStatus, updatedAt: new Date() } },
+      { $set: syncFields },
       { session }
     );
 
@@ -2138,99 +2259,164 @@ router.post("/add_trans-in", isAuthenticated, isAdmin, async (req, res) => {
 
 router.post('/add_trans-out', isAuthenticated, isAdmin, async (req, res) => {
   const session = await mongoose.startSession();
+
   try {
     session.startTransaction();
 
     const { name, repair, workStatus, storeId, products } = req.body;
-    const nameTrim   = (name || "").trim();
+    const nameTrim = (name || "").trim();
     const repairTrim = (repair || "").trim();
     const storeIdNum = Number(storeId);
 
     // ✅ ตรวจสอบข้อมูลเบื้องต้น
-    if (!nameTrim || !repairTrim || !storeIdNum || !Array.isArray(products) || products.length === 0) {
+    if (
+      !nameTrim ||
+      !repairTrim ||
+      !storeIdNum ||
+      !Array.isArray(products) ||
+      products.length === 0
+    ) {
       return res.status(400).json({ alert: "กรุณากรอกข้อมูลให้ครบถ้วน" });
     }
 
     const store = await Store.findOne({ storeId: storeIdNum }).session(session);
-    if (!store) return res.status(404).json({ alert: "ไม่พบรหัสสาขานี้" });
+    if (!store) {
+      return res.status(404).json({ alert: "ไม่พบรหัสสาขานี้" });
+    }
 
     // ✅ ตรวจว่าชื่อผู้เบิกต้องอยู่ใน Requester และยัง active
-    const requesterDoc = await Requester.findOne({ shortName: nameTrim, active: true }).session(session);
-    if (!requesterDoc) {
-      return res.status(400).json({ alert: `ไม่พบชื่อผู้เบิก "${nameTrim}" ในระบบ หรือถูกปิดใช้งาน` });
-    }
+    const requesterDoc = await Requester.findOne({
+      shortName: nameTrim,
+      active: true
+    }).session(session);
 
-    // 🔒 กัน SKU ซ้ำ (ของเดิมคุณมีอยู่แล้ว — คงไว้)
-    const seen = new Set();
-    const dups = new Set();
-    for (const item of products) {
-      const sku = (item?.sku || "").trim().toUpperCase();
-      if (!sku) continue;
-      if (seen.has(sku)) dups.add(sku);
-      else seen.add(sku);
-    }
-    if (dups.size > 0) {
+    if (!requesterDoc) {
       return res.status(400).json({
-        alert: `พบรหัสสินค้าในคำสั่งนี้ซ้ำกัน: ${[...dups].join(", ")}\nโปรดรวมให้เหลือรหัสละ 1 แถวก่อนบันทึก`,
+        alert: `ไม่พบชื่อผู้เบิก "${nameTrim}" ในระบบ หรือถูกปิดใช้งาน`
       });
     }
 
-    // ✅ ตรวจสอบสินค้าก่อน
+    // ✅ เช็ค transaction เดิมของเลข repair นี้
+    // ถ้าใบงานเดิมเป็น Finish แล้วมีการ OUT เพิ่ม จะให้ transaction ใหม่นับเข้า report ด้วย
+    const existingTx = await Transaction.findOne({ requestId: repairTrim })
+      .sort({ createdAt: -1 })
+      .session(session);
+
+    const status = workStatus || existingTx?.workStatus || "Pending";
+    const finishDateValue =
+      status === "Finish"
+        ? (existingTx?.finishDate || new Date())
+        : null;
+
+    // 🔒 กัน SKU ซ้ำ
+    const seen = new Set();
+    const dups = new Set();
+
+    for (const item of products) {
+      const sku = (item?.sku || "").trim().toUpperCase();
+      if (!sku) continue;
+
+      if (seen.has(sku)) {
+        dups.add(sku);
+      } else {
+        seen.add(sku);
+      }
+    }
+
+    if (dups.size > 0) {
+      return res.status(400).json({
+        alert: `พบรหัสสินค้าในคำสั่งนี้ซ้ำกัน: ${[...dups].join(", ")}\nโปรดรวมให้เหลือรหัสละ 1 แถวก่อนบันทึก`
+      });
+    }
+
+    // ✅ ตรวจสอบสินค้าและ stock ก่อน
     const insufficientStock = [];
+
     for (const item of products) {
       const sku = (item?.sku || "").trim();
       const quantity = Number(item?.quantity);
 
       if (!sku || !Number.isFinite(quantity) || quantity <= 0) {
-        return res.status(400).json({ alert: `SKU: ${sku || "ไม่ระบุ"} → จำนวนไม่ถูกต้อง` });
+        return res.status(400).json({
+          alert: `SKU: ${sku || "ไม่ระบุ"} → จำนวนไม่ถูกต้อง`
+        });
       }
 
-      const product = await Product.findOne({ sku }).session(session);
+      const product = await Product.findOne({
+        sku,
+        active: { $ne: false }
+      }).session(session);
+
       if (!product) {
-        return res.status(404).json({ alert: `ไม่พบสินค้า SKU: ${sku}` });
+        return res.status(404).json({
+          alert: `ไม่พบสินค้า SKU: ${sku} หรือสินค้านี้ถูกปิดใช้งาน`
+        });
       }
 
       if ((product.quantity || 0) < quantity) {
-        insufficientStock.push({ sku, available: product.quantity || 0 });
+        insufficientStock.push({
+          sku,
+          available: product.quantity || 0
+        });
       }
     }
 
     if (insufficientStock.length > 0) {
-      const alertMessage = insufficientStock.map(item => `SKU: ${item.sku} คงเหลือ: ${item.available}`).join("<br>");
-      return res.status(400).json({ alert: `สินค้าบางรายการมีจำนวนไม่เพียงพอ<br>${alertMessage}` });
+      const alertMessage = insufficientStock
+        .map(item => `SKU: ${item.sku} คงเหลือ: ${item.available}`)
+        .join("<br>");
+
+      return res.status(400).json({
+        alert: `สินค้าบางรายการมีจำนวนไม่เพียงพอ<br>${alertMessage}`
+      });
     }
 
     // ✅ ตัดสต็อก
     for (const item of products) {
       const sku = item.sku.trim();
       const quantity = Number(item.quantity);
-      await Product.updateOne({ sku }, { $inc: { quantity: -quantity } }, { session });
+
+      await Product.updateOne(
+        {
+          sku,
+          active: { $ne: false }
+        },
+        {
+          $inc: { quantity: -quantity }
+        },
+        { session }
+      );
     }
 
-    // ✅ บันทึก transaction
+    // ✅ บันทึก transaction OUT
     await Transaction.create([{
       requesterName: nameTrim,
       requestId: repairTrim,
-      transactionType: 'OUT',
-      workStatus,
+      transactionType: "OUT",
+      workStatus: status,
+      finishDate: finishDateValue,
       storeId: storeIdNum,
-      products: products.map(p => ({ sku: p.sku.trim(), quantity: Number(p.quantity) })),
-      username: req.user.username,
+      products: products.map(p => ({
+        sku: p.sku.trim(),
+        quantity: Number(p.quantity)
+      })),
+      username: req.user.username
     }], { session });
 
-    // ✅ Sync workStatus สำหรับ requestId เดียวกัน
-    await Transaction.updateMany(
-      { requestId: repairTrim },
-      { $set: { workStatus, updatedAt: new Date() } },
-      { session }
-    );
-
     await session.commitTransaction();
-    return res.status(200).json({ message: "บันทึกข้อมูลเรียบร้อยแล้ว" });
+
+    return res.status(200).json({
+      message: "บันทึกข้อมูลเรียบร้อยแล้ว"
+    });
+
   } catch (error) {
     await session.abortTransaction();
     console.error('❌ /add_trans-out:', error);
-    return res.status(500).json({ alert: 'ไม่สามารถบันทึกข้อมูลได้' });
+
+    return res.status(500).json({
+      alert: 'ไม่สามารถบันทึกข้อมูลได้'
+    });
+
   } finally {
     session.endSession();
   }
@@ -2493,6 +2679,28 @@ router.post('/update', upload.single('image'), isAuthenticated, async (req, res)
 });
 
 
+router.put('/products/:id/toggle-active', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({ success: false });
+    }
+
+    product.active = !product.active;
+    await product.save();
+
+    res.json({
+      success: true,
+      active: product.active
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false });
+  }
+});
+
 
 router.post("/import-excel", isAuthenticated, async (req, res) => {
   // ✅ whitelist และ helper ใช้เฉพาะใน route นี้
@@ -2593,7 +2801,10 @@ router.post("/import-excel", isAuthenticated, async (req, res) => {
 router.get('/stock-summary',isAuthenticated, async (req, res) => {
   try {
     // ดึงข้อมูล onHand จาก collection products
-    const products = await Product.find({}, 'sku description quantity typeparts cost machineTypes');
+    const products = await Product.find(
+      { active: { $ne: false } },
+      'sku description quantity typeparts cost machineTypes'
+    );
 
     // ดึงข้อมูล Pending (รวม OUT - IN)
     const pendingData = await Transaction.aggregate([
@@ -3050,6 +3261,151 @@ router.put("/api/announcements/:id", isAuthenticated, isAdmin, async (req, res) 
   }
 });
 
+router.get("/finished-usage", isAuthenticated, async (req, res) => {
+  try {
+    const startDate = req.query.startDate || "";
+    const endDate = req.query.endDate || "";
+
+    const matchStage = {
+      workStatus: "Finish",
+      finishDate: { $ne: null }
+    };
+
+    if (startDate || endDate) {
+      matchStage.finishDate = {};
+
+      if (startDate) {
+        matchStage.finishDate.$gte = dayjs
+          .tz(startDate, "Asia/Bangkok")
+          .startOf("day")
+          .toDate();
+      }
+
+      if (endDate) {
+        matchStage.finishDate.$lte = dayjs
+          .tz(endDate, "Asia/Bangkok")
+          .endOf("day")
+          .toDate();
+      }
+    }
+
+    const report = await Transaction.aggregate([
+      { $match: matchStage },
+      { $unwind: "$products" },
+
+      {
+        $group: {
+          _id: {
+            requestId: "$requestId",
+            sku: "$products.sku"
+          },
+          requesterName: { $first: "$requesterName" },
+          storeId: { $first: "$storeId" },
+          finishDate: { $max: "$finishDate" },
+
+          totalOut: {
+            $sum: {
+              $cond: [
+                { $eq: ["$transactionType", "OUT"] },
+                "$products.quantity",
+                0
+              ]
+            }
+          },
+
+          totalReturn: {
+            $sum: {
+              $cond: [
+                { $eq: ["$transactionType", "IN"] },
+                "$products.quantity",
+                0
+              ]
+            }
+          }
+        }
+      },
+
+      {
+        $addFields: {
+          usedQty: { $subtract: ["$totalOut", "$totalReturn"] }
+        }
+      },
+
+      {
+        $match: {
+          usedQty: { $gt: 0 }
+        }
+      },
+
+      {
+        $lookup: {
+          from: "products",
+          localField: "_id.sku",
+          foreignField: "sku",
+          as: "productInfo"
+        }
+      },
+      {
+        $unwind: {
+          path: "$productInfo",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+
+      // ✅ ดึงชื่อสาขาจาก Store collection
+      {
+        $lookup: {
+          from: "stores",
+          localField: "storeId",
+          foreignField: "storeId",
+          as: "storeInfo"
+        }
+      },
+      {
+        $unwind: {
+          path: "$storeInfo",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+
+      {
+        $project: {
+          _id: 0,
+          requestId: "$_id.requestId",
+          sku: "$_id.sku",
+          description: {
+            $ifNull: ["$productInfo.description", "N/A"]
+          },
+          requesterName: 1,
+          storeId: 1,
+
+          // ✅ ใช้ชื่อจาก stores
+          storename: {
+            $ifNull: ["$storeInfo.storename", "-"]
+          },
+
+          finishDate: 1,
+          totalOut: 1,
+          totalReturn: 1,
+          usedQty: 1
+        }
+      },
+
+      { $sort: { finishDate: -1, requestId: 1, sku: 1 } }
+    ]);
+
+    res.render("finished-usage", {
+      report,
+      startDate,
+      endDate,
+      dayjs
+    });
+
+  } catch (error) {
+    console.error("Error fetching finished usage report:", error);
+    res.status(500).send("Error fetching finished usage report");
+  }
+});
 
 
 router.get("/session-check", (req, res) => {
