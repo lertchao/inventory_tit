@@ -3,6 +3,12 @@
 // ===== Cancel guard helpers (global) =====
 let __IS_CANCELED__ = false;
 
+// ✅ แปลงรหัสสาขาให้เป็น 3 หลัก เช่น 9 => 009, 53 => 053
+function formatStoreId(storeId) {
+  if (storeId === null || storeId === undefined || storeId === "") return "";
+  return String(storeId).padStart(3, "0");
+}
+
 function setFormDisabled(disabled) {
   const form = document.querySelector("form");
   if (!form) return;
@@ -13,33 +19,30 @@ function setFormDisabled(disabled) {
   const addBtn = document.querySelector(".add-row");
   if (addBtn) addBtn.disabled = disabled;
 
-  // ช่องที่ต้อง "คงเปิดไว้เสมอ" แม้จะเป็น Cancel
-  const keepEnabledNames = new Set(["repair"]); // 👈 เลขที่ใบเบิก
+  const keepEnabledNames = new Set(["repair"]);
 
   form.querySelectorAll("input, select, textarea, button.remove-row").forEach((el) => {
-    if (el === submitBtn) return;                 // ข้ามปุ่ม submit (จัดการด้านบนแล้ว)
-    if (keepEnabledNames.has(el.name)) {          // 👈 อย่าล็อคช่อง repair
+    if (el === submitBtn) return;
+    if (keepEnabledNames.has(el.name)) {
       el.disabled = false;
       return;
     }
-    el.disabled = disabled;                       // ล็อคอย่างอื่นตามปกติ
+    el.disabled = disabled;
   });
 
-  // Select2 ต้องสั่งผ่าน jQuery
   try {
     $("#requesterName").prop("disabled", disabled).trigger("change.select2");
   } catch (e) {}
 }
 
-
-function updateCancelUI(isCanceled /*, requestId */) {
+function updateCancelUI(isCanceled) {
   __IS_CANCELED__ = !!isCanceled;
   const banner = document.getElementById("status-banner");
 
   if (__IS_CANCELED__) {
     if (banner) {
       banner.className = "alert alert-danger mt-2";
-      banner.innerHTML = 'ใบงานนี้ถูก <b>Cancel</b> แล้ว — ไม่สามารถเพิ่มรายการ OUT ได้';
+      banner.innerHTML = "ใบงานนี้ถูก <b>Cancel</b> แล้ว — ไม่สามารถเพิ่มรายการ OUT ได้";
     }
     setFormDisabled(true);
   } else {
@@ -51,20 +54,18 @@ function updateCancelUI(isCanceled /*, requestId */) {
   }
 }
 
-// ✅ เติม option ให้ select ถ้ายังไม่มี แล้วเลือกค่านั้น (ใช้กับ "Cancel")
 function ensureStatusOptionAndSelect(selectEl, status) {
   if (!selectEl) return;
   const exists = Array.from(selectEl.options).some((o) => o.value === status);
   if (!exists) {
     const opt = new Option(status, status);
-    if (status === "Cancel") opt.disabled = true; // แสดงได้ แต่ห้ามผู้ใช้เปลี่ยนมาเลือกเอง
+    if (status === "Cancel") opt.disabled = true;
     selectEl.add(opt);
   }
   selectEl.value = status;
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-  // ฟังก์ชันสำหรับอัปเดตการแสดงปุ่มลบ
   function updateRemoveButtons() {
     const rows = document.querySelectorAll("table tbody tr");
     const removeButtons = document.querySelectorAll(".remove-row");
@@ -73,7 +74,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // เมื่อผู้ใช้กรอก SKU
   document.addEventListener("input", function (event) {
     if (event.target.classList.contains("sku-input")) {
       const sku = event.target.value.trim();
@@ -82,13 +82,14 @@ document.addEventListener("DOMContentLoaded", function () {
       const costCell = row.querySelector(".cost-cell");
 
       if (sku) {
-        fetch(`/get-product-details?sku=${sku}`)
+        fetch(`/get-product-details?sku=${encodeURIComponent(sku)}`)
           .then((response) => response.json())
           .then((data) => {
             if (data && data.product) {
               descriptionCell.textContent = data.product.description || "ไม่พบข้อมูล";
               descriptionCell.classList.remove("text-danger");
               descriptionCell.classList.add("text-dark");
+
               costCell.classList.remove("text-danger");
               costCell.classList.add("text-dark");
               costCell.textContent =
@@ -97,6 +98,7 @@ document.addEventListener("DOMContentLoaded", function () {
               descriptionCell.textContent = "ไม่พบข้อมูล SKU";
               descriptionCell.classList.remove("text-dark");
               descriptionCell.classList.add("text-danger");
+
               costCell.textContent = "ไม่พบข้อมูล";
               costCell.classList.remove("text-dark");
               costCell.classList.add("text-danger");
@@ -106,7 +108,9 @@ document.addEventListener("DOMContentLoaded", function () {
             console.error("Error fetching product details:", error);
             descriptionCell.textContent = "เกิดข้อผิดพลาด";
             descriptionCell.classList.add("text-danger");
+
             costCell.textContent = "เกิดข้อผิดพลาด";
+            costCell.classList.add("text-danger");
           });
       } else {
         descriptionCell.textContent = "";
@@ -116,13 +120,12 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // ค้นหาชื่อสาขาจาก storeId
   const storeIdInput = document.getElementById("storeId");
   const storenameInput = document.getElementById("storename");
 
   storeIdInput.addEventListener("input", async function () {
     const storeId = storeIdInput.value.trim();
-    storenameInput.value = ""; // เคลียร์ค่าก่อน
+    storenameInput.value = "";
 
     if (!storeId) {
       storenameInput.classList.remove("text-danger");
@@ -130,7 +133,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     try {
-      const response = await fetch(`/get-store-name?storeId=${storeId}`);
+      const response = await fetch(`/get-store-name?storeId=${encodeURIComponent(storeId)}`);
       const data = await response.json();
 
       if (response.ok && data.storename) {
@@ -147,35 +150,39 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // เพิ่มแถว
   document.querySelector(".add-row").addEventListener("click", function () {
-    if (__IS_CANCELED__) return; // กันเพิ่มเมื่อ Cancel
+    if (__IS_CANCELED__) return;
+
     const tableBody = document.querySelector("table tbody");
     const newRow = `
       <tr>
-        <td><input type="text" class="form-control sku-input" placeholder="กรอกรหัสสินค้า" name="sku" required></td>
+        <td>
+          <input type="text" class="form-control sku-input" placeholder="กรอกรหัสสินค้า" name="sku" required>
+        </td>
         <td class="text-start align-middle description-cell"></td>
-        <td><input type="number" class="form-control text-center" placeholder="กรอกจำนวน" name="quantity" value="1" required></td>
+        <td>
+          <input type="number" class="form-control text-center" placeholder="กรอกจำนวน" name="quantity" value="1" required>
+        </td>
         <td class="text-center align-middle cost-cell"></td>
-        <td class="text-center"><button type="button" class="btn btn-danger btn-sm remove-row">ลบ</button></td>
+        <td class="text-center">
+          <button type="button" class="btn btn-danger btn-sm remove-row">ลบ</button>
+        </td>
       </tr>`;
+
     tableBody.insertAdjacentHTML("beforeend", newRow);
     updateRemoveButtons();
   });
 
-  // ลบแถว
   document.addEventListener("click", function (event) {
     if (event.target.classList.contains("remove-row")) {
-      if (__IS_CANCELED__) return; // กันลบเมื่อ Cancel
+      if (__IS_CANCELED__) return;
       event.target.closest("tr").remove();
       updateRemoveButtons();
     }
   });
 
-  // อัปเดตปุ่มลบตอนโหลดหน้าเว็บ
   updateRemoveButtons();
 
-  // ฟังก์ชันตรวจสอบเลขที่ใบเบิกและกรอกข้อมูลอัตโนมัติ
   const repairInput = document.querySelector('[name="repair"]');
   const nameInput = document.querySelector('[name="name"]');
   const workStatusInput = document.querySelector('[name="workStatus"]');
@@ -195,6 +202,7 @@ document.addEventListener("DOMContentLoaded", function () {
       workStatusInput.value = "Pending";
       storeIdInputField.value = "";
       storenameInputField.value = "";
+
       if (repairHistorySection) repairHistorySection.classList.add("d-none");
       updateCancelUI(false);
       return;
@@ -205,63 +213,66 @@ document.addEventListener("DOMContentLoaded", function () {
       const data = await response.json();
 
       if (response.ok && data.transaction) {
-        // ===== Prefill requesterName ให้ Select2 =====
-        const selectedName = (data.transaction.requesterName || '').trim();
+        const selectedName = (data.transaction.requesterName || "").trim();
         nameInput.value = selectedName;
 
-        const $sel = $('#requesterName');
+        const $sel = $("#requesterName");
+
         if (selectedName) {
-          const hasOption = $sel.find(`option[value="${selectedName.replace(/"/g, '\\"')}"]`).length > 0;
+          const safeName = selectedName.replace(/"/g, '\\"');
+          const hasOption = $sel.find(`option[value="${safeName}"]`).length > 0;
+
           if (!hasOption) {
-            $sel.append(new Option(selectedName, selectedName, true, true)).trigger('change');
+            $sel.append(new Option(selectedName, selectedName, true, true)).trigger("change");
           } else {
-            $sel.val(selectedName).trigger('change');
+            $sel.val(selectedName).trigger("change");
           }
         } else {
-          $sel.val(null).trigger('change');
+          $sel.val(null).trigger("change");
         }
-        // =============================================
 
-        const status = data.transaction.workStatus || 'Pending';
-        if (status.toLowerCase() === 'cancel') {
-          ensureStatusOptionAndSelect(workStatusInput, 'Cancel');
+        const status = data.transaction.workStatus || "Pending";
+
+        if (status.toLowerCase() === "cancel") {
+          ensureStatusOptionAndSelect(workStatusInput, "Cancel");
           updateCancelUI(true);
         } else {
           workStatusInput.value = status;
           updateCancelUI(false);
         }
 
-        storeIdInputField.value = data.transaction.storeId ?? '';
-        storenameInputField.value = data.transaction.storeName || '';
+        // ✅ จุดสำคัญ: แสดงรหัสสาขาเป็น 3 หลัก
+        storeIdInputField.value = formatStoreId(data.transaction.storeId);
 
-        // กระตุ้นให้ไปดึงชื่อสาขาตาม storeId
-        storeIdInputField.dispatchEvent(new Event('input'));
+        storenameInputField.value = data.transaction.storeName || "";
+
+        storeIdInputField.dispatchEvent(new Event("input"));
       } else {
-        nameInput.value = '';
-        $('#requesterName').val(null).trigger('change');
-        workStatusInput.value = 'Pending';
-        storeIdInputField.value = '';
-        storenameInputField.value = '';
+        nameInput.value = "";
+        $("#requesterName").val(null).trigger("change");
+        workStatusInput.value = "Pending";
+        storeIdInputField.value = "";
+        storenameInputField.value = "";
         updateCancelUI(false);
       }
 
       await loadRepairHistory(repair);
     } catch (error) {
-      console.error('Error fetching transaction details:', error);
-      nameInput.value = '';
-      $('#requesterName').val(null).trigger('change');
-      workStatusInput.value = '';
-      storeIdInputField.value = '';
-      storenameInputField.value = '';
-      if (repairHistorySection) repairHistorySection.classList.add('d-none');
+      console.error("Error fetching transaction details:", error);
+      nameInput.value = "";
+      $("#requesterName").val(null).trigger("change");
+      workStatusInput.value = "";
+      storeIdInputField.value = "";
+      storenameInputField.value = "";
+
+      if (repairHistorySection) repairHistorySection.classList.add("d-none");
       updateCancelUI(false);
     }
   });
 
-  // โหลดข้อมูล Transaction ทั้งหมดหากพบเลข repair ซ้ำ
   async function loadRepairHistory(repair) {
     try {
-      const response = await fetch(`/get-transactions-summary?repair=${repair}`);
+      const response = await fetch(`/get-transactions-summary?repair=${encodeURIComponent(repair)}`);
       const data = await response.json();
 
       if (response.ok && data.transactions && data.transactions.length > 0) {
@@ -269,17 +280,17 @@ document.addEventListener("DOMContentLoaded", function () {
         if (transactionTableBody) transactionTableBody.innerHTML = "";
         if (summaryTableBody) summaryTableBody.innerHTML = "";
 
-        // ✅ ถ้ามีรายการไหน workStatus = Cancel ให้ล็อกฟอร์มทันที + set select เป็น Cancel
         const anyCanceled = data.transactions.some(
           (tx) => (tx.workStatus || "").toLowerCase() === "cancel"
         );
+
         if (anyCanceled) {
           ensureStatusOptionAndSelect(workStatusInput, "Cancel");
           updateCancelUI(true);
         }
 
-        // --- ตาราง Transaction
         let count = 1;
+
         data.transactions.forEach((transaction) => {
           const createdAt = dayjs(transaction.createdAt)
             .tz("Asia/Bangkok")
@@ -295,14 +306,15 @@ document.addEventListener("DOMContentLoaded", function () {
               <td class="text-center">${transaction.transactionType}</td>
               <td class="text-center">${createdAt}</td>
             `;
+
             if (transactionTableBody) transactionTableBody.appendChild(tr);
           });
 
           count++;
         });
 
-        // --- สรุปยอด (Summary)
         const summary = {};
+
         data.transactions.forEach((tr) => {
           tr.products.forEach((p) => {
             if (!summary[p.sku]) {
@@ -311,11 +323,13 @@ document.addEventListener("DOMContentLoaded", function () {
                 net: 0,
               };
             }
+
             summary[p.sku].net += tr.transactionType === "IN" ? p.quantity : -p.quantity;
           });
         });
 
         let summaryIndex = 1;
+
         for (const sku in summary) {
           const tr = document.createElement("tr");
           tr.innerHTML = `
@@ -324,6 +338,7 @@ document.addEventListener("DOMContentLoaded", function () {
             <td>${summary[sku].description}</td>
             <td class="text-center">${summary[sku].net}</td>
           `;
+
           if (summaryTableBody) summaryTableBody.appendChild(tr);
         }
       } else {
@@ -335,20 +350,20 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // ===== Submit (กัน Cancel + แสดงผล) =====
   const theForm = document.querySelector("form");
+
   if (theForm) {
     theForm.addEventListener("submit", function (event) {
       event.preventDefault();
 
       const alertContainer = document.getElementById("alert-container");
 
-      // ⛔ กันเคส Cancel แบบชัวร์ ๆ
       if (__IS_CANCELED__) {
-        alertContainer.innerHTML = `<div class="alert alert-danger alert-dismissible fade show" role="alert">
-          ใบงานนี้ถูก <b>Cancel</b> แล้ว — ไม่สามารถเพิ่มรายการ OUT ได้
-          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>`;
+        alertContainer.innerHTML = `
+          <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            ใบงานนี้ถูก <b>Cancel</b> แล้ว — ไม่สามารถเพิ่มรายการ OUT ได้
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>`;
         return;
       }
 
@@ -367,7 +382,9 @@ document.addEventListener("DOMContentLoaded", function () {
           const descEl = row.querySelector(".description-cell");
           const qtyEl = row.querySelector('[name="quantity"]');
           const costEl = row.querySelector(".cost-cell");
+
           if (!skuEl || !descEl || !qtyEl || !costEl) return null;
+
           return {
             sku: skuEl.value.trim(),
             description: descEl.textContent.trim(),
@@ -389,30 +406,34 @@ document.addEventListener("DOMContentLoaded", function () {
             throw data;
           }
 
-          alertContainer.innerHTML = `<div class="alert alert-success alert-dismissible fade show" role="alert">
-            <strong>สำเร็จ!</strong> ${data.message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-          </div>`;
+          alertContainer.innerHTML = `
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+              <strong>สำเร็จ!</strong> ${data.message}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>`;
+
           setTimeout(() => window.location.reload(), 2500);
         })
         .catch((error) => {
           console.error("Error saving:", error);
+
           submitButton.disabled = false;
           submitButton.innerHTML = "บันทึกข้อมูล";
 
-          alertContainer.innerHTML = `<div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <strong>เกิดข้อผิดพลาด!</strong> ${error.alert || error.error || "ไม่สามารถบันทึกข้อมูลได้"}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-          </div>`;
+          alertContainer.innerHTML = `
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+              <strong>เกิดข้อผิดพลาด!</strong> ${error.alert || error.error || "ไม่สามารถบันทึกข้อมูลได้"}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>`;
         });
     });
   }
 
-  // === ป้องกัน SKU ซ้ำในฟอร์ม OUT — UI เตือน + คุมปุ่ม submit ===
   (function () {
     function validateDuplicateSkusOUT() {
       const rows = Array.from(document.querySelectorAll("table.form_out tbody tr"));
       const submitBtn = document.querySelector('button[type="submit"]');
+
       const alertContainer =
         document.getElementById("alert-container") ||
         (() => {
@@ -429,17 +450,20 @@ document.addEventListener("DOMContentLoaded", function () {
       rows.forEach((row) => {
         const inp = row.querySelector(".sku-input");
         const val = (inp?.value || "").trim().toUpperCase();
+
         if (!val) return;
+
         if (seen.has(val)) dups.add(val);
         else seen.add(val);
       });
 
-      // ไฮไลต์แถวที่ซ้ำ
       rows.forEach((row) => {
         const inp = row.querySelector(".sku-input");
         const v = (inp?.value || "").trim().toUpperCase();
+
         row.classList.remove("table-danger");
         inp?.classList.remove("is-invalid");
+
         if (v && dups.has(v)) {
           row.classList.add("table-danger");
           inp?.classList.add("is-invalid");
@@ -447,12 +471,7 @@ document.addEventListener("DOMContentLoaded", function () {
       });
 
       if (submitBtn) {
-        if (dups.size > 0) {
-          submitBtn.disabled = true;
-        } else {
-          // อย่า enable ถ้าใบงานถูก Cancel
-          submitBtn.disabled = __IS_CANCELED__ ? true : false;
-        }
+        submitBtn.disabled = dups.size > 0 || __IS_CANCELED__;
       }
 
       if (dups.size > 0) {
@@ -462,25 +481,25 @@ document.addEventListener("DOMContentLoaded", function () {
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
           </div>`;
         return false;
-      } else {
-        return true;
       }
+
+      return true;
     }
 
-    // ตรวจทุกครั้งที่พิมพ์/เพิ่ม/ลบแถว
     document.addEventListener("input", (e) => {
       if (e.target.classList.contains("sku-input")) validateDuplicateSkusOUT();
     });
+
     document.addEventListener("click", (e) => {
       if (e.target.classList.contains("add-row") || e.target.classList.contains("remove-row")) {
         setTimeout(validateDuplicateSkusOUT, 0);
       }
     });
 
-    // กันตอน submit อีกรอบ
     const formEl =
       document.querySelector("form[action='/add_trans-out']") ||
       document.querySelector("form");
+
     if (formEl) {
       formEl.addEventListener("submit", (e) => {
         if (!validateDuplicateSkusOUT()) {

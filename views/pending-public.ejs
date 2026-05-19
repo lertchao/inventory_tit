@@ -1,318 +1,307 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Pending Work</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pending Work</title>
 
-<!-- Bootstrap -->
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
-<link rel="stylesheet" href="css/styles.css">
-<link rel="icon" href="images/storage.png" sizes="32x32">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" href="images/storage.png" sizes="32x32">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
-<!-- DataTables -->
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
+  <!-- DataTables -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
 
-<!-- Responsive -->
-<link rel="stylesheet"
-href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
+  <!-- Responsive -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
 
 </head>
 
 <body>
 
-<div class="container-fluid">
-<div class="row">
+  <div class="container-fluid">
+    <div class="row">
 
-<div class="desktop-sidebar col-lg-2 col-12 d-none d-lg-block">
-<%- include('sidebar-public') %>
-</div>
+      <div class="desktop-sidebar col-lg-2 col-12 d-none d-lg-block">
+        <%- include('sidebar-public') %>
+      </div>
 
-<%- include('sidebarMobile-public') %>
+      <%- include('sidebarMobile-public') %>
 
-<div class="col-lg-10 col-12">
+        <div class="col-lg-10 col-12">
 
-<h2 class="text-center p-4 fs-3 fs-md-1">
-Pending Work With Parts
-<img src="/images/completed-task.png"
-class="img-fluid"
-style="max-width:40px;vertical-align:middle">
-</h2>
+          <h2 class="text-center p-4 fs-3 fs-md-1">
+            Pending Work With Parts
+            <img src="/images/completed-task.png" class="img-fluid" style="max-width:40px;vertical-align:middle">
+          </h2>
 
-<canvas id="pendingWorkChart"></canvas>
+          <canvas id="pendingWorkChart"></canvas>
 
-<% if (pendingWorkOrdersTable.length > 0) { %>
+          <% if (pendingWorkOrdersTable.length> 0) { %>
 
-<div class="row mt-4 mb-3">
-<div class="col-md-4 ms-auto">
+            <div class="row mt-4 mb-3">
+              <div class="col-md-4 ms-auto">
 
-<label for="nameFilter"
-class="form-label fw-semibold text-end d-block">
-ค้นหาจากชื่อ
-</label>
+                <label for="nameFilter" class="form-label fw-semibold text-end d-block">
+                  ค้นหาจากชื่อ
+                </label>
 
-<select id="nameFilter" class="form-select text-center">
-<option value="">-- ทั้งหมด --</option>
-</select>
+                <select id="nameFilter" class="form-select text-center">
+                  <option value="">-- ทั้งหมด --</option>
+                </select>
 
-</div>
-</div>
+              </div>
+            </div>
 
-<table id="pendingTable"
-class="table table-bordered table-striped display"
-style="width:100%">
+            <table id="pendingTable" class="table table-bordered table-striped display" style="width:100%">
 
-<thead class="table-dark">
+              <thead class="table-dark">
 
-<tr>
+                <tr>
 
-<th>Repair Number</th>
-<th class="text-center">Name</th>
-<th class="text-center">Store ID</th>
-<th class="text-center">Store Name</th>
-<th class="text-center">Total Cost</th>
-<th class="text-center">Issue Date</th>
-<th class="text-center">Pending (Days)</th>
-<th class="text-center">Details</th>
+                  <th>Repair Number</th>
+                  <th class="text-center">Name</th>
+                  <th class="text-center">Store ID</th>
+                  <th class="text-center">Store Name</th>
+                  <th class="text-center">Total Cost</th>
+                  <th class="text-center">Issue Date</th>
+                  <th class="text-center">Pending (Days)</th>
+                  <th class="text-center">Details</th>
 
-</tr>
+                </tr>
 
-</thead>
+              </thead>
 
-<tbody>
+              <tbody>
 
-<% pendingWorkOrdersTable.forEach(order => { %>
+                <% pendingWorkOrdersTable.forEach(order=> { %>
 
-<tr>
+                  <tr>
 
-<td><%= order._id.requestId %></td>
+                    <td>
+                      <%= order._id.requestId %>
+                    </td>
 
-<td class="text-center">
-<%= order._id.requesterName %>
-</td>
+                    <td class="text-center">
+                      <%= order._id.requesterName %>
+                    </td>
 
-<td class="text-center">
-<%= order._id.storeId ? String(order._id.storeId).padStart(3,'0') : '-' %>
-</td>
+                    <td class="text-center">
+                      <%= order._id.storeId ? String(order._id.storeId).padStart(3,'0') : '-' %>
+                    </td>
 
-<td class="text-start">
-<%= order._id.storename || 'N/A' %>
-</td>
+                    <td class="text-start">
+                      <%= order._id.storename || 'N/A' %>
+                    </td>
 
-<td class="text-center">
-<%= order.totalCombinedCost.toLocaleString('en-US',{
-minimumFractionDigits:2,
-maximumFractionDigits:2
-}) %>
-</td>
+                    <td class="text-center">
+                      <%= order.totalCombinedCost.toLocaleString('en-US',{ minimumFractionDigits:2,
+                        maximumFractionDigits:2 }) %>
+                    </td>
 
-<td class="text-center"
-data-order="<%= order.earliestTransactionDate.toISOString().split('T')[0] %>">
+                    <td class="text-center"
+                      data-order="<%= order.earliestTransactionDate.toISOString().split('T')[0] %>">
 
-<%= new Date(order.earliestTransactionDate).toLocaleDateString('en-GB',{
-year:'numeric',
-month:'short',
-day:'numeric',
-timeZone:'Asia/Bangkok'
-}) %>
+                      <%= new Date(order.earliestTransactionDate).toLocaleDateString('en-GB',{ year:'numeric',
+                        month:'short', day:'numeric', timeZone:'Asia/Bangkok' }) %>
 
-</td>
+                    </td>
 
-<td class="text-center"
-data-order="<%= order.pendingDays %>">
+                    <td class="text-center" data-order="<%= order.pendingDays %>">
 
-<%= order.pendingDays %> Days
+                      <%= order.pendingDays %> Days
 
-</td>
+                    </td>
 
-<td class="text-center"
-style="white-space:nowrap;">
+                    <td class="text-center" style="white-space:nowrap;">
 
-<a class="btn btn-sm btn-outline-secondary"
-href="/public-workorder/<%= encodeURIComponent(order._id.requestId) %>"
-target="_blank"
-rel="noopener">
+                      <a class="btn btn-sm btn-outline-secondary"
+                        href="/public-workorder/<%= encodeURIComponent(order._id.requestId) %>" target="_blank"
+                        rel="noopener">
 
-View
+                        View
 
-</a>
+                      </a>
 
-</td>
+                    </td>
 
-</tr>
+                  </tr>
 
-<% }) %>
+                  <% }) %>
 
-</tbody>
+              </tbody>
 
-</table>
+            </table>
 
-<% } else { %>
+            <% } else { %>
 
-<p class="text-muted">
-No pending work orders available.
-</p>
+              <p class="text-muted">
+                No pending work orders available.
+              </p>
 
-<% } %>
+              <% } %>
 
-</div>
-</div>
-</div>
+        </div>
+    </div>
+  </div>
 
-<!-- JS -->
+  <!-- JS -->
 
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 
-<script type="application/json" id="pendingWorkOrdersData">
-<%- JSON.stringify(pendingWorkOrders || []) %>
-</script>
+  <script type="application/json" id="pendingWorkOrdersData">
+    <%- JSON.stringify(pendingWorkOrders || []) %>
+  </script>
 
-<script src="js/pending.js"></script>
+  <script src="js/pending.js"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-<!-- DataTables -->
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+  <!-- DataTables -->
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
-<!-- Responsive -->
-<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
-<script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+  <!-- Responsive -->
+  <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+  <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
 
-<!-- Buttons -->
-<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+  <!-- Buttons -->
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 
-<script>
+  <script>
 
-$(function () {
+    $(function () {
 
-const table = $('#pendingTable').DataTable({
+      const table = $('#pendingTable').DataTable({
 
-dom:
-"<'row mb-2'<'col-12 col-md-6 mb-2 mb-md-0'l><'col-12 col-md-6 d-flex justify-content-md-end justify-content-center'B>>" +
-"<'row'<'col-12'tr>>" +
-"<'row mt-2'<'col-md-6'i><'col-md-6 text-end'p>>",
+        dom:
+          "<'row mb-2'<'col-12 col-md-6 mb-2 mb-md-0'l><'col-12 col-md-6 d-flex justify-content-md-end justify-content-center'B>>" +
+          "<'row'<'col-12'tr>>" +
+          "<'row mt-2'<'col-md-6'i><'col-md-6 text-end'p>>",
 
-responsive: true,
+        responsive: true,
 
-columnDefs: [
-  { responsivePriority: 1, targets: 0 }, // Repair Number
-  { responsivePriority: 2, targets: 1 }, // Name
-  { responsivePriority: 3, targets: 3 }, // Store Name
-  { responsivePriority: 4, targets: 7 }, // View
-  { responsivePriority: 100, targets: 2 }, // Store ID
-  { responsivePriority: 101, targets: 4 }, // Total Cost
-  { responsivePriority: 102, targets: 5 }, // Issue Date
-  { responsivePriority: 103, targets: 6 }  // Pending Days
-],
+        columnDefs: [
+          { responsivePriority: 1, targets: 0 }, // Repair Number
+          { responsivePriority: 2, targets: 1 }, // Name
+          { responsivePriority: 3, targets: 3 }, // Store Name
+          { responsivePriority: 4, targets: 7 }, // View
+          { responsivePriority: 100, targets: 2 }, // Store ID
+          { responsivePriority: 101, targets: 4 }, // Total Cost
+          { responsivePriority: 102, targets: 5 }, // Issue Date
+          { responsivePriority: 103, targets: 6 }  // Pending Days
+        ],
 
-buttons: [
+        buttons: [
 
-{
-extend: 'csv',
-text: '<i class="bi bi-file-earmark-spreadsheet"></i> CSV',
-className: 'btn btn-outline-secondary btn-sm me-2',
-exportOptions: { columns: ':not(:last-child)' }
-},
+          {
+            extend: 'csv',
+            text: '<i class="bi bi-file-earmark-spreadsheet"></i> CSV',
+            className: 'btn btn-outline-secondary btn-sm me-2',
+            exportOptions: { columns: ':not(:last-child)' }
+          },
 
-{
-extend: 'excel',
-text: '<i class="bi bi-file-earmark-excel"></i> Excel',
-className: 'btn btn-outline-success btn-sm me-2',
-exportOptions: { columns: ':not(:last-child)' }
-},
+          {
+            extend: 'excel',
+            text: '<i class="bi bi-file-earmark-excel"></i> Excel',
+            className: 'btn btn-outline-success btn-sm me-2',
+            exportOptions: { columns: ':not(:last-child)' }
+          },
 
-{
-extend: 'print',
-text: '<i class="bi bi-printer"></i> Print',
-className: 'btn btn-outline-primary btn-sm',
-exportOptions: { columns: ':not(:last-child)' }
-}
+          {
+            extend: 'print',
+            text: '<i class="bi bi-printer"></i> Print',
+            className: 'btn btn-outline-primary btn-sm',
+            exportOptions: { columns: ':not(:last-child)' }
+          }
 
-],
+        ],
 
-pageLength: 25,
+        pageLength: 25,
 
-lengthMenu: [[10,25,50,100],[10,25,50,100]],
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
 
-language: {
+        language: {
 
-lengthMenu: "แสดง _MENU_ รายการต่อหน้า",
+          lengthMenu: "แสดง _MENU_ รายการต่อหน้า",
 
-info: "แสดง _START_ ถึง _END_ จากทั้งหมด _TOTAL_ รายการ",
+          info: "แสดง _START_ ถึง _END_ จากทั้งหมด _TOTAL_ รายการ",
 
-paginate: {
-next: "ถัดไป",
-previous: "ก่อนหน้า"
-},
+          paginate: {
+            next: "ถัดไป",
+            previous: "ก่อนหน้า"
+          },
 
-zeroRecords: "ไม่พบข้อมูลที่ค้นหา",
+          zeroRecords: "ไม่พบข้อมูลที่ค้นหา",
 
-infoEmpty: "ไม่มีข้อมูลแสดง",
+          infoEmpty: "ไม่มีข้อมูลแสดง",
 
-infoFiltered: "(กรองจากทั้งหมด _MAX_ รายการ)"
+          infoFiltered: "(กรองจากทั้งหมด _MAX_ รายการ)"
 
-},
+        },
 
-initComplete: function () {
+        initComplete: function () {
 
-const api = this.api();
-const nameColumn = api.column(1);
-const select = $('#nameFilter');
+          const api = this.api();
+          const nameColumn = api.column(1);
+          const select = $('#nameFilter');
 
-const uniqueNames = [];
+          const uniqueNames = [];
 
-nameColumn.data().each(function (value) {
+          nameColumn.data().each(function (value) {
 
-const cleanValue =
-$('<div>').html(value).text().trim();
+            const cleanValue =
+              $('<div>').html(value).text().trim();
 
-if (cleanValue &&
-cleanValue !== '-' &&
-!uniqueNames.includes(cleanValue)) {
+            if (cleanValue &&
+              cleanValue !== '-' &&
+              !uniqueNames.includes(cleanValue)) {
 
-uniqueNames.push(cleanValue);
+              uniqueNames.push(cleanValue);
 
-}
+            }
 
-});
+          });
 
-uniqueNames.sort().forEach(function (name) {
+          uniqueNames.sort().forEach(function (name) {
 
-select.append(`<option value="${name}">${name}</option>`);
+            select.append(`<option value="${name}">${name}</option>`);
 
-});
+          });
 
-select.on('change', function () {
+          select.on('change', function () {
 
-const val =
-$.fn.dataTable.util.escapeRegex($(this).val());
+            const val =
+              $.fn.dataTable.util.escapeRegex($(this).val());
 
-nameColumn.search(val ? '^'+val+'$' : '', true, false).draw();
+            nameColumn.search(val ? '^' + val + '$' : '', true, false).draw();
 
-});
+          });
 
-}
+        }
 
-});
+      });
 
-});
+    });
 
-</script>
+  </script>
 
 </body>
+
 </html>

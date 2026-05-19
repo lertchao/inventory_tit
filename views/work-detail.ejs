@@ -53,7 +53,11 @@
 
         <div class="col-md-2 col-sm-6">
           <label for="storeIdInput" class="form-label fw-bold">รหัสสาขา</label>
-          <input id="storeIdInput" class="form-control" value="<%= transactions[0].storeId %>" />
+          <input 
+            id="storeIdInput" 
+            class="form-control" 
+            value="<%= String(transactions[0].storeId).padStart(3, '0') %>" 
+          />
         </div>
 
         <div class="col-md-2 col-sm-6">

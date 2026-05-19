@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finished Usage Report</title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" href="images/storage.png" sizes="32x32">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+  <!-- DataTables -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
+</head>
+
+<body>
+<div class="container-fluid">
+  <div class="row">
+
+    <!-- Desktop Sidebar -->
+    <div class="desktop-sidebar col-lg-2 col-12 d-none d-lg-block">
+      <%- include('sidebar') %>
+    </div>
+
+    <!-- Mobile Sidebar -->
+    <%- include('sidebarMobile') %>
+
+    <!-- Main Content -->
+    <div class="col-lg-10 col-12">
+      <h2 class="text-center p-4">
+        Finished Usage Report
+        <i class="bi bi-clipboard-check text-success"></i>
+      </h2>
+
+      <div class="container-fluid">
+
+        <!-- Filter Date -->
+        <form method="GET" action="/finished-usage" class="row g-2 mb-3 justify-content-center">
+          <div class="col-md-3 col-6">
+            <label for="startDate" class="form-label">Start Finish Date</label>
+            <input
+              type="date"
+              id="startDate"
+              name="startDate"
+              class="form-control form-control-sm"
+              value="<%= startDate %>"
+            >
+          </div>
+
+          <div class="col-md-3 col-6">
+            <label for="endDate" class="form-label">End Finish Date</label>
+            <input
+              type="date"
+              id="endDate"
+              name="endDate"
+              class="form-control form-control-sm"
+              value="<%= endDate %>"
+            >
+          </div>
+
+          <div class="col-md-2 col-12 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary btn-sm w-100">
+              <i class="bi bi-search"></i> Filter
+            </button>
+          </div>
+
+          <div class="col-md-2 col-12 d-flex align-items-end">
+            <a href="/finished-usage" class="btn btn-outline-secondary btn-sm w-100">
+              Clear
+            </a>
+          </div>
+        </form>
+
+        <% if (report.length > 0) { %>
+          <div class="invisible" id="finishedUsageWrapper">
+            <table id="finishedUsageTable" class="table table-bordered table-striped display nowrap" style="width:100%">
+              <thead class="table-dark">
+                <tr>
+                  <th>Finish Date</th>
+                  <th>Request ID</th>
+                  <th>Store ID</th>
+                  <th>Store Name</th>
+                  <th>Requester</th>
+                  <th>SKU</th>
+                  <th>Description</th>
+                  <th class="text-center">OUT Qty</th>
+                  <th class="text-center">Return Qty</th>
+                  <th class="text-center">Used Qty</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <% report.forEach((item) => { %>
+                  <tr>
+                    <td 
+                      data-order="<%= item.finishDate ? item.finishDate.toISOString() : '' %>"
+                      data-export="<%= item.finishDate ? dayjs(item.finishDate).tz('Asia/Bangkok').format('YYYY-MM-DD HH:mm:ss') : '' %>">
+                      <%= item.finishDate ? dayjs(item.finishDate).tz("Asia/Bangkok").format("DD MMM YYYY, HH:mm") : "-" %>
+                    </td>
+
+                    <td><%= item.requestId || "-" %></td>
+                    <td><%= item.storeId ? String(item.storeId).padStart(3, "0") : "-" %></td>
+                    <td><%= item.storename || "-" %></td>
+                    <td><%= item.requesterName || "-" %></td>
+                    <td><%= item.sku || "-" %></td>
+                    <td><%= item.description || "N/A" %></td>
+
+                    <td class="text-center">
+                      <span class="badge out-badge"><%= item.totalOut || 0 %></span>
+                    </td>
+
+                    <td class="text-center">
+                      <span class="badge in-badge"><%= item.totalReturn || 0 %></span>
+                    </td>
+
+                    <td class="text-center fw-bold">
+                      <%= item.usedQty || 0 %>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } else { %>
+          <p class="text-muted text-center mt-4">No finished usage found.</p>
+        <% } %>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<script>
+  $(document).ready(function () {
+    const table = $('#finishedUsageTable').DataTable({
+      dom: "<'row mb-2'" +
+        "<'col-12 col-md-6 mb-2 mb-md-0'l>" +
+        "<'col-12 col-md-6 d-flex justify-content-md-end justify-content-center'B>" +
+        ">" +
+        "<'row mb-2'<'col-12'f>>" +
+        "<'row'<'col-12'tr>>" +
+        "<'row mt-2'<'col-md-6'i><'col-md-6 text-end'p>>",
+
+        buttons: [
+          {
+            extend: 'csv',
+            text: '<i class="bi bi-file-earmark-spreadsheet"></i> CSV',
+            className: 'btn btn-outline-secondary btn-sm me-2'
+          },
+          {
+            extend: 'excel',
+            text: '<i class="bi bi-file-earmark-excel"></i> Excel',
+            className: 'btn btn-outline-success btn-sm me-2',
+
+            exportOptions: {
+              format: {
+                body: function (data, row, column, node) {
+
+                  // ✅ คอลัมน์ Finish Date
+                  if (column === 0) {
+                    return $(node).attr('data-export') || data;
+                  }
+
+                  return $(node).text().trim();
+                }
+              }
+            },
+
+            customize: function (xlsx) {
+              const sheet = xlsx.xl.worksheets['sheet1.xml'];
+
+              // ✅ คอลัมน์ A = Finish Date
+              $('row c[r^="A"]', sheet).each(function () {
+
+                const cellRef = $(this).attr('r');
+
+                // ข้าม header
+                if (cellRef === 'A1') return;
+
+                const text =
+                  $('is t', this).text() ||
+                  $('v', this).text();
+
+                const match = text.match(
+                  /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/
+                );
+
+                if (!match) return;
+
+                const [, y, m, d, hh, mm, ss] = match.map(Number);
+
+                const excelDate =
+                  Date.UTC(y, m - 1, d, hh, mm, ss) / 86400000 + 25569;
+
+                $(this).attr('t', 'n');
+                $(this).attr('s', '67');
+
+                $(this)
+                  .empty()
+                  .append(`<v>${excelDate}</v>`);
+              });
+            }
+          },
+          {
+            extend: 'print',
+            text: '<i class="bi bi-printer"></i> Print',
+            className: 'btn btn-outline-primary btn-sm'
+          }
+        ],
+
+      scrollX: true,
+      responsive: false,
+      order: [[0, 'desc']],
+      pageLength: 25,
+      lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+      pagingType: "simple_numbers",
+
+      language: {
+        search: "ค้นหา:",
+        lengthMenu: "แสดง _MENU_ รายการต่อหน้า",
+        info: "แสดง _START_ ถึง _END_ จากทั้งหมด _TOTAL_ รายการ",
+        paginate: { next: "ถัดไป", previous: "ก่อนหน้า" },
+        zeroRecords: "ไม่พบข้อมูลที่ค้นหา",
+        infoEmpty: "ไม่มีข้อมูลแสดง",
+        infoFiltered: "(กรองจากทั้งหมด _MAX_ รายการ)"
+      }
+    });
+
+    table.draw();
+
+    $('#finishedUsageWrapper').removeClass('invisible');
+    $('#finishedUsageTable').removeClass('d-none');
+
+    setTimeout(function () {
+      table.columns.adjust().draw(false);
+    }, 100);
+
+    $(window).on('resize', function () {
+      table.columns.adjust();
+    });
+  });
+</script>
+
+</body>
+</html>

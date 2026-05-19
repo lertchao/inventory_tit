@@ -85,7 +85,9 @@
                     <td class="text-center"><%= product.remaining %></td>
                     <td class="text-center"><%= transaction.requesterName %></td>
                     <td><%= transaction.requestId %></td>
-                    <td data-order="<%= transaction.createdAt.toISOString() %>">
+                    <td 
+                      data-order="<%= transaction.createdAt.toISOString() %>"
+                      data-export="<%= transaction.createdAtExcel %>">
                       <%= transaction.createdAtFormatted %>
                     </td>
                   </tr>
@@ -167,7 +169,55 @@ $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
         {
           extend: 'excel',
           text: '<i class="bi bi-file-earmark-excel"></i> Excel',
-          className: 'btn btn-outline-success btn-sm me-2'
+          className: 'btn btn-outline-success btn-sm me-2',
+
+          exportOptions: {
+            format: {
+              body: function (data, row, column, node) {
+
+                // ✅ คอลัมน์ Created At
+                if (column === 7) {
+                  return $(node).attr('data-export') || data;
+                }
+
+                return $(node).text().trim();
+              }
+            }
+          },
+
+          customize: function (xlsx) {
+            const sheet = xlsx.xl.worksheets['sheet1.xml'];
+
+            $('row c[r^="H"]', sheet).each(function () {
+
+              const cellRef = $(this).attr('r');
+
+              // ข้าม header
+              if (cellRef === 'H1') return;
+
+              const text =
+                $('is t', this).text() ||
+                $('v', this).text();
+
+              const match = text.match(
+                /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/
+              );
+
+              if (!match) return;
+
+              const [, y, m, d, hh, mm, ss] = match.map(Number);
+
+              const excelDate =
+                Date.UTC(y, m - 1, d, hh, mm, ss) / 86400000 + 25569;
+
+              $(this).attr('t', 'n');
+              $(this).attr('s', '67');
+
+              $(this)
+                .empty()
+                .append(`<v>${excelDate}</v>`);
+            });
+          }
         },
         {
           extend: 'print',

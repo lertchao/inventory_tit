@@ -30,6 +30,10 @@ const productSchema = new mongoose.Schema({
   machineTypes: {
     type: [String],
     default: []
+  },
+  active: {
+    type: Boolean,
+    default: true
   }
 
 }, {

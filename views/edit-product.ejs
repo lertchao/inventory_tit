@@ -81,6 +81,8 @@
                 <th class="text-center">Type</th> 
                 <th class="text-center">Machine Types</th>
                 <th class="text-center">Cost Piece</th>
+                <th class="text-center">สถานะ</th>
+                <th class="col-1 text-center">จัดการสถานะ</th>
                 <th class="text-center">แก้ไข</th>
                 <th class="text-center">ลบ</th>
               </tr>
@@ -88,7 +90,7 @@
             <tbody>
               <% products.forEach(function(item) { %>
                 <tr>
-                  <td class="text-center"><%= item.sku %></td>
+                  <td class="text-start"><%= item.sku %></td>
                   <td class="text-start"><%= item.description %></td>
                   <td class="text-center"><%= item.typeparts || '-' %></td> 
                   <td class="text-center">
@@ -99,6 +101,27 @@
                     <% } %>
                   </td> 
                   <td class="text-center"><%= new Intl.NumberFormat().format(item.cost) %></td>
+                  <td class="text-center">
+                    <% if (item.active !== false) { %>
+                      <span class="badge bg-success">Active</span>
+                    <% } else { %>
+                      <span class="badge bg-secondary">Inactive</span>
+                    <% } %>
+                  </td>
+
+                  <td class="text-center">
+                    <button 
+                      class="btn btn-outline-secondary btn-sm toggle-active-btn"
+                      data-id="<%= item._id %>"
+                    >
+                      <% if (item.active !== false) { %>
+                        ปิดใช้งาน
+                      <% } else { %>
+                        เปิดใช้งาน
+                      <% } %>
+                    </button>
+                  </td>
+
                   <td class="text-center">
                     <a href="/edit-product/<%= item._id %>" class="btn btn-warning btn-sm">แก้ไข</a>
                   </td>
@@ -186,7 +209,37 @@
   });
 </script>
 
-    
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+  document.querySelectorAll(".toggle-active-btn").forEach(btn => {
+    btn.addEventListener("click", async function () {
+
+      const id = this.dataset.id;
+
+      try {
+        const res = await fetch(`/products/${id}/toggle-active`, {
+          method: "PUT"
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          location.reload(); // ง่ายสุด
+        } else {
+          alert("อัพเดตสถานะไม่สำเร็จ");
+        }
+
+      } catch (err) {
+        console.error(err);
+        alert("เกิด error");
+      }
+
+    });
+  });
+
+});
+</script>
 
 
 </body>
