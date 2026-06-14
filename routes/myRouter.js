@@ -733,14 +733,17 @@ router.get("/", isAuthenticated, async (req, res) => {
     const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     
     const top20Movement = await Transaction.aggregate([
-      // 1) เลือกเฉพาะธุรกรรมในเดือนนี้ และใบงานที่ Finish
       {
         $match: {
-          createdAt: { $gte: firstDayOfMonth, $lte: lastDayOfMonth },
           workStatus: "Finish",
+          finishDate: {
+            $gte: firstDayOfMonth,
+            $lte: lastDayOfMonth,
+            $ne: null
+          }
         }
       },
-    
+        
       // 2) แตกสินค้าแต่ละบรรทัด
       { $unwind: "$products" },
     
