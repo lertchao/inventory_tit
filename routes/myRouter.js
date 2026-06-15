@@ -1227,43 +1227,80 @@ router.post('/delete/:id', isAuthenticated, isAdmin, async (req, res) => {
 
 router.get("/transaction", isAuthenticated, async (req, res) => {
   try {
-    const searchQuery = req.query.search ? req.query.search.trim() : "";
+    const searchQuery = (req.query.search || "").trim();
+    const TZ = "Asia/Bangkok";
 
-    // ดึงข้อมูล Transaction และเรียงลำดับตามวันที่ (เก่าสุด -> ใหม่สุด)
-    const transactions = await Transaction.find()
-      .sort({ createdAt: 1 }) // ต้องเรียงเวลาเพื่อให้คำนวณคงเหลือตามลำดับถูก
+    // รับช่วงวันที่จาก query — default = วันนี้
+    const startRaw = req.query.startDate || dayjs().tz(TZ).format("YYYY-MM-DD");
+    const endRaw   = req.query.endDate   || dayjs().tz(TZ).format("YYYY-MM-DD");
+
+    const rangeStart = dayjs.tz(startRaw, TZ).startOf("day").toDate();
+    const rangeEnd   = dayjs.tz(endRaw,   TZ).endOf("day").toDate();
+
+    // 1) โหลดเฉพาะ transaction ในช่วงวันที่เลือก
+    const transactions = await Transaction.find({
+      createdAt: { $gte: rangeStart, $lte: rangeEnd }
+    })
+      .sort({ createdAt: 1 })
       .lean();
 
-    // ดึง SKU ทั้งหมดจากทุก transaction
-    const allSKUs = transactions.flatMap((transaction) =>
-      transaction.products.map((product) => product.sku)
-    );
+    // 2) รวบ SKU ที่ปรากฏในช่วงนี้
+    const skusInRange = [...new Set(
+      transactions.flatMap(tx => tx.products.map(p => p.sku))
+    )];
 
-    // ดึงข้อมูลสินค้าเพื่อเอา description มาใส่
-    const productsMap = await Product.find({ sku: { $in: allSKUs } })
-      .lean()
-      .then((products) =>
-        products.reduce((map, product) => {
-          map[product.sku] = product;
-          return map;
-        }, {})
-      );
+    // 3) คำนวณ starting balance ของแต่ละ SKU ก่อนช่วงวันที่เลือก
+    const startingData = skusInRange.length > 0
+      ? await Transaction.aggregate([
+          { $match: { createdAt: { $lt: rangeStart } } },
+          { $unwind: "$products" },
+          { $match: { "products.sku": { $in: skusInRange } } },
+          {
+            $group: {
+              _id: "$products.sku",
+              balance: {
+                $sum: {
+                  $cond: [
+                    { $eq: ["$transactionType", "IN"] },
+                    "$products.quantity",
+                    { $multiply: ["$products.quantity", -1] }
+                  ]
+                }
+              }
+            }
+          }
+        ])
+      : [];
 
-    // คำนวณคงเหลือต่อ SKU ไล่ตามเวลา
-    const skuBalances = {}; // { SKU: remaining }
+    // 4) ดึง description จาก Product
+    const productsMap = skusInRange.length > 0
+      ? await Product.find({ sku: { $in: skusInRange } })
+          .lean()
+          .then(list => list.reduce((m, p) => { m[p.sku] = p; return m; }, {}))
+      : {};
 
-    const enrichedTransactions = transactions.map((transaction) => {
+    // ดึง store name สำหรับ storeId ที่ปรากฏในช่วงนี้
+    const storeIds = [...new Set(transactions.map(tx => tx.storeId).filter(id => id != null))];
+    const storeMap = storeIds.length > 0
+      ? await Store.find({ storeId: { $in: storeIds } })
+          .lean()
+          .then(list => list.reduce((m, s) => { m[s.storeId] = s.storename; return m; }, {}))
+      : {};
+
+    // 5) เริ่ม skuBalances จาก starting balance
+    const skuBalances = {};
+    startingData.forEach(({ _id, balance }) => { skuBalances[_id] = balance; });
+    skusInRange.forEach(sku => { if (skuBalances[sku] === undefined) skuBalances[sku] = 0; });
+
+    // 6) คำนวณ running balance ไล่ตามลำดับเวลา
+    let enrichedTransactions = transactions.map((transaction) => {
       const updatedProducts = transaction.products.map((product) => {
         const sku = product.sku;
-
-        if (!skuBalances[sku]) skuBalances[sku] = 0;
-
         if (transaction.transactionType === "IN") {
-          skuBalances[sku] += product.quantity;
+          skuBalances[sku] = (skuBalances[sku] || 0) + product.quantity;
         } else if (transaction.transactionType === "OUT") {
-          skuBalances[sku] -= product.quantity;
+          skuBalances[sku] = (skuBalances[sku] || 0) - product.quantity;
         }
-
         return {
           ...product,
           description: productsMap[sku]?.description || "N/A",
@@ -1274,32 +1311,33 @@ router.get("/transaction", isAuthenticated, async (req, res) => {
       return {
         ...transaction,
         products: updatedProducts,
+        storeName: storeMap[transaction.storeId] || "-",
         createdAtFormatted: dayjs(transaction.createdAt)
-          .tz("Asia/Bangkok")
+          .tz(TZ)
           .format("DD MMM YYYY, HH:mm"),
-
         createdAtExcel: dayjs(transaction.createdAt)
-          .tz("Asia/Bangkok")
+          .tz(TZ)
           .format("YYYY-MM-DD HH:mm:ss"),
       };
     });
 
-    // กรองตามคำค้นหา (ถ้ามี) - กรองที่ระดับ product
-    let filteredTransactions = enrichedTransactions;
+    // 7) กรอง SKU ตาม searchQuery (ถ้ามี)
     if (searchQuery) {
-      filteredTransactions = enrichedTransactions
-        .map((transaction) => ({
-          ...transaction,
-          products: transaction.products.filter((product) =>
-            product.sku.includes(searchQuery)
+      enrichedTransactions = enrichedTransactions
+        .map(tx => ({
+          ...tx,
+          products: tx.products.filter(p =>
+            p.sku.toLowerCase().includes(searchQuery.toLowerCase())
           ),
         }))
-        .filter((transaction) => transaction.products.length > 0);
+        .filter(tx => tx.products.length > 0);
     }
 
     res.render("transaction", {
-      products: filteredTransactions,
+      products: enrichedTransactions,
       searchQuery,
+      startDate: startRaw,
+      endDate: endRaw,
     });
   } catch (error) {
     console.error("Error fetching transactions:", error);
@@ -3266,31 +3304,19 @@ router.put("/api/announcements/:id", isAuthenticated, isAdmin, async (req, res) 
 
 router.get("/finished-usage", isAuthenticated, async (req, res) => {
   try {
-    const startDate = req.query.startDate || "";
-    const endDate = req.query.endDate || "";
+    const TZ = "Asia/Bangkok";
+
+    // default = เดือนปัจจุบัน
+    const startDate = req.query.startDate || dayjs().tz(TZ).startOf("month").format("YYYY-MM-DD");
+    const endDate   = req.query.endDate   || dayjs().tz(TZ).endOf("month").format("YYYY-MM-DD");
+
+    const rangeStart = dayjs.tz(startDate, TZ).startOf("day").toDate();
+    const rangeEnd   = dayjs.tz(endDate,   TZ).endOf("day").toDate();
 
     const matchStage = {
       workStatus: "Finish",
-      finishDate: { $ne: null }
+      finishDate: { $ne: null, $gte: rangeStart, $lte: rangeEnd }
     };
-
-    if (startDate || endDate) {
-      matchStage.finishDate = {};
-
-      if (startDate) {
-        matchStage.finishDate.$gte = dayjs
-          .tz(startDate, "Asia/Bangkok")
-          .startOf("day")
-          .toDate();
-      }
-
-      if (endDate) {
-        matchStage.finishDate.$lte = dayjs
-          .tz(endDate, "Asia/Bangkok")
-          .endOf("day")
-          .toDate();
-      }
-    }
 
     const report = await Transaction.aggregate([
       { $match: matchStage },

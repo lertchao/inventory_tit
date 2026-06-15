@@ -37,67 +37,78 @@
       </h2>
 
       <div class="container-fluid">
-        <!-- ✅ Filter Date -->
-        <div class="row g-2 mb-3 justify-content-center">
+        <!-- Date filter — server-side -->
+        <form method="GET" action="/transaction" class="row g-2 mb-3 justify-content-center align-items-end">
           <div class="col-md-3 col-6">
-            <label for="minDate" class="form-label">Start Date</label>
-            <input type="date" id="minDate" class="form-control form-control-sm">
+            <label for="startDate" class="form-label">Start Date</label>
+            <input type="date" id="startDate" name="startDate" class="form-control form-control-sm"
+                   value="<%= startDate %>">
           </div>
           <div class="col-md-3 col-6">
-            <label for="maxDate" class="form-label">End Date</label>
-            <input type="date" id="maxDate" class="form-control form-control-sm">
+            <label for="endDate" class="form-label">End Date</label>
+            <input type="date" id="endDate" name="endDate" class="form-control form-control-sm"
+                   value="<%= endDate %>">
           </div>
-        </div>
+          <% if (searchQuery) { %>
+            <input type="hidden" name="search" value="<%= searchQuery %>">
+          <% } %>
+          <div class="col-md-2 col-12 d-grid">
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i class="bi bi-search"></i> Apply
+            </button>
+          </div>
+        </form>
+
 
         <% if (products.length > 0) { %>
-          <div class="invisible" id="transactionWrapper">
-            <table id="transactionTable" class="table table-bordered table-striped display nowrap" style="width:100%">
-          
-
-              <thead class="table-dark">
-              <tr>
-                <th>SKU</th>
-                <th>Description</th>
-                <th class="text-center">Quantity</th>
-                <th class="text-center">Transaction Type</th>
-                <th class="text-center">Remaining Quantity</th>
-                <th class="text-center">Requester Name</th>
-                <th>Request ID</th>
-                <th>Created At</th>
-              </tr>
-              </thead>
-              <tbody>
-              <% products.forEach((transaction) => { %>
-                <% transaction.products.forEach((product) => { %>
-                  <tr>
-                    <td><%= product.sku %></td>
-                    <td><%= product.description || "N/A" %></td>
-                    <td class="text-center"><%= product.quantity %></td>
-                    <td class="text-center">
-                      <% if (transaction.transactionType === "IN") { %>
-                        <span class="badge in-badge">In</span>
-                      <% } else if (transaction.transactionType === "OUT") { %>
-                        <span class="badge out-badge">Out</span>
-                      <% } else { %>
-                        <span class="badge bg-secondary">Unknown</span>
-                      <% } %>
-                    </td>
-                    <td class="text-center"><%= product.remaining %></td>
-                    <td class="text-center"><%= transaction.requesterName %></td>
-                    <td><%= transaction.requestId %></td>
-                    <td 
-                      data-order="<%= transaction.createdAt.toISOString() %>"
-                      data-export="<%= transaction.createdAtExcel %>">
-                      <%= transaction.createdAtFormatted %>
-                    </td>
-                  </tr>
-                <% }); %>
+          <table id="transactionTable" class="table table-bordered table-striped display nowrap" style="width:100%">
+            <thead class="table-dark">
+            <tr>
+              <th>SKU</th>
+              <th>Description</th>
+              <th class="text-center">Quantity</th>
+              <th class="text-center">Transaction Type</th>
+              <th class="text-center">Remaining Quantity</th>
+              <th class="text-center">Requester Name</th>
+              <th>Request ID</th>
+              <th class="text-center">Store ID</th>
+              <th>Store Name</th>
+              <th>Created At</th>
+            </tr>
+            </thead>
+            <tbody>
+            <% products.forEach((transaction) => { %>
+              <% transaction.products.forEach((product) => { %>
+                <tr>
+                  <td><%= product.sku %></td>
+                  <td><%= product.description || "N/A" %></td>
+                  <td class="text-center"><%= product.quantity %></td>
+                  <td class="text-center">
+                    <% if (transaction.transactionType === "IN") { %>
+                      <span class="badge in-badge">In</span>
+                    <% } else if (transaction.transactionType === "OUT") { %>
+                      <span class="badge out-badge">Out</span>
+                    <% } else { %>
+                      <span class="badge bg-secondary">Unknown</span>
+                    <% } %>
+                  </td>
+                  <td class="text-center"><%= product.remaining %></td>
+                  <td class="text-center"><%= transaction.requesterName %></td>
+                  <td><%= transaction.requestId %></td>
+                  <td class="text-center"><%= transaction.storeId != null ? String(transaction.storeId).padStart(3, '0') : '-' %></td>
+                  <td><%= transaction.storeName %></td>
+                  <td
+                    data-order="<%= transaction.createdAt.toISOString() %>"
+                    data-export="<%= transaction.createdAtExcel %>">
+                    <%= transaction.createdAtFormatted %>
+                  </td>
+                </tr>
               <% }); %>
-              </tbody>
-            </table>
-          </div>
+            <% }); %>
+            </tbody>
+          </table>
         <% } else { %>
-          <p class="text-muted">No transactions found.</p>
+          <p class="text-muted">ไม่พบข้อมูลในช่วงวันที่เลือก</p>
         <% } %>
       </div>
     </div>
@@ -116,44 +127,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 
 <script>
- // ✅ Custom Date Filter
-function parseLocalDateInput(s) {
-  if (!s) return null;
-  const [y, m, d] = s.split('-').map(Number);
-  return new Date(y, m - 1, d); // local midnight
-}
-
-$.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
-  const minInput = $('#minDate').val();
-  const maxInput = $('#maxDate').val();
-
-  const cell = $('#transactionTable').DataTable().cell(dataIndex, 7).node();
-  const dateStr = $(cell).attr('data-order');
-  const rowDate = new Date(dateStr);
-
-  let min = parseLocalDateInput(minInput);
-  let max = parseLocalDateInput(maxInput);
-
-  if (max) {
-    max.setHours(23, 59, 59, 999);
-  }
-
-  return (!min || rowDate >= min) && (!max || rowDate <= max);
-});
-
-
   $(document).ready(function () {
-    const today = new Date();
-    const todayStr = today.getFullYear() + '-' +
-      String(today.getMonth() + 1).padStart(2, '0') + '-' +
-      String(today.getDate()).padStart(2, '0');
-
-    $('#minDate').val(todayStr);
-    $('#maxDate').val(todayStr);
-
-    const table = $('#transactionTable').DataTable({
+    $('#transactionTable').DataTable({
       dom: "<'row mb-2'" +
-        "<'col-12 col-md-6 mb-2 mb-md-0'l>" + 
+        "<'col-12 col-md-6 mb-2 mb-md-0'l>" +
         "<'col-12 col-md-6 d-flex justify-content-md-end justify-content-center'B>" +
         ">" +
         "<'row mb-2'<'col-12'f>>" +
@@ -170,52 +147,27 @@ $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
           extend: 'excel',
           text: '<i class="bi bi-file-earmark-excel"></i> Excel',
           className: 'btn btn-outline-success btn-sm me-2',
-
           exportOptions: {
             format: {
               body: function (data, row, column, node) {
-
-                // ✅ คอลัมน์ Created At
                 if (column === 7) {
                   return $(node).attr('data-export') || data;
                 }
-
                 return $(node).text().trim();
               }
             }
           },
-
           customize: function (xlsx) {
             const sheet = xlsx.xl.worksheets['sheet1.xml'];
-
             $('row c[r^="H"]', sheet).each(function () {
-
               const cellRef = $(this).attr('r');
-
-              // ข้าม header
               if (cellRef === 'H1') return;
-
-              const text =
-                $('is t', this).text() ||
-                $('v', this).text();
-
-              const match = text.match(
-                /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/
-              );
-
+              const text = $('is t', this).text() || $('v', this).text();
+              const match = text.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/);
               if (!match) return;
-
               const [, y, m, d, hh, mm, ss] = match.map(Number);
-
-              const excelDate =
-                Date.UTC(y, m - 1, d, hh, mm, ss) / 86400000 + 25569;
-
-              $(this).attr('t', 'n');
-              $(this).attr('s', '67');
-
-              $(this)
-                .empty()
-                .append(`<v>${excelDate}</v>`);
+              const excelDate = Date.UTC(y, m - 1, d, hh, mm, ss) / 86400000 + 25569;
+              $(this).attr('t', 'n').attr('s', '67').empty().append(`<v>${excelDate}</v>`);
             });
           }
         },
@@ -227,11 +179,10 @@ $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
       ],
       scrollX: true,
       responsive: false,
-      order: [[7, 'desc']],
+      order: [[7, 'asc']],
       pageLength: 25,
-      lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+      lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'ทั้งหมด']],
       pagingType: "simple_numbers",
-
       language: {
         search: "ค้นหา:",
         lengthMenu: "แสดง _MENU_ รายการต่อหน้า",
@@ -242,18 +193,6 @@ $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
         infoFiltered: "(กรองจากทั้งหมด _MAX_ รายการ)"
       }
     });
-
-    table.draw(); // ✅ เรียก draw หลังตั้งค่า default
-
-    $('#minDate, #maxDate').on('change', function () {
-      table.draw();
-      $('#transactionWrapper').removeClass('invisible');
-      $('#transactionTable').removeClass('d-none');
-    });
-
-    // ✅ แสดงตารางทันทีหากมีข้อมูลวันนี้
-    $('#transactionWrapper').removeClass('invisible');
-    $('#transactionTable').removeClass('d-none');
   });
 </script>
 
