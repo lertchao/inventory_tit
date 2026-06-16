@@ -150,7 +150,7 @@
           exportOptions: {
             format: {
               body: function (data, row, column, node) {
-                if (column === 7) {
+                if (column === 9) {
                   return $(node).attr('data-export') || data;
                 }
                 return $(node).text().trim();
@@ -159,9 +159,9 @@
           },
           customize: function (xlsx) {
             const sheet = xlsx.xl.worksheets['sheet1.xml'];
-            $('row c[r^="H"]', sheet).each(function () {
+            $('row c[r^="J"]', sheet).each(function () {
               const cellRef = $(this).attr('r');
-              if (cellRef === 'H1') return;
+              if (cellRef === 'J1') return;
               const text = $('is t', this).text() || $('v', this).text();
               const match = text.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/);
               if (!match) return;
@@ -179,7 +179,7 @@
       ],
       scrollX: true,
       responsive: false,
-      order: [[7, 'asc']],
+      order: [[9, 'desc']],
       pageLength: 25,
       lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'ทั้งหมด']],
       pagingType: "simple_numbers",

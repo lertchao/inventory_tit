@@ -421,7 +421,8 @@ router.post("/register",isAuthenticated, isAdmin, async (req, res) => {
 });
 
 router.get("/login", (req, res) => {
-  res.render("login", { message: "", returnUrl: req.query.returnUrl || "/" });
+  if (req.session?.user) return res.redirect("/");
+  res.render("login", { message: "" });
 });
 
 router.post("/login", async (req, res) => {
@@ -432,8 +433,7 @@ router.post("/login", async (req, res) => {
     // ตรวจสอบว่า username/password ถูกต้องไหม
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.render("login", {
-        message: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง",
-        returnUrl: req.body.returnUrl || "/"
+        message: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"
       });
     }
 
@@ -454,7 +454,7 @@ router.post("/login", async (req, res) => {
     });
 
     // ✅ redirect หลัง session ถูกบันทึกแน่นอน
-    res.redirect(req.body.returnUrl || "/");
+    res.redirect("/");
     
   } catch (error) {
     console.error("Login Error:", error);
