@@ -2074,28 +2074,16 @@ router.get('/public-workorder/:requestId', async (req, res) => {
 
 
 
-router.get('/get-product-details', (req, res) => {
-  const sku = req.query.sku;
-
-  Product.findOne(
-    {
-      sku: sku,
-      active: { $ne: false }
-    },
-    'description cost',
-    (err, product) => {
-
-      if (err) {
-        return res.status(500).send('Error fetching product details');
-      }
-
-      if (product) {
-        res.json({ product });
-      } else {
-        res.json({ product: null });
-      }
-    }
-  );
+router.get('/get-product-details', isAuthenticated, async (req, res) => {
+  try {
+    const product = await Product.findOne(
+      { sku: req.query.sku, active: { $ne: false } },
+      'description cost'
+    );
+    res.json({ product: product || null });
+  } catch (err) {
+    res.status(500).send('Error fetching product details');
+  }
 });
 
 
@@ -2131,7 +2119,7 @@ router.get("/get-store-name", isAuthenticated, async (req, res) => {
 });
 
 
-router.get("/get-transaction-details", async (req, res) => {
+router.get("/get-transaction-details", isAuthenticated, async (req, res) => {
   try {
     const { repair } = req.query;
 
@@ -2163,25 +2151,16 @@ router.get("/get-transaction-details", async (req, res) => {
   }
 });
 
-router.get('/get-product-details-in', (req, res) => {
-  const sku = req.query.sku;
-
-  Product.findOne(
-    { sku },
-    'description cost active',
-    (err, product) => {
-
-      if (err) {
-        return res.status(500).send('Error fetching product details');
-      }
-
-      if (product) {
-        res.json({ product });
-      } else {
-        res.json({ product: null });
-      }
-    }
-  );
+router.get('/get-product-details-in', isAuthenticated, async (req, res) => {
+  try {
+    const product = await Product.findOne(
+      { sku: req.query.sku },
+      'description cost active'
+    );
+    res.json({ product: product || null });
+  } catch (err) {
+    res.status(500).send('Error fetching product details');
+  }
 });
 
   
@@ -2527,7 +2506,7 @@ router.get("/add-product", isAuthenticated, isAdmin, async (req, res) => {
 
 
 
-router.post("/add", upload.single("image"), async (req, res) => {
+router.post("/add", isAuthenticated, isAdmin, upload.single("image"), async (req, res) => {
   try {
     let imagePublicId = "";
 

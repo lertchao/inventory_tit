@@ -204,7 +204,7 @@
     <% tx.products.forEach((p, pIndex) => { %>
       <tr>
         <td class="text-center align-middle"><%= pIndex === 0 ? showSeq : '' %></td>
-        <td class="text-center align-middle"><%= p.sku %></td>
+        <td class="align-middle"><%= p.sku %></td>
         <td class="text-center align-middle"><%= p.quantity %></td>
         <td class="text-center align-middle"><%= (tx.transactionType || '').toUpperCase() %></td>
         <td class="text-center align-middle">
@@ -276,7 +276,7 @@
           %>
             <tr data-sku="<%= sku %>" data-description="<%= summary[sku].description %>" data-net="<%= net %>" data-max="<%= maxReturn %>">
               <td class="text-center align-middle"><%= index + 1 %></td>
-              <td class="text-center align-middle"><%= sku %></td>
+              <td class="align-middle"><%= sku %></td>
               <td class="align-middle"><%= summary[sku].description %></td>
               <td class="text-center align-middle"><%= net %></td>
               <td class="text-center align-middle">
