@@ -34,15 +34,16 @@ const labels           = src.map(o => o._id);
         formatter : (v,ctx) => `${jobsArr[ctx.dataIndex]} Rp.`
       },
       value : {
-        display : (ctx) => ctx.dataset.data[ctx.dataIndex] >= 10000,
+        display : (ctx) => ctx.dataset.data[ctx.dataIndex] > 0,
         anchor  : "end",
         align   : "top",
         color   : "black",
         font    : () => ({ family:"kanit", weight:"normal", size:fSize() }),
         padding : 10,
-        formatter : (v) => v.toLocaleString(undefined,{
-          minimumFractionDigits:2, maximumFractionDigits:2
-        })
+        formatter : (v) => new Intl.NumberFormat("en", {
+          notation: "compact",
+          maximumFractionDigits: 1
+        }).format(v)
       }
     }
   });
