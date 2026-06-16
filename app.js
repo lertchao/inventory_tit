@@ -5,13 +5,11 @@ const router = require('./routes/myRouter')
 const app = express()
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
-
-//mongodb+srv://64230092:1234@cluster0.pglvr.mongodb.net/Database
-//mongodb://localhost:27017/Database
+require('dotenv').config();
 
 mongoose.set('strictQuery', true);
 
-const dbUrl = 'mongodb+srv://64230092:1234@cluster0.pglvr.mongodb.net/Database'; 
+const dbUrl = process.env.MONGO_URI;
 mongoose.connect(dbUrl, {
     useNewUrlParser: true,
     useUnifiedTopology: true
@@ -24,7 +22,7 @@ mongoose.connect(dbUrl, {
 // ตั้งค่า session
 app.use(
   session({
-    secret: "your_secret_key",
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
