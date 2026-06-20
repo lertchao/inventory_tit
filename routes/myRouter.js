@@ -2877,6 +2877,79 @@ router.get('/stock-summary',isAuthenticated, async (req, res) => {
   }
 });
 
+router.get('/api/stock-summary', async (req, res) => {
+  // ── Auth: API Key via header ───────────────────────────────────────────────
+  const apiKey = req.headers['x-api-key'];
+  if (!apiKey || apiKey !== process.env.STOCK_API_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    // ── ดึงข้อมูล products ────────────────────────────────────────────────────
+    const products = await Product.find(
+      { active: { $ne: false } },
+      'sku description quantity typeparts cost machineTypes'
+    );
+
+    // ── ดึง Pending (OUT - IN) ────────────────────────────────────────────────
+    const pendingData = await Transaction.aggregate([
+      { $match: { workStatus: 'Pending' } },
+      { $unwind: '$products' },
+      {
+        $group: {
+          _id: '$products.sku',
+          totalOut: {
+            $sum: {
+              $cond: [{ $eq: ['$transactionType', 'OUT'] }, '$products.quantity', 0]
+            }
+          },
+          totalIn: {
+            $sum: {
+              $cond: [{ $eq: ['$transactionType', 'IN'] }, '$products.quantity', 0]
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          pendingQuantity: { $subtract: ['$totalOut', '$totalIn'] }
+        }
+      }
+    ]);
+
+    const pendingMap = {};
+    pendingData.forEach(item => {
+      pendingMap[item._id] = item.pendingQuantity;
+    });
+
+    // ── รวมข้อมูลและ return JSON ──────────────────────────────────────────────
+    const summary = products
+      .map(product => {
+        const onShelf = product.quantity || 0;
+        const pending = pendingMap[product.sku] || 0;
+        const machineType = Array.isArray(product.machineTypes)
+          ? product.machineTypes.join(', ')
+          : (product.machineTypes || 'Other');
+
+        return {
+          sku:          product.sku,
+          description:  product.description || '',
+          cost:         typeof product.cost === 'number' ? product.cost : 0,
+          on_shelf:     onShelf,
+          pending:      pending,
+          total:        onShelf + pending,
+          machine_type: machineType || 'Other'
+        };
+      })
+      .sort((a, b) => a.sku.localeCompare(b.sku));
+
+    res.json(summary);
+
+  } catch (error) {
+    console.error('[/api/stock-summary] Error:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
 
 router.get('/get-transactions-summary', isAuthenticated, async (req, res) => {
   const { repair } = req.query;
