@@ -1,10 +1,7 @@
-@font-face {
-    font-family: kanit;
-    src: url(../Kanit/Kanit-Regular.ttf);
-}
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Noto+Sans+Thai:wght@300;400;700&display=swap');
 
 * {
-    font-family: kanit;
+    font-family: 'Lato', 'Noto Sans Thai', sans-serif;
 }
 
 /* Custom Sidebar for Desktop */
@@ -89,6 +86,17 @@
 .remove-row {
     display: none;
   }
+
+.chart-wrapper {
+  position: relative;
+  height: 360px;
+}
+
+@media (max-width: 768px) {
+  .chart-wrapper {
+    height: 220px;
+  }
+}
 
 .form_in{
     background-color: #EFF3EA;

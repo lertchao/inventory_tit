@@ -37,17 +37,19 @@
       <%- include('sidebarMobile') %>
 
       <div class="col-lg-10 col-12">
-        <div class="d-flex justify-content-between align-items-center p-4 flex-wrap gap-2">
-          <h2 class="text-danger m-0">
-            Manual Issue Parts
-            <img src="/images/out-of-stock.png" alt="logo" class="img-fluid" style="max-width: 40px; vertical-align: middle;">
-          </h2>
-
-          <div class="d-flex gap-2">
-            <a href="/trans-out" class="btn btn-outline-secondary">
+        <div class="row align-items-center p-4">
+          <div class="col-12 col-md-6 text-center order-1 order-md-2">
+            <h2 class="text-danger m-0">
+              Manual Issue Parts
+              <img src="/images/out-of-stock.png" alt="logo" class="img-fluid" style="max-width: 40px; vertical-align: middle;">
+            </h2>
+          </div>
+          <div class="col-12 col-md-3 text-center text-md-start order-2 order-md-1 mt-2 mt-md-0">
+            <a href="/trans-out" class="btn btn-outline-secondary btn-sm">
               <i class="bi bi-arrow-left"></i> Back to Issue Parts
             </a>
           </div>
+          <div class="col-md-3 d-none d-md-block order-md-3"></div>
         </div>
 
         <div id="status-banner" class="alert d-none mt-2"></div>
@@ -98,24 +100,25 @@
             <table class="table table-bordered form_out">
               <thead>
                 <tr class="table-dark">
-                  <th class="text-center col-sm-2">รหัสสินค้า</th>
-                  <th class="text-center col-sm-4">Description</th>
-                  <th class="text-center col-1">จำนวน</th>
-                  <th class="text-center col-1">Cost</th>
-                  <th class="text-center col-1">การดำเนินการ</th>
+                  <th class="text-center" style="min-width:140px">รหัสสินค้า</th>
+                  <th class="text-center d-none d-md-table-cell">Description</th>
+                  <th class="text-center" style="min-width:80px">จำนวน</th>
+                  <th class="text-center d-none d-md-table-cell" style="min-width:80px">Cost</th>
+                  <th class="text-center" style="min-width:60px">ลบ</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td>
-                    <input type="text" class="form-control sku-input" placeholder="กรอกรหัสสินค้า" name="sku" required>
+                    <input type="text" class="form-control sku-input" placeholder="กรอกรหัสสินค้า" name="sku" required style="text-transform:uppercase">
+                    <small class="description-cell d-block d-md-none text-muted mt-1"></small>
                   </td>
-                  <td class="text-start description-cell align-middle"></td>
+                  <td class="text-start description-cell align-middle d-none d-md-table-cell"></td>
                   <td>
-                    <input type="number" class="form-control text-center" placeholder="กรอกจำนวน" name="quantity" value="1" min="1" required>
+                    <input type="number" class="form-control text-center" placeholder="จำนวน" name="quantity" value="1" min="1" required>
                   </td>
-                  <td class="text-center cost-cell align-middle"></td>
-                  <td class="text-center">
+                  <td class="text-center cost-cell align-middle d-none d-md-table-cell"></td>
+                  <td class="text-center align-middle">
                     <button type="button" class="btn btn-danger btn-sm remove-row">ลบ</button>
                   </td>
                 </tr>

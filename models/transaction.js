@@ -21,6 +21,11 @@ const transactionSchema = new mongoose.Schema({
     }
   ],
   workStatus: { type: String, enum: ["Pending", "Finish","Cancel"] },
+  statusHistory: [{
+    status:    { type: String },
+    changedBy: { type: String },
+    changedAt: { type: Date }
+  }],
 
   finishDate: {type: Date, default: null},
   storeId: { type: Number },

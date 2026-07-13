@@ -1,5 +1,6 @@
 // pending.js  (single-bar version: combine CM+PM)
 document.addEventListener("DOMContentLoaded", () => {
+  Chart.defaults.font.family = 'Lato, "Noto Sans Thai", sans-serif';
 const raw = document.getElementById("pendingWorkOrdersData").textContent;
 const allData = JSON.parse(raw) || [];
 
@@ -41,7 +42,7 @@ const src = allData.filter(o => {
         offset: 8,
         clamp: true,
         color: "#333",
-        font: () => ({ family: "kanit", weight: "normal", size: fSize() }),
+        font: () => ({ family: "Lato", weight: "normal", size: fSize() }),
         formatter: (v) =>
           new Intl.NumberFormat("en", {
             notation: "compact",
@@ -65,17 +66,20 @@ const src = allData.filter(o => {
           backgroundColor: "rgba(242, 182, 107, 0.4)",
           borderColor: "rgba(230, 162, 60, 0.9)",
           borderWidth: 1,
+          borderRadius: 4,
           datalabels: makeLabels()
         }
       ]
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       layout: { padding: { top: 40, bottom: 20 } },
       scales: {
         y: {
           beginAtZero: true,
           max: yMax,
+          grid: { color: "rgba(0,0,0,0.05)" },
           ticks: {
             stepSize: step,
             font: () => ({ size: fSize() })
@@ -110,7 +114,7 @@ const src = allData.filter(o => {
         legend: {
           position: "bottom",
           labels: {
-            font: () => ({ family: "kanit", weight: "bold", size: fSize() })
+            font: () => ({ family: "Lato", weight: "bold", size: fSize() })
           }
         }
       }
@@ -120,14 +124,6 @@ const src = allData.filter(o => {
 
   // ปรับขนาด label ตามหน้าจอเมื่อ resize (เฉพาะ value)
   window.addEventListener("resize", () => {
-    const s = fSize();
-    chart.options.scales.x.ticks.font.size = s;
-    chart.options.scales.y.ticks.font.size = s;
-    chart.options.plugins.legend.labels.font.size = s;
-
-    const dl = chart.data.datasets[0]?.datalabels?.labels;
-    if (dl?.value?.font) dl.value.font.size = s;
-
     chart.resize();
     chart.update();
   });

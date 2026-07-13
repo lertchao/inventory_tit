@@ -8,6 +8,7 @@ const MongoStore = require("connect-mongo");
 require('dotenv').config();
 
 mongoose.set('strictQuery', true);
+app.set('trust proxy', 1);
 
 const dbUrl = process.env.MONGO_URI;
 mongoose.connect(dbUrl, {
@@ -32,6 +33,7 @@ app.use(
     cookie: {
       maxAge: 1000 * 60 * 60 * 1, // อายุ session 1 ชั่วโมง
       httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
     },
   })
 );

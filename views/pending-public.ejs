@@ -40,7 +40,9 @@
             <img src="/images/completed-task.png" class="img-fluid" style="max-width:40px;vertical-align:middle">
           </h2>
 
-          <canvas id="pendingWorkChart"></canvas>
+          <div class="chart-wrapper">
+            <canvas id="pendingWorkChart"></canvas>
+          </div>
 
           <% if (pendingWorkOrdersTable.length> 0) { %>
 
@@ -160,7 +162,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 
   <script type="application/json" id="pendingWorkOrdersData">
-    <%- JSON.stringify(pendingWorkOrders || []) %>
+    <%- JSON.stringify(pendingWorkOrders || []).replace(/</g, '\\u003c') %>
   </script>
 
   <script src="js/pending.js"></script>

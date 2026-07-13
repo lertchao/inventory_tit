@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
+  Chart.defaults.font.family = 'Lato, "Noto Sans Thai", sans-serif';
   const raw = document.getElementById("pendingWorkOrdersData").textContent;
 const allData = JSON.parse(raw);
 
@@ -17,35 +18,23 @@ const labels           = src.map(o => o._id);
   const pmJobs           = src.map(o => o.pmPendingCount);
 
   const max  = Math.max(...cmTotals, ...pmTotals);
-  const yMax = Math.ceil(max / 5000) * 5000;
+  const yMax = Math.ceil(max / 20000) * 20000;
 
   const fSize = () =>
     window.innerWidth <  768 ? 9 :
     window.innerWidth < 1024 ? 12 : 15;
 
-  const makeLabels = (jobsArr) => ({
-    labels : {
-      title : {
-        display : (ctx) => jobsArr[ctx.dataIndex] > 0,  
-        anchor  : "start",
-        align   : "center",
-        color   : "black",
-        font    : () => ({ family:"kanit", weight:"normal", size:fSize()-2 }),
-        formatter : (v,ctx) => `${jobsArr[ctx.dataIndex]} Rp.`
-      },
-      value : {
-        display : (ctx) => ctx.dataset.data[ctx.dataIndex] > 0,
-        anchor  : "end",
-        align   : "top",
-        color   : "black",
-        font    : () => ({ family:"kanit", weight:"normal", size:fSize() }),
-        padding : 10,
-        formatter : (v) => new Intl.NumberFormat("en", {
-          notation: "compact",
-          maximumFractionDigits: 1
-        }).format(v)
-      }
-    }
+  const makeLabels = () => ({
+    display : (ctx) => window.innerWidth >= 768 && ctx.dataset.data[ctx.dataIndex] > 0,
+    anchor  : "end",
+    align   : "top",
+    color   : "#374151",
+    font    : () => ({ weight:"normal", size:fSize() }),
+    padding : 6,
+    formatter : (v) => new Intl.NumberFormat("en", {
+      notation: "compact",
+      maximumFractionDigits: 1
+    }).format(v)
   });
 
   const ctx = document.getElementById("pendingWorkChart").getContext("2d");
@@ -57,32 +46,35 @@ const labels           = src.map(o => o._id);
         {
           label : "Total Pending Cost (CM)",
           data  : cmTotals,
-          backgroundColor : "rgba(173,216,230,0.5)",
-          borderColor     : "rgba(173,216,230,1)",
+          backgroundColor : "rgba(59,130,246,0.7)",
+          borderColor     : "rgba(37,99,235,1)",
           borderWidth     : 1,
-          datalabels      : makeLabels(cmJobs)
+          borderRadius    : 2,
+          datalabels      : makeLabels()
         },
         {
           label : "Total Pending Cost (PM)",
           data  : pmTotals,
-          backgroundColor : "rgba(144,238,144,0.5)",
-          borderColor     : "rgba(144,238,144,1)",
+          backgroundColor : "rgba(16,185,129,0.7)",
+          borderColor     : "rgba(5,150,105,1)",
           borderWidth     : 1,
-          datalabels      : makeLabels(pmJobs)
+          borderRadius    : 2,
+          datalabels      : makeLabels()
         }
       ]
     },
 
     options : {
       responsive : true,
+      maintainAspectRatio : false,
       layout : { padding:{ top:40, bottom:20 } },
 
       scales : {
         y : {
           beginAtZero:true,
           max:yMax,
+          grid: { color: "rgba(0,0,0,0.05)" },
           ticks:{
-            stepSize:20000,
             font:()=>({ size:fSize() })
           }
         },
@@ -94,11 +86,23 @@ const labels           = src.map(o => o._id);
       },
 
       plugins : {
-        tooltip : { mode:"index", intersect:false },
+        tooltip : {
+          mode:"index",
+          intersect:false,
+          callbacks: {
+            label: (ctx) => {
+              const idx = ctx.dataIndex;
+              const isCm = ctx.datasetIndex === 0;
+              const jobs = isCm ? cmJobs[idx] : pmJobs[idx];
+              const val  = new Intl.NumberFormat("en", { minimumFractionDigits:0, maximumFractionDigits:0 }).format(ctx.raw);
+              return ` ${ctx.dataset.label}: ฿${val}  (${jobs} Rp.)`;
+            }
+          }
+        },
         legend  : {
           position:"bottom",
           labels:{
-            font:()=>({ family:"kanit", weight:"bold", size:fSize() })
+            font:()=>({ family:"Lato", weight:"bold", size:fSize() })
           }
         }
       }
@@ -108,17 +112,6 @@ const labels           = src.map(o => o._id);
   });
 
   window.addEventListener("resize", () => {
-    const s = fSize();
-    chart.options.scales.x.ticks.font.size        = s;
-    chart.options.scales.y.ticks.font.size        = s;
-    chart.options.plugins.legend.labels.font.size = s;
-
-    chart.data.datasets.forEach(ds => {
-      const {title,value} = ds.datalabels.labels;
-      title.font.size  = s - 2;
-      value.font.size  = s;
-    });
-
     chart.resize(); chart.update();
   });
 });

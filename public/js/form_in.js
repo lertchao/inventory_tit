@@ -80,27 +80,29 @@ document.addEventListener("DOMContentLoaded", function () {
   // เมื่อผู้ใช้กรอก SKU
   document.addEventListener("input", function (event) {
     if (event.target.classList.contains("sku-input")) {
-      const sku = event.target.value.trim();
+      const sku = event.target.value.trim().toUpperCase();
       const row = event.target.closest("tr");
-      const descriptionCell = row.querySelector(".description-cell");
+      const descriptionCells = row.querySelectorAll(".description-cell");
       const costCell = row.querySelector(".cost-cell");
 
+      const setDesc = (text, cls) => descriptionCells.forEach(el => {
+        el.textContent = text;
+        el.classList.remove("text-danger", "text-dark", "text-muted");
+        el.classList.add(cls || "text-muted");
+      });
+
       if (sku) {
-        fetch(`/get-product-details-in?sku=${sku}`)
+        fetch(`/get-product-details-in?sku=${encodeURIComponent(sku)}`)
           .then((response) => response.json())
           .then((data) => {
             if (data && data.product) {
-              descriptionCell.textContent = data.product.description || "ไม่พบข้อมูล";
-              descriptionCell.classList.remove("text-danger");
-              descriptionCell.classList.add("text-dark");
+              setDesc(data.product.description || "ไม่พบข้อมูล", "text-dark");
               costCell.classList.remove("text-danger");
               costCell.classList.add("text-dark");
               costCell.textContent =
                 new Intl.NumberFormat().format(data.product.cost) || "ไม่พบข้อมูล";
             } else {
-              descriptionCell.textContent = "ไม่พบข้อมูล SKU";
-              descriptionCell.classList.remove("text-dark");
-              descriptionCell.classList.add("text-danger");
+              setDesc("ไม่พบข้อมูล SKU", "text-danger");
               costCell.textContent = "ไม่พบข้อมูล";
               costCell.classList.remove("text-dark");
               costCell.classList.add("text-danger");
@@ -108,13 +110,11 @@ document.addEventListener("DOMContentLoaded", function () {
           })
           .catch((error) => {
             console.error("Error fetching product details:", error);
-            descriptionCell.textContent = "เกิดข้อผิดพลาด";
-            descriptionCell.classList.add("text-danger");
+            setDesc("เกิดข้อผิดพลาด", "text-danger");
             costCell.textContent = "เกิดข้อผิดพลาด";
           });
       } else {
-        descriptionCell.textContent = "";
-        descriptionCell.classList.remove("text-danger", "text-dark");
+        setDesc("", null);
         costCell.textContent = "";
       }
     }
@@ -158,14 +158,15 @@ document.addEventListener("DOMContentLoaded", function () {
     const newRow = `
       <tr>
         <td>
-          <input type="text" class="form-control sku-input" placeholder="กรอกรหัสสินค้า" name="sku" required>
+          <input type="text" class="form-control sku-input" placeholder="กรอกรหัสสินค้า" name="sku" required style="text-transform:uppercase">
+          <small class="description-cell d-block d-md-none text-muted mt-1"></small>
         </td>
-        <td class="text-start description-cell align-middle"></td>
+        <td class="text-start description-cell align-middle d-none d-md-table-cell"></td>
         <td>
-          <input type="number" class="form-control text-center" placeholder="กรอกจำนวน" name="quantity" value="1" required>
+          <input type="number" class="form-control text-center" placeholder="จำนวน" name="quantity" value="1" required>
         </td>
-        <td class="text-center cost-cell align-middle"></td>
-        <td class="text-center">
+        <td class="text-center cost-cell align-middle d-none d-md-table-cell"></td>
+        <td class="text-center align-middle">
           <button type="button" class="btn btn-danger btn-sm remove-row">ลบ</button>
         </td>
       </tr>
@@ -279,7 +280,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // โหลดข้อมูล Transaction ทั้งหมดหากพบเลข repair ซ้ำ
   async function loadRepairHistory(repair) {
     try {
-      const response = await fetch(`/get-transactions-summary?repair=${repair}`);
+      const response = await fetch(`/get-transactions-summary?repair=${encodeURIComponent(repair)}`);
       const data = await response.json();
 
       if (response.ok && data.transactions && data.transactions.length > 0) {
@@ -376,7 +377,7 @@ document.addEventListener("DOMContentLoaded", function () {
       submitButton.innerHTML = "⏳ กำลังบันทึก...";
 
       const name = document.querySelector('[name="name"]').value.trim();
-      const repair = document.querySelector('[name="repair"]').value.trim();
+      const repair = document.querySelector('[name="repair"]').value.trim().toUpperCase();
       const workStatus = document.querySelector('[name="workStatus"]').value;
       const storeId = document.querySelector('[name="storeId"]').value.trim();
 
@@ -388,7 +389,7 @@ document.addEventListener("DOMContentLoaded", function () {
           const costEl = row.querySelector(".cost-cell");
           if (!skuEl || !descEl || !qtyEl || !costEl) return null;
           return {
-            sku: skuEl.value.trim(),
+            sku: skuEl.value.trim().toUpperCase(),
             description: descEl.textContent.trim(),
             quantity: parseInt(qtyEl.value, 10),
             cost: parseFloat(costEl.textContent.replace(/,/g, "")) || 0,
@@ -470,7 +471,7 @@ document.addEventListener("DOMContentLoaded", function () {
           submitBtn.disabled = true;
         } else {
           // อย่า enable ถ้าใบงานถูก Cancel
-          submitBtn.disabled = __IS_CANCELED__ ? true : false;
+          submitBtn.disabled = __IS_CANCELED__;
         }
       }
 

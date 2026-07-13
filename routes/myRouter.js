@@ -463,7 +463,12 @@ router.post("/login", async (req, res) => {
 });
 
 router.get("/logout", (req, res) => {
-  req.session.destroy(() => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error("Session destroy error:", err);
+      return res.status(500).json({ loggedOut: false, message: "ออกจากระบบไม่สำเร็จ กรุณาลองใหม่" });
+    }
+    res.clearCookie("connect.sid");
     res.json({ loggedOut: true, message: "ออกจากระบบสำเร็จ" });
   });
 });
@@ -728,9 +733,8 @@ router.get("/", isAuthenticated, async (req, res) => {
       { $group: { _id: null, totalQty: { $sum: "$quantity" } } },
     ]);
 
-    const now = new Date();
-    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const firstDayOfMonth = dayjs().tz('Asia/Bangkok').startOf('month').toDate();
+    const lastDayOfMonth  = dayjs().tz('Asia/Bangkok').endOf('month').toDate();
     
     const top20Movement = await Transaction.aggregate([
       {
@@ -888,7 +892,8 @@ router.get('/trans-out',isAuthenticated, isAdmin,(req,res)=>{
 })
 
 
-router.get('/onhand',isAuthenticated, async (req, res) => {
+router.get('/onhand', isAuthenticated, async (req, res) => {
+  try {
   const perPage = 12;
   const page = parseInt(req.query.page) || 1;
   const searchQueryRaw = (req.query.search || '').trim();
@@ -942,18 +947,23 @@ router.get('/onhand',isAuthenticated, async (req, res) => {
     .sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
 
   res.render('onhand', {
-    products,
-    search: searchQueryRaw,
-    current: page,
-    pages: Math.ceil(total / perPage),
-    machineTypesSelected: machineTypes,
-    machineTypeOptions,
-    filter   // 👉 ส่งค่านี้ให้ EJS ตั้งค่าสวิตช์ + สร้างลิงก์เพจ
-  });
+      products,
+      search: searchQueryRaw,
+      current: page,
+      pages: Math.ceil(total / perPage),
+      machineTypesSelected: machineTypes,
+      machineTypeOptions,
+      filter
+    });
+  } catch (err) {
+    console.error("❌ /onhand:", err);
+    res.status(500).render("404", { title: "Error", message: "เกิดข้อผิดพลาด กรุณาลองใหม่" });
+  }
 });
 
 
 router.get('/public-onhand', async (req, res) => {
+  try {
   const perPage = 12;
   const page = parseInt(req.query.page) || 1;
   const searchQueryRaw = (req.query.search || '').trim();
@@ -1006,14 +1016,18 @@ router.get('/public-onhand', async (req, res) => {
     .sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
 
   res.render('onhand-public', {
-    products,
-    search: searchQueryRaw,
-    current: page,
-    pages: Math.ceil(total / perPage),
-    machineTypesSelected: machineTypes,
-    machineTypeOptions,
-    filter   // 👉 ส่งค่านี้ให้ EJS ตั้งค่าสวิตช์ + สร้างลิงก์เพจ
-  });
+      products,
+      search: searchQueryRaw,
+      current: page,
+      pages: Math.ceil(total / perPage),
+      machineTypesSelected: machineTypes,
+      machineTypeOptions,
+      filter
+    });
+  } catch (err) {
+    console.error("❌ /public-onhand:", err);
+    res.status(500).render("404", { title: "Error", message: "เกิดข้อผิดพลาด กรุณาลองใหม่" });
+  }
 });
 
 router.get("/public-pending", async (req, res) => {
@@ -1509,6 +1523,7 @@ router.get('/workorder/:requestId', isAuthenticated, async (req, res) => {
           updatedAt:       { $first: '$updatedAt' },
           transactionType: { $first: '$transactionType' },
           workStatus:      { $first: '$workStatus' },
+          statusHistory:   { $first: '$statusHistory' },
           storeId:         { $first: '$storeId' },
           storename:       { $first: '$storeInfo.storename' },
           products: {
@@ -1552,8 +1567,18 @@ router.get('/workorder/:requestId', isAuthenticated, async (req, res) => {
         : '-';
     });
 
+    // รวบรวม statusHistory จาก transaction แรกที่มี (append-only บน 1 document)
+    const rawHistory = transactions.find(tx => tx.statusHistory?.length)?.statusHistory || [];
+    const statusHistory = rawHistory.map(h => ({
+      status:    h.status,
+      changedBy: h.changedBy,
+      changedAt: h.changedAt
+        ? dayjs(h.changedAt).tz('Asia/Bangkok').format('DD MMM YYYY, HH:mm')
+        : '-'
+    }));
+
     // ส่งให้ EJS ใช้งาน (หน้า work-detail)
-    res.render('work-detail', { transactions, requestId });
+    res.render('work-detail', { transactions, requestId, statusHistory });
   } catch (error) {
     console.error('Error fetching transactions for Request ID:', error);
     res.status(500).send('Internal Server Error');
@@ -1577,6 +1602,11 @@ router.put('/workorder/:requestId/update-status', isAuthenticated, async (req, r
     returnItems,
     addOutItems = [] // รายการ OUT เพิ่ม
   } = req.body;
+
+  const ALLOWED_STATUSES = ['Pending', 'Finish', 'Cancel'];
+  if (workStatus && !ALLOWED_STATUSES.includes(workStatus)) {
+    return res.status(400).json({ message: 'Invalid workStatus value.' });
+  }
 
   try {
     // โหลดธุรกรรมทั้งหมดของใบงานนี้
@@ -1680,15 +1710,24 @@ router.put('/workorder/:requestId/update-status', isAuthenticated, async (req, r
           }
 
           // เซ็ตธุรกรรมเดิมทั้งหมดเป็น Cancel
+          const cancelNow = new Date();
           await Transaction.updateMany(
             { requestId },
-            { 
-              $set: { 
-                workStatus: 'Cancel', 
+            {
+              $set: {
+                workStatus: 'Cancel',
                 finishDate: null,
-                updatedAt: new Date() 
-              } 
+                updatedAt: cancelNow
+              }
             },
+            { session }
+          );
+
+          // บันทึก statusHistory บน document ต้นฉบับ (มี products แน่นอน)
+          const cancelBy = req.session?.user?.username || req.user?.username || 'system';
+          await Transaction.updateOne(
+            { _id: txs[0]._id },
+            { $push: { statusHistory: { status: 'Cancel', changedBy: cancelBy, changedAt: cancelNow } } },
             { session }
           );
         });
@@ -1966,6 +2005,15 @@ router.put('/workorder/:requestId/update-status', isAuthenticated, async (req, r
       return res.status(404).json({ message: 'No transactions found to update.' });
     }
 
+    if (workStatus && workStatus !== currentStatus) {
+      const changedBy = req.session?.user?.username || req.user?.username || 'system';
+      const finalRequestId = (newRequestId && newRequestId !== requestId) ? newRequestId : requestId;
+      await Transaction.updateOne(
+        { _id: txs[0]._id },
+        { $push: { statusHistory: { status: workStatus, changedBy, changedAt: now } } }
+      );
+    }
+
     // สร้างข้อความสรุป
     let chunks = [];
     if (partialReturnResult) {
@@ -2076,12 +2124,14 @@ router.get('/public-workorder/:requestId', async (req, res) => {
 
 router.get('/get-product-details', isAuthenticated, async (req, res) => {
   try {
+    const sku = String(req.query.sku || '').trim();
     const product = await Product.findOne(
-      { sku: req.query.sku, active: { $ne: false } },
+      { sku, active: { $ne: false } },
       'description cost'
     );
     res.json({ product: product || null });
   } catch (err) {
+    console.error("❌ /get-product-details:", err);
     res.status(500).send('Error fetching product details');
   }
 });
@@ -2153,12 +2203,14 @@ router.get("/get-transaction-details", isAuthenticated, async (req, res) => {
 
 router.get('/get-product-details-in', isAuthenticated, async (req, res) => {
   try {
+    const sku = String(req.query.sku || '').trim();
     const product = await Product.findOne(
-      { sku: req.query.sku },
+      { sku },
       'description cost active'
     );
     res.json({ product: product || null });
   } catch (err) {
+    console.error("❌ /get-product-details-in:", err);
     res.status(500).send('Error fetching product details');
   }
 });
@@ -2628,7 +2680,8 @@ router.post('/update', upload.single('image'), isAuthenticated, async (req, res)
 
     if (!update_id || update_id.trim() === "") {
       console.error("🔴 update_id is missing or empty");
-      return res.render("edit-form", { product: req.body, message: "error" });
+      const machineTypeOptions = await Product.distinct('machineTypes').catch(() => []);
+      return res.render("edit-form", { product: req.body, message: "error", machineTypeOptions });
     }
 
     const product = await Product.findById(update_id);
@@ -2694,7 +2747,8 @@ router.post('/update', upload.single('image'), isAuthenticated, async (req, res)
     res.redirect(`/edit-product/${update_id}?message=success`);
   } catch (err) {
     console.error("🔴 Error updating product:", err);
-    res.render('edit-form', { product: req.body, message: 'error' });
+    const machineTypeOptions = await Product.distinct('machineTypes').catch(() => []);
+    res.render('edit-form', { product: req.body, message: 'error', machineTypeOptions });
   }
 });
 
@@ -3237,40 +3291,53 @@ router.get('/product/:sku', isAuthenticated, async (req, res) => {
 });
 
 router.get("/public-home", async (req, res) => {
-  const q = (req.query.q || "").trim();
-  const category = (req.query.category || "").trim();
+  try {
+    const q = (req.query.q || "").trim();
+    const category = (req.query.category || "").trim();
 
-  const filter = {};
-  if (category) filter.category = category;
-  if (q) filter.title = new RegExp(q, "i");
+    const filter = {};
+    if (category) filter.category = category;
+    if (q) {
+      const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.title = new RegExp(escaped, "i");
+    }
 
-  const list = await Announcement
-    .find(filter)
-    .sort({ isPinned: -1, publishedAt: -1 })
-    .lean();
+    const list = await Announcement
+      .find(filter)
+      .sort({ isPinned: -1, publishedAt: -1 })
+      .lean();
 
-  const featured = list[0] || null;
-  const posts = list.slice(1);
+    const featured = list[0] || null;
+    const posts = list.slice(1);
 
-  res.render("home-public", {
-    q,
-    category,
-    featured,
-    posts,
-    currentPage: 1,
-    totalPages: 1,
-    isAdmin: req.session?.user?.role === "admin", // ใช้ตรวจฝั่ง EJS
-  });
+    res.render("home-public", {
+      q,
+      category,
+      featured,
+      posts,
+      currentPage: 1,
+      totalPages: 1,
+      isAdmin: req.session?.user?.role === "admin",
+    });
+  } catch (err) {
+    console.error("❌ /public-home:", err);
+    res.status(500).render("404", { title: "Error", message: "เกิดข้อผิดพลาด กรุณาลองใหม่" });
+  }
 });
 
 router.get("/public-announcement/:id", async (req, res) => {
-  const post = await Announcement.findById(req.params.id).lean();
-  if (!post) return res.status(404).render("404", { message: "ไม่พบประกาศ" });
+  try {
+    const post = await Announcement.findById(req.params.id).lean();
+    if (!post) return res.status(404).render("404", { title: "ไม่พบหน้า", message: "ไม่พบประกาศ" });
 
-  res.render("announcement-detail", {
-    post,
-    isAdmin: req.session?.user?.role === "admin",
-  });
+    res.render("announcement-detail", {
+      post,
+      isAdmin: req.session?.user?.role === "admin",
+    });
+  } catch (err) {
+    console.error("❌ /public-announcement/:id:", err);
+    res.status(500).render("404", { title: "Error", message: "เกิดข้อผิดพลาด กรุณาลองใหม่" });
+  }
 });
 
 // เพิ่มประกาศ (เฉพาะ admin)

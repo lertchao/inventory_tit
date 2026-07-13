@@ -26,20 +26,18 @@
         <div class="col-lg-10 col-12">
 
           <div class="row align-items-center p-4">
-            <div class="col-3"></div>
-          
-            <div class="col-6 text-center">
+            <div class="col-12 col-md-6 text-center order-1 order-md-2">
               <h2 class="text-danger m-0">
                 Issue Parts
                 <img src="images/out-of-stock.png" alt="logo" class="img-fluid" style="max-width: 40px; vertical-align: middle;">
               </h2>
             </div>
-          
-            <div class="col-3 text-end">
-              <a href="/manual-issue-parts" class="btn btn-outline-danger">
+            <div class="col-12 col-md-3 text-center text-md-end order-2 order-md-3 mt-2 mt-md-0">
+              <a href="/manual-issue-parts" class="btn btn-outline-danger btn-sm">
                 <i class="bi bi-box-arrow-up-right me-1"></i> Manual Issue Parts
               </a>
             </div>
+            <div class="col-md-3 d-none d-md-block order-md-1"></div>
           </div>
 
           <div id="status-banner" class="alert d-none mt-2"></div>
@@ -53,7 +51,7 @@
 
               <div class="mb-3 col-md-4 col-sm-12">
                 <label class="form-label">เลขที่ใบเบิก</label>
-                <input type="text" class="form-control" placeholder="กรุณากรอกเลขที่ใบเบิก" name="repair" required>
+                <input type="text" class="form-control" placeholder="กรุณากรอกเลขที่ใบเบิก" name="repair" required style="text-transform:uppercase">
               </div>
 
               <div class="mb-3 col-md-4 col-sm-12">
@@ -103,31 +101,28 @@
               <table class="table table-bordered form_out">
                 <thead>
                   <tr class="table-dark">
-                    <th class="text-center col-sm-2">รหัสสินค้า</th>
-                    <th class="text-center col-sm-2">Description</th>
-                    <th class="text-center col-1">จำนวน</th>
-                    <th class="text-center col-1">Cost</th>
-                    <th class="text-center col-1">การดำเนินการ</th>
+                    <th class="text-center" style="min-width:140px">รหัสสินค้า</th>
+                    <th class="text-center d-none d-md-table-cell">Description</th>
+                    <th class="text-center" style="min-width:80px">จำนวน</th>
+                    <th class="text-center d-none d-md-table-cell" style="min-width:80px">Cost</th>
+                    <th class="text-center" style="min-width:60px">ลบ</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
                     <td>
                       <input type="text" class="form-control sku-input" placeholder="กรอกรหัสสินค้า" name="sku"
-                        required>
+                        required style="text-transform:uppercase">
+                      <small class="description-cell d-block d-md-none text-muted mt-1"></small>
                     </td>
-                    <td class="text-start description-cell align-middle">
-                      <!-- Description จะอัพเดตแบบ dynamic -->
-                    </td>
+                    <td class="text-start description-cell align-middle d-none d-md-table-cell"></td>
                     <td>
-                      <input type="number" class="form-control text-center" placeholder="กรอกจำนวน" name="quantity"
+                      <input type="number" class="form-control text-center" placeholder="จำนวน" name="quantity"
                         value="1" min="0" required>
                     </td>
-                    <td class="text-center cost-cell align-middle">
-                      <!-- Cost จะอัพเดตแบบ dynamic -->
-                    </td>
-                    <td class="text-center">
-                      <button type="button" class="text-center btn btn-danger btn-sm remove-row">ลบ</button>
+                    <td class="text-center cost-cell align-middle d-none d-md-table-cell"></td>
+                    <td class="text-center align-middle">
+                      <button type="button" class="btn btn-danger btn-sm remove-row">ลบ</button>
                     </td>
                   </tr>
                 </tbody>

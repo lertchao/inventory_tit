@@ -41,7 +41,7 @@
               <div class="row g-2 align-items-end">
                 <div class="col-lg-3 col-sm-12">
                   <input type="text" name="search" class="form-control" value="<%= searchQuery || '' %>"
-                    placeholder="กรอก RP number หรือ ชื่อ" />
+                    placeholder="กรอก RP number หรือ ชื่อ" style="text-transform:uppercase" />
                 </div>
 
                 <div class="col-lg-3 col-sm-12">
@@ -97,7 +97,7 @@
                   <tr>
                     <td class="row-index"></td>
                     <td class="text-start"><%= t._id %></td>
-                    <td class="text-start"><%= String(t.storeId || '').padStart(3, '0') %> - <%= t.storeName || '-' %></td>
+                    <td class="text-start" style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<%= String(t.storeId || '').padStart(3, '0') %> - <%= t.storeName || '-' %>"><%= String(t.storeId || '').padStart(3, '0') %> - <%= t.storeName || '-' %></td>
                     <td><%= t.requesterName %></td>
 
                     <!-- ✅ คีย์เรียงเป็น ISO -->

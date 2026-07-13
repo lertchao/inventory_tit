@@ -46,52 +46,6 @@
         
         
 
-        <h3 class="m-3 section-title">Pending Work</h3>
-        <canvas id="pendingWorkChart"></canvas>
-        
-        <% if (pendingWorkOrdersTable.length > 0) { %>
-          <table id="pendingTable" class="table table-bordered table-hover" style="width:100%">
-            <thead class="table-dark">
-              <tr>
-                <th>Repair Number</th>
-                <th class="text-center">Requester Name</th>
-                <th class="text-center">Store ID</th>
-                <th class="text-center">Store Name</th>
-                <th class="text-center">Total Cost</th>
-                <th class="text-center">Issue Date</th>
-                <th class="text-center">Pending (Days)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% pendingWorkOrdersTable.forEach(order => { %>
-                <tr>
-                  <td><%= order._id.requestId %></td>
-                  <td class="text-center"><%= order._id.requesterName %></td>
-                  <td class="text-center"><%= order._id.storeId ? String(order._id.storeId).padStart(3, '0') : '-' %></td>
-                  <td class="text-start"><%= order._id.storename || 'N/A' %></td>
-                  <td class="text-center"><%= order.totalCombinedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
-                  <td class="text-center"
-                  data-order="<%= order.earliestTransactionDate.toISOString().split('T')[0] %>">
-                  <%= new Date(order.earliestTransactionDate).toLocaleDateString('en-GB', {
-                  year: 'numeric', month: 'short', day: 'numeric', timeZone: 'Asia/Bangkok'
-                  }) %>
-                </td>
-              
-              
-              <td class="text-center"
-                  data-order="<%= order.pendingDays %>">
-                <%= order.pendingDays %> Days
-              </td>
-              
-                </tr>
-              <% }) %>
-            </tbody>
-          </table>
-        <% } else { %>
-          <p class="text-muted">No pending work orders available.</p>
-        <% } %>
-        
-
         <!-- Summary Cards -->
 <div class="row text-center g-3 m-3 justify-content-center">
   <div class="col-md-3">
@@ -135,6 +89,58 @@
   </div>
 </div>
 
+        <div class="card shadow-sm mx-3 mb-4">
+          <div class="card-header fw-semibold text-secondary">Pending Work by Requester</div>
+          <div class="card-body">
+            <div class="chart-wrapper">
+              <canvas id="pendingWorkChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <% if (pendingWorkOrdersTable.length > 0) { %>
+          <table id="pendingTable" class="table table-bordered table-hover" style="width:100%">
+            <thead class="table-dark">
+              <tr>
+                <th>Repair Number</th>
+                <th class="text-center">Requester Name</th>
+                <th class="text-center">Store ID</th>
+                <th class="text-center">Store Name</th>
+                <th class="text-center">Total Cost</th>
+                <th class="text-center">Issue Date</th>
+                <th class="text-center">Pending (Days)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% pendingWorkOrdersTable.forEach(order => { %>
+                <tr>
+                  <td><%= order._id.requestId %></td>
+                  <td class="text-center"><%= order._id.requesterName %></td>
+                  <td class="text-center"><%= order._id.storeId ? String(order._id.storeId).padStart(3, '0') : '-' %></td>
+                  <td class="text-start"><%= order._id.storename || 'N/A' %></td>
+                  <td class="text-center"><%= order.totalCombinedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
+                  <td class="text-center"
+                  data-order="<%= order.earliestTransactionDate.toISOString().split('T')[0] %>">
+                  <%= new Date(order.earliestTransactionDate).toLocaleDateString('en-GB', {
+                  year: 'numeric', month: 'short', day: 'numeric', timeZone: 'Asia/Bangkok'
+                  }) %>
+                </td>
+              
+              
+              <td class="text-center"
+                  data-order="<%= order.pendingDays %>">
+                <%= order.pendingDays %> Days
+              </td>
+              
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        <% } else { %>
+          <p class="text-muted">No pending work orders available.</p>
+        <% } %>
+        
+
 
                 <!-- Parts Movement Today -->
                 <div>
@@ -159,7 +165,7 @@
                         <tr>
                           <td><%= index + 1 %></td>
                           <td class="text-start"><%= item._id.partId %></td>
-                          <td class="text-start"><%= item._id.partName %></td>
+                          <td class="text-start" style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<%= item._id.partName %>"><%= item._id.partName %></td>
                           <td class="text-center">
                             <% if (item.totalIn > 0) { %><span class="badge in-badge"><%= item.totalIn %></span><% } %>
                           </td>
@@ -214,7 +220,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
   <script type="application/json" id="pendingWorkOrdersData">
-    <%- JSON.stringify(pendingWorkOrders || []) %>
+    <%- JSON.stringify(pendingWorkOrders || []).replace(/</g, '\\u003c') %>
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 

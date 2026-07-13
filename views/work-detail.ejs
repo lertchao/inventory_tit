@@ -48,7 +48,7 @@
 
         <div class="col-md-3 col-sm-6">
           <label for="newRequestId" class="form-label fw-bold">เลขที่ใบเบิก</label>
-          <input id="newRequestId" class="form-control" value="<%= requestId %>" />
+          <input id="newRequestId" class="form-control" value="<%= requestId %>" style="text-transform:uppercase" />
         </div>
 
         <div class="col-md-2 col-sm-6">
@@ -79,6 +79,21 @@
         Created At: <%= transactions[0].createdAtFormatted %><br />
         Last Updated: <%= transactions[0].updatedAtFormatted %>
       </div>
+
+      <% if (statusHistory && statusHistory.length > 0) { %>
+      <div class="mt-3">
+        <p class="text-muted small mb-1"><i class="bi bi-clock-history me-1"></i>Status History</p>
+        <% statusHistory.forEach(function(h) {
+          const dotColor = h.status === 'Finish' ? '#198754' :
+                           h.status === 'Cancel' ? '#dc3545' : '#ffc107';
+        %>
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <span style="width:8px;height:8px;border-radius:50%;background:<%= dotColor %>;flex-shrink:0;"></span>
+          <span class="text-muted small"><%= h.status %> — <%= h.changedAt %> by <%= h.changedBy %></span>
+        </div>
+        <% }); %>
+      </div>
+      <% } %>
     </div>
 
     <div id="alertMessage" class="alert d-none alert-dismissible fade show mt-3 text-center" role="alert">
@@ -251,9 +266,10 @@
   });
 %>
 
-<script id="cancelReturnData" type="application/json"><%- JSON.stringify(cancelReturn || []) %></script>
+<script id="cancelReturnData" type="application/json"><%- JSON.stringify(cancelReturn || []).replace(/</g, '\\u003c') %></script>
 <script>
   const cancelReturnItems = JSON.parse(document.getElementById('cancelReturnData').textContent || '[]');
+  const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 </script>
 
     <!-- Summary table -->
@@ -323,10 +339,10 @@
           <thead class="table-light">
             <tr>
               <th class="text-center col-1">#</th>
-              <th class="text-center col-3">SKU</th>
-              <th class="text-center col-4">Description</th>
-              <th class="text-center col-2">Issue Qty</th>
-              <th class="text-center col-2">ลบ</th>
+              <th class="text-center" style="min-width:140px">SKU</th>
+              <th class="text-center d-none d-md-table-cell">Description</th>
+              <th class="text-center" style="min-width:90px">Issue Qty</th>
+              <th class="text-center" style="min-width:60px">ลบ</th>
             </tr>
           </thead>
           <tbody id="addOutTbody">
@@ -548,44 +564,48 @@
       const tr = document.createElement('tr');
       tr.className = 'data-row';
       tr.innerHTML = `
-        <td class="seq text-center"></td>
-        <td class="text-center">
-          <input type="text" class="form-control sku-input" placeholder="ระบุ SKU" value="${prefill.sku || ''}" />
+        <td class="seq text-center align-top pt-2"></td>
+        <td class="align-top">
+          <input type="text" class="form-control sku-input" placeholder="ระบุ SKU" value="${prefill.sku || ''}" style="text-transform:uppercase" />
+          <small class="description-cell d-block d-md-none text-muted text-start mt-1"></small>
         </td>
-        <td class="description-cell"></td>
-        <td class="text-center">
+        <td class="description-cell align-top d-none d-md-table-cell"></td>
+        <td class="text-center align-top">
           <input type="number" class="form-control qty-input text-center" min="1" step="1" value="${prefill.quantity || 1}" inputmode="numeric" pattern="[0-9]*" style="max-width:120px;margin:0 auto;text-align:center;" />
         </td>
-        <td class="text-center btn-cell"></td>
+        <td class="text-center align-top btn-cell"></td>
       `;
 
       const skuInput = tr.querySelector('.sku-input');
       const qtyInput = tr.querySelector('.qty-input');
-      const descCell = tr.querySelector('.description-cell');
+      const descCells = tr.querySelectorAll('.description-cell');
       const btnCell = tr.querySelector('.btn-cell');
 
+      function setDesc(text, cls) {
+        descCells.forEach(el => {
+          el.textContent = text;
+          el.classList.remove('text-danger', 'text-dark', 'text-muted');
+          el.classList.add(cls || 'text-muted');
+        });
+      }
+
       function setInvalid() {
-        descCell.textContent = 'ไม่พบข้อมูล SKU';
-        descCell.classList.remove('text-dark'); 
-        descCell.classList.add('text-danger');
+        setDesc('ไม่พบข้อมูล SKU', 'text-danger');
         tr.dataset.valid = '0';
         tr.dataset.sku = '';
         tr.dataset.description = '';
       }
       function setValid(data) {
-        descCell.textContent = data.description || '';
-        descCell.classList.remove('text-danger'); 
-        descCell.classList.add('text-dark');
+        setDesc(data.description || '', 'text-dark');
         tr.dataset.valid = '1';
         tr.dataset.sku = data.sku;
         tr.dataset.description = data.description || '';
       }
 
       async function validateSkuLive(value) {
-        const sku = (value ?? '').trim();
+        const sku = (value ?? '').trim().toUpperCase();
         if (!sku) {
-          descCell.textContent = '';
-          descCell.classList.remove('text-danger','text-dark');
+          setDesc('', 'text-muted');
           tr.dataset.valid = '0';
           tr.dataset.sku = '';
           tr.dataset.description = '';
@@ -622,22 +642,27 @@
     async function validateAllAddOutRows() {
       const rows = Array.from(addOutTbody.querySelectorAll('tr.data-row'));
       const jobs = rows.map(async tr => {
-        const sku = (tr.querySelector('.sku-input')?.value || '').trim();
-        const descCell = tr.querySelector('.description-cell');
+        const sku = (tr.querySelector('.sku-input')?.value || '').trim().toUpperCase();
+        const descCells = tr.querySelectorAll('.description-cell');
+        const setDesc = (text, cls) => descCells.forEach(el => {
+          el.textContent = text;
+          el.classList.remove('text-danger', 'text-dark', 'text-muted');
+          el.classList.add(cls || 'text-muted');
+        });
         if (!sku) {
           tr.dataset.valid = '0';
-          if (descCell) { descCell.textContent = ''; descCell.classList.remove('text-dark'); }
+          setDesc('', 'text-muted');
           return;
         }
         const data = await fetchProductBySku(sku);
         if (!data) {
           tr.dataset.valid = '0';
-          if (descCell) { descCell.textContent = 'ไม่พบข้อมูล SKU'; descCell.classList.add('text-danger'); }
+          setDesc('ไม่พบข้อมูล SKU', 'text-danger');
         } else {
           tr.dataset.valid = '1';
           tr.dataset.sku = data.sku;
           tr.dataset.description = data.description || '';
-          if (descCell) { descCell.textContent = data.description || ''; descCell.classList.add('text-dark'); }
+          setDesc(data.description || '', 'text-dark');
         }
       });
       return Promise.all(jobs);
@@ -648,7 +673,7 @@
       const map = new Map(); // sku -> { sku, quantity, description }
       rows.forEach(tr => {
         const valid = tr.dataset.valid === '1';
-        const sku = (tr.dataset.sku || tr.querySelector('.sku-input')?.value || '').trim();
+        const sku = (tr.dataset.sku || tr.querySelector('.sku-input')?.value || '').trim().toUpperCase();
         const qty = parseInt(tr.querySelector('.qty-input')?.value || '0', 10);
         const description = tr.dataset.description || '';
 
@@ -682,8 +707,8 @@
           const tr = document.createElement('tr');
           tr.innerHTML = `
             <td class="text-center">${idx + 1}</td>
-            <td>${it.sku}</td>
-            <td>${it.description || ''}</td>
+            <td>${esc(it.sku)}</td>
+            <td>${esc(it.description)}</td>
             <td class="text-center">${netNow}</td>
             <td class="text-center">${it.quantity}</td>
             <td class="text-center">${netAfter}</td>
@@ -701,8 +726,8 @@
           const tr = document.createElement('tr');
           tr.innerHTML = `
             <td class="text-center">${idx + 1}</td>
-            <td>${it.sku}</td>
-            <td>${it.description || ''}</td>
+            <td>${esc(it.sku)}</td>
+            <td>${esc(it.description)}</td>
             <td class="text-center">${netNow}</td>
             <td class="text-center">${qtyRet}</td>
             <td class="text-center">${netAfter}</td>
@@ -715,7 +740,7 @@
     // ===== API glue =====
     async function sendUpdate(force = false, extra = {}) {
       const newStatus = workStatusSelect.value;
-      const newRequestId = reqIdInput.value.trim();
+      const newRequestId = reqIdInput.value.trim().toUpperCase();
       const requesterName = requesterInput.value.trim();
       const storeId = storeIdInput.value.trim();
 
@@ -810,8 +835,8 @@
             const tr = document.createElement('tr');
             tr.innerHTML = `
               <td class="text-center">${idx + 1}</td>
-              <td>${it.sku}</td>
-              <td>${it.description || ''}</td>
+              <td>${esc(it.sku)}</td>
+              <td>${esc(it.description)}</td>
               <td class="text-center">${it.qty}</td>`;
             tbody.appendChild(tr);
           });

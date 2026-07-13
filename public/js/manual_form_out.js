@@ -37,15 +37,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
   document.addEventListener("input", function (event) {
     if (event.target.classList.contains("sku-input")) {
-      const sku = event.target.value.trim();
+      const sku = event.target.value.trim().toUpperCase();
       const row = event.target.closest("tr");
-      const descriptionCell = row.querySelector(".description-cell");
+      const descriptionCells = row.querySelectorAll(".description-cell");
       const costCell = row.querySelector(".cost-cell");
 
+      const setDesc = (text, cls) => descriptionCells.forEach(el => {
+        el.textContent = text;
+        el.classList.remove("text-danger", "text-dark", "text-muted");
+        el.classList.add(cls || "text-muted");
+      });
+
       if (!sku) {
-        descriptionCell.textContent = "";
+        setDesc("", null);
         costCell.textContent = "";
-        descriptionCell.classList.remove("text-danger", "text-dark");
         costCell.classList.remove("text-danger", "text-dark");
         validateDuplicateSkusOUT();
         return;
@@ -55,18 +60,12 @@ document.addEventListener("DOMContentLoaded", function () {
         .then((res) => res.json())
         .then((data) => {
           if (data && data.product) {
-            descriptionCell.textContent = data.product.description || "ไม่พบข้อมูล";
-            descriptionCell.classList.remove("text-danger");
-            descriptionCell.classList.add("text-dark");
-
+            setDesc(data.product.description || "ไม่พบข้อมูล", "text-dark");
             costCell.textContent = new Intl.NumberFormat().format(data.product.cost || 0);
             costCell.classList.remove("text-danger");
             costCell.classList.add("text-dark");
           } else {
-            descriptionCell.textContent = "ไม่พบข้อมูล SKU";
-            descriptionCell.classList.remove("text-dark");
-            descriptionCell.classList.add("text-danger");
-
+            setDesc("ไม่พบข้อมูล SKU", "text-danger");
             costCell.textContent = "ไม่พบข้อมูล";
             costCell.classList.remove("text-dark");
             costCell.classList.add("text-danger");
@@ -75,8 +74,7 @@ document.addEventListener("DOMContentLoaded", function () {
         })
         .catch((err) => {
           console.error("Error fetching product details:", err);
-          descriptionCell.textContent = "เกิดข้อผิดพลาด";
-          descriptionCell.classList.add("text-danger");
+          setDesc("เกิดข้อผิดพลาด", "text-danger");
           costCell.textContent = "เกิดข้อผิดพลาด";
           costCell.classList.add("text-danger");
           validateDuplicateSkusOUT();
@@ -116,14 +114,15 @@ document.addEventListener("DOMContentLoaded", function () {
     const newRow = `
       <tr>
         <td>
-          <input type="text" class="form-control sku-input" placeholder="กรอกรหัสสินค้า" name="sku" required>
+          <input type="text" class="form-control sku-input" placeholder="กรอกรหัสสินค้า" name="sku" required style="text-transform:uppercase">
+          <small class="description-cell d-block d-md-none text-muted mt-1"></small>
         </td>
-        <td class="text-start align-middle description-cell"></td>
+        <td class="text-start align-middle description-cell d-none d-md-table-cell"></td>
         <td>
-          <input type="number" class="form-control text-center" placeholder="กรอกจำนวน" name="quantity" value="1" min="1" required>
+          <input type="number" class="form-control text-center" placeholder="จำนวน" name="quantity" value="1" min="1" required>
         </td>
-        <td class="text-center align-middle cost-cell"></td>
-        <td class="text-center">
+        <td class="text-center align-middle cost-cell d-none d-md-table-cell"></td>
+        <td class="text-center align-middle">
           <button type="button" class="btn btn-danger btn-sm remove-row">ลบ</button>
         </td>
       </tr>
@@ -208,7 +207,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const costEl = row.querySelector(".cost-cell");
 
         return {
-          sku: skuEl?.value.trim() || "",
+          sku: (skuEl?.value.trim() || "").toUpperCase(),
           description: descEl?.textContent.trim() || "",
           quantity: parseInt(qtyEl?.value, 10),
           cost: parseFloat((costEl?.textContent || "0").replace(/,/g, "")) || 0,

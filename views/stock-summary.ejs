@@ -50,9 +50,9 @@
               <% summary.forEach(item => { %>
                 <tr>
                   <td class="text-start"><%= item.sku %></td>
-                  <td><%= item.description %></td>
+                  <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<%= item.description %>"><%= item.description %></td>
                   <td class="text-center"><%= item.type %></td>
-                  <td class="text-center">
+                  <td class="text-center" style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<%= (item.machineTypes && item.machineTypes.length > 0) ? item.machineTypes.join(', ') : '-' %>">
                     <%= (item.machineTypes && item.machineTypes.length > 0) ? item.machineTypes.join(", ") : "-" %>
                   </td>
                   <td class="text-end">
