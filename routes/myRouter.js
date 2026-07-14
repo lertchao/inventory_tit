@@ -3092,7 +3092,8 @@ router.get('/api/requesters', isAuthenticated, isAdmin, async (req, res) => {
       id: String(d._id),
       shortName: d.shortName,
       aliases: d.aliases || [],
-      active: !!d.active
+      active: !!d.active,
+      isFSE: !!d.isFSE
     })));
   } catch (err) {
     console.error('GET /api/requesters error:', err);
@@ -3130,7 +3131,7 @@ router.post('/api/requesters', isAuthenticated, isAdmin, async (req, res) => {
 
 router.patch('/api/requesters/:id', isAuthenticated, isAdmin, async (req, res) => {
   try {
-    const { shortName, aliases = '', active } = req.body;
+    const { shortName, aliases = '', active, isFSE } = req.body;
 
     const update = {};
     if (shortName) update.shortName = shortName.trim();
@@ -3141,6 +3142,7 @@ router.patch('/api/requesters/:id', isAuthenticated, isAdmin, async (req, res) =
         .filter(a => a !== '');
     }
     if (active !== undefined) update.active = !!active;
+    if (isFSE !== undefined) update.isFSE = !!isFSE;
 
     const doc = await Requester.findByIdAndUpdate(req.params.id, update, { new: true });
     if (!doc) return res.status(404).json({ ok: false, message: 'ไม่พบ requester นี้' });

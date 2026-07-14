@@ -62,9 +62,13 @@
             <input type="text" id="aliases" class="form-control" placeholder="เช่น Aoddy, Aod-CHP">
             <div class="form-text">เอาไว้จับสะกดชื่อเก่า/ชื่อจริงหรืออื่นๆในอนาคต (ไม่จำเป็น) </div>
           </div>
-          <div class="form-check">
+          <div class="form-check mb-2">
             <input class="form-check-input" type="checkbox" id="active" checked />
             <label class="form-check-label" for="active">Active</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="isFSE" />
+            <label class="form-check-label" for="isFSE">FSE (Field Service Engineer / ช่าง)</label>
           </div>
         </form>
       </div>
@@ -116,9 +120,10 @@
           <thead>
             <tr class="table-dark">
               <th class="text-center col-3">Name</th>
-              <th class="text-center col-5">Suffix</th>
+              <th class="text-center col-4">Suffix</th>
+              <th class="text-center col-1">FSE</th>
               <th class="text-center col-1">สถานะ</th>
-              <th class="text-center col-2">จัดการสถานะ</th>
+              <th class="text-center col-1">จัดการสถานะ</th>
               <th class="text-center col-1">แก้ไข</th>
               <th class="text-center col-1">ลบ</th>
             </tr>
@@ -201,6 +206,15 @@
         <td class="text-start">${escapeHtml(item.shortName || '')}</td>
         <td class="text-start">${aliasHtml || '<span class="text-muted">-</span>'}</td>
         <td class="text-center">
+          <button class="btn btn-sm btn-toggle-fse" data-id="${item.id}"
+            style="font-size:.75rem;padding:2px 8px;border-radius:12px;
+              ${item.isFSE
+                ? 'background:#0d6efd;color:#fff;border:1.5px solid #0d6efd;'
+                : 'background:transparent;color:#6c757d;border:1.5px solid #ced4da;'}">
+            ${item.isFSE ? 'FSE ✓' : 'FSE'}
+          </button>
+        </td>
+        <td class="text-center">
           ${item.active
             ? '<span class="badge bg-success">Active</span>'
             : '<span class="badge bg-secondary">Inactive</span>'}
@@ -249,6 +263,7 @@
     document.getElementById('shortName').value = data.shortName || '';
     document.getElementById('aliases').value = (data.aliases || []).join(', ');
     document.getElementById('active').checked = data.active !== undefined ? !!data.active : true;
+    document.getElementById('isFSE').checked = !!data.isFSE;
   }
 
   function getForm() {
@@ -256,7 +271,8 @@
       id: document.getElementById('_id').value,
       shortName: document.getElementById('shortName').value.trim(),
       aliases: document.getElementById('aliases').value.trim(),
-      active: document.getElementById('active').checked
+      active: document.getElementById('active').checked,
+      isFSE: document.getElementById('isFSE').checked
     };
   }
 
@@ -299,6 +315,22 @@
       document.getElementById('reqModalLabel').textContent = 'แก้ไขผู้เบิก';
       showAlertIn('#reqModalAlert', 'info', '', 1);
       reqModal.show();
+    });
+
+    // Toggle FSE
+    $('#reqTbody').addEventListener('click', async (e) => {
+      const btn = e.target.closest('.btn-toggle-fse');
+      if (!btn) return;
+      const id = btn.getAttribute('data-id');
+      try {
+        const res = await fetchJSON(`/api/requesters/${id}/toggle-fse`, { method: 'POST' });
+        showAlert('success', res.isFSE ? 'กำหนด FSE เรียบร้อย' : 'ยกเลิก FSE เรียบร้อย');
+        const list = await fetchJSON('/api/requesters?active=');
+        cache = Array.isArray(list) ? list : (list.results || []);
+        applyFilter();
+      } catch (err) {
+        showAlert('danger', err.message || 'อัปเดตไม่สำเร็จ');
+      }
     });
 
     // Toggle active

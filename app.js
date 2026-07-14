@@ -2,6 +2,7 @@ const express = require('express')
 const path = require('path')
 const mongoose = require('mongoose');
 const router = require('./routes/myRouter')
+const miniStockRouter = require('./routes/miniStockRouter')
 const app = express()
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
@@ -58,6 +59,7 @@ app.set('views',path.join(__dirname,'views'))
 app.set('view engine', 'ejs')
 //app.use(express.urlencoded({extended:false}))
 app.use(router)
+app.use(miniStockRouter)
 app.use(express.static(path.join(__dirname,'public')))
 
 app.use((req, res) => {

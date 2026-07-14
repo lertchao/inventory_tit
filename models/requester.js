@@ -4,8 +4,9 @@ const requesterSchema = new mongoose.Schema({
   // รหัส/ชื่อย่อที่ใช้ในระบบ (แนะนำให้เป็น key หลักที่คนคุ้นเคย)
   shortName: { type: String, required: true, trim: true, unique: true },
 
-  // เปิด/ปิดใช้งาน (soft delete)
   active: { type: Boolean, default: true },
+
+  isFSE: { type: Boolean, default: false },
 
   // ไว้ map ชื่อเก่า/สะกดผิด ให้ค้นเจอง่ายในอนาคต
   aliases: [{ type: String, trim: true }]
