@@ -68,8 +68,18 @@ function ensureStatusOptionAndSelect(selectEl, status) {
 }
 
 // ── Source toggle helpers ──────────────────────────────────────────────────
+function getCurrentRequester() {
+  // ดึงชื่อผู้เบิกที่เลือกอยู่ตอนนี้
+  const sel = document.getElementById('requesterName');
+  return (sel ? (sel.value || '').trim() : '');
+}
+
 function renderSourceToggle(cell, rowId) {
-  const fseOptions = __FSES__.map(f => `<option value="${f}">${f}</option>`).join('');
+  const currentFSE = getCurrentRequester();
+  const fseOptions = __FSES__.map(f =>
+    `<option value="${f}" ${f === currentFSE ? 'selected' : ''}>${f}</option>`
+  ).join('');
+
   cell.innerHTML = `
     <div class="d-flex align-items-center gap-1 flex-wrap">
       <div class="btn-group btn-group-sm" role="group">
@@ -94,6 +104,15 @@ function renderSourceToggle(cell, rowId) {
         fseSelect.value = '';
       }
     });
+  });
+}
+
+// เมื่อเปลี่ยนชื่อผู้เบิก → sync FSE ในทุก source toggle ที่มีอยู่
+function syncFSEToRequester() {
+  const name = getCurrentRequester();
+  document.querySelectorAll('.fse-select').forEach(sel => {
+    const hasOption = Array.from(sel.options).some(o => o.value === name);
+    if (hasOption) sel.value = name;
   });
 }
 

@@ -233,6 +233,11 @@ $(document).ready(function () {
 
   // กันกด Enter แล้ว submit
   $('#requesterName').on('keypress', function (e) { if (e.which === 13) e.preventDefault(); });
+
+  // เมื่อเลือกชื่อผู้เบิก → sync FSE dropdown
+  $('#requesterName').on('change', function () {
+    if (typeof syncFSEToRequester === 'function') syncFSEToRequester();
+  });
 });
 
 
