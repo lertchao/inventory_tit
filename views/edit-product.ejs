@@ -91,9 +91,9 @@
               <% products.forEach(function(item) { %>
                 <tr>
                   <td class="text-start"><%= item.sku %></td>
-                  <td class="text-start"><%= item.description %></td>
-                  <td class="text-center"><%= item.typeparts || '-' %></td> 
-                  <td class="text-center">
+                  <td class="text-start" style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<%= item.description %>"><%= item.description %></td>
+                  <td class="text-center"><%= item.typeparts || '-' %></td>
+                  <td class="text-center" style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<%= (Array.isArray(item.machineTypes) && item.machineTypes.length > 0) ? item.machineTypes.join(', ') : '-' %>">
                     <% if (Array.isArray(item.machineTypes) && item.machineTypes.length > 0) { %>
                       <%= item.machineTypes.join(', ') %>
                     <% } else { %>

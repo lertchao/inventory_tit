@@ -241,7 +241,7 @@
               <tr>
                 <td class="text-center align-middle"><%= idx + 1 %></td>
                 <td class="text-center align-middle"><%= sku %></td>
-                <td class="align-middle"><%= summary[sku].description %></td>
+                <td class="align-middle" style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<%= summary[sku].description %>"><%= summary[sku].description %></td>
                 <td class="text-center align-middle"><%= net %></td>
                 <td class="text-center align-middle">
                   <%= cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>

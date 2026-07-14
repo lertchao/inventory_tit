@@ -114,24 +114,17 @@
             <tbody>
               <% pendingWorkOrdersTable.forEach(order => { %>
                 <tr>
-                  <td><%= order._id.requestId %></td>
-                  <td class="text-center"><%= order._id.requesterName %></td>
-                  <td class="text-center"><%= order._id.storeId ? String(order._id.storeId).padStart(3, '0') : '-' %></td>
-                  <td class="text-start"><%= order._id.storename || 'N/A' %></td>
-                  <td class="text-center"><%= order.totalCombinedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
-                  <td class="text-center"
-                  data-order="<%= order.earliestTransactionDate.toISOString().split('T')[0] %>">
-                  <%= new Date(order.earliestTransactionDate).toLocaleDateString('en-GB', {
-                  year: 'numeric', month: 'short', day: 'numeric', timeZone: 'Asia/Bangkok'
-                  }) %>
-                </td>
-              
-              
-              <td class="text-center"
-                  data-order="<%= order.pendingDays %>">
-                <%= order.pendingDays %> Days
-              </td>
-              
+                  <td style="white-space:nowrap;"><%= order._id.requestId %></td>
+                  <td class="text-center" style="white-space:nowrap;"><%= order._id.requesterName %></td>
+                  <td class="text-center" style="white-space:nowrap;"><%= order._id.storeId ? String(order._id.storeId).padStart(3, '0') : '-' %></td>
+                  <td class="text-start" style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<%= order._id.storename || 'N/A' %>"><%= order._id.storename || 'N/A' %></td>
+                  <td class="text-center" style="white-space:nowrap;"><%= order.totalCombinedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
+                  <td class="text-center" style="white-space:nowrap;" data-order="<%= order.earliestTransactionDate.toISOString().split('T')[0] %>">
+                    <%= new Date(order.earliestTransactionDate).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'Asia/Bangkok' }) %>
+                  </td>
+                  <td class="text-center" style="white-space:nowrap;" data-order="<%= order.pendingDays %>">
+                    <%= order.pendingDays %> Days
+                  </td>
                 </tr>
               <% }) %>
             </tbody>

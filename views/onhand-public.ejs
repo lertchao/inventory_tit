@@ -47,6 +47,21 @@
       justify-content: center;
       font-size: 1rem;
     }
+    @media (max-width: 576px) {
+      .pagination .page-link {
+        min-width: 36px;
+        min-height: 36px;
+        font-size: 0.85rem;
+        padding: 0.25rem 0.4rem;
+      }
+      nav[aria-label="Page navigation"] {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .pagination {
+        flex-wrap: nowrap;
+      }
+    }
 
     /* ===== Filter switches ===== */
     .form-check-input { width: 2.5em; height: 1.4em; }
@@ -221,7 +236,9 @@
             </a>
           </li>
         </ul>
-        <p class="text-center text-muted small">หน้าที่ <%= current %> / <%= pages %></p>
+      </nav>
+
+      <p class="text-center text-muted small">หน้าที่ <%= current %> / <%= pages %></p>
       </nav>
 
     </div>

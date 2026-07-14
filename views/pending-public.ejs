@@ -85,19 +85,19 @@
 
                   <tr>
 
-                    <td>
+                    <td style="white-space:nowrap;">
                       <%= order._id.requestId %>
                     </td>
 
-                    <td class="text-center">
+                    <td class="text-center" style="white-space:nowrap;">
                       <%= order._id.requesterName %>
                     </td>
 
-                    <td class="text-center">
+                    <td class="text-center" style="white-space:nowrap;">
                       <%= order._id.storeId ? String(order._id.storeId).padStart(3,'0') : '-' %>
                     </td>
 
-                    <td class="text-start">
+                    <td class="text-start" style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<%= order._id.storename || 'N/A' %>">
                       <%= order._id.storename || 'N/A' %>
                     </td>
 
