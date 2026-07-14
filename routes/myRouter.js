@@ -5,6 +5,7 @@ const Transaction = require('../models/transaction')
 const Store = require('../models/store')
 const Requester = require('../models/requester')
 const Announcement = require('../models/announcement')
+const MiniStockTx = require('../models/miniStockTransaction')
 const Sequence = require("../models/Sequence")
 const fs = require('fs');
 const path = require('path');
@@ -2127,7 +2128,7 @@ router.get('/get-product-details', isAuthenticated, async (req, res) => {
     const sku = String(req.query.sku || '').trim();
     const product = await Product.findOne(
       { sku, active: { $ne: false } },
-      'description cost'
+      'description cost inMiniStock'
     );
     res.json({ product: product || null });
   } catch (err) {
@@ -2425,11 +2426,28 @@ router.post('/add_trans-out', isAuthenticated, isAdmin, async (req, res) => {
         });
       }
 
-      if ((product.quantity || 0) < quantity) {
-        insufficientStock.push({
-          sku,
-          available: product.quantity || 0
-        });
+      if (item.fromMiniStock) {
+        // ── Mini Stock: ตรวจ FSE และ balance ──
+        const fseName = (item.fseName || '').trim();
+        if (!fseName) {
+          return res.status(400).json({ alert: `SKU: ${sku} → กรุณาเลือก FSE สำหรับ Mini Stock` });
+        }
+        const fseDoc = await Requester.findOne({ shortName: fseName, isFSE: true, active: true }).session(session);
+        if (!fseDoc) {
+          return res.status(400).json({ alert: `ไม่พบ FSE "${fseName}" ในระบบ` });
+        }
+        const txs = await MiniStockTx.find({ fse: fseName, sku }).session(session).lean();
+        const balance = txs.reduce((s, t) => s + (t.type === 'TRANSFER' ? t.quantity : -t.quantity), 0);
+        if (balance < quantity) {
+          return res.status(400).json({
+            alert: `Mini Stock ของ ${fseName} / ${sku} ไม่พอ (มี ${balance} ชิ้น ต้องการ ${quantity})`
+          });
+        }
+      } else {
+        // ── Shelf: ตรวจจำนวนคงเหลือ ──
+        if ((product.quantity || 0) < quantity) {
+          insufficientStock.push({ sku, available: product.quantity || 0 });
+        }
       }
     }
 
@@ -2443,24 +2461,36 @@ router.post('/add_trans-out', isAuthenticated, isAdmin, async (req, res) => {
       });
     }
 
-    // ✅ ตัดสต็อก
+    // ✅ ตัดสต็อก (เฉพาะ Shelf items)
     for (const item of products) {
+      if (item.fromMiniStock) continue;
       const sku = item.sku.trim();
       const quantity = Number(item.quantity);
-
       await Product.updateOne(
-        {
-          sku,
-          active: { $ne: false }
-        },
-        {
-          $inc: { quantity: -quantity }
-        },
+        { sku, active: { $ne: false } },
+        { $inc: { quantity: -quantity } },
         { session }
       );
     }
 
-    // ✅ บันทึก transaction OUT
+    // ✅ สร้าง MiniStockTx USAGE สำหรับ mini-stock items
+    for (const item of products) {
+      if (!item.fromMiniStock) continue;
+      const fseName = (item.fseName || '').trim();
+      const product = await Product.findOne({ sku: item.sku.trim() }).session(session).lean();
+      await MiniStockTx.create([{
+        type: 'USAGE',
+        fse: fseName,
+        sku: item.sku.trim(),
+        description: item.description || product?.description || '',
+        quantity: Number(item.quantity),
+        workOrderId: repairTrim,
+        createdBy: req.user?.username || req.session?.user?.username || 'system',
+        replenished: false
+      }], { session });
+    }
+
+    // ✅ บันทึก transaction OUT (ทุก item รวมอยู่ใน transaction เดียว)
     await Transaction.create([{
       requesterName: nameTrim,
       requestId: repairTrim,
@@ -2470,7 +2500,10 @@ router.post('/add_trans-out', isAuthenticated, isAdmin, async (req, res) => {
       storeId: storeIdNum,
       products: products.map(p => ({
         sku: p.sku.trim(),
-        quantity: Number(p.quantity)
+        quantity: Number(p.quantity),
+        description: p.description || '',
+        fromMiniStock: !!p.fromMiniStock,
+        fseName: p.fromMiniStock ? (p.fseName || '').trim() : undefined
       })),
       username: req.user.username
     }], { session });
@@ -3060,6 +3093,7 @@ router.get('/api/requesters', isAuthenticated, isAdmin, async (req, res) => {
     const cond = {};
     if (active === 'true')  cond.active = true;
     if (active === 'false') cond.active = false;
+    if (req.query.isFSE === 'true') cond.isFSE = true;
 
     if (q && q.trim()) {
       const kw = q.trim();

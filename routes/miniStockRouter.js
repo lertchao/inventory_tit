@@ -25,7 +25,7 @@ router.get('/mini-stock', isAuthenticated, isAdmin, async (req, res) => {
   try {
     const [fses, products, balanceMap, pending] = await Promise.all([
       Requester.find({ isFSE: true, active: true }).sort('shortName').lean(),
-      Product.find({ inMiniStock: true, active: true }).sort('sku').lean(),
+      Product.find({ inMiniStock: true, active: { $ne: false } }).sort('sku').lean(),
       computeBalanceMap(),
       MiniStockTx.find({ type: 'USAGE', replenished: false }).sort({ createdAt: -1 }).lean()
     ]);
@@ -54,6 +54,16 @@ router.get('/mini-stock', isAuthenticated, isAdmin, async (req, res) => {
 });
 
 // ── API ───────────────────────────────────────────────────────────────────────
+
+// GET /api/mini-stock/fses   (JSON list of active FSE names)
+router.get('/api/mini-stock/fses', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const fses = await Requester.find({ isFSE: true, active: true }).sort('shortName').lean();
+    res.json(fses.map(f => f.shortName));
+  } catch (err) {
+    res.status(500).json({ ok: false, message: err.message });
+  }
+});
 
 // GET /api/mini-stock/balance   (JSON)
 router.get('/api/mini-stock/balance', isAuthenticated, isAdmin, async (req, res) => {

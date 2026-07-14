@@ -2,6 +2,8 @@
 
 // ===== Cancel guard helpers (global) =====
 let __IS_CANCELED__ = false;
+let __FSES__ = [];   // active FSE names, loaded once on page load
+let __rowCounter__ = 0; // unique id per row for radio button names
 
 // ✅ แปลงรหัสสาขาให้เป็น 3 หลัก เช่น 9 => 009, 53 => 053
 function formatStoreId(storeId) {
@@ -65,7 +67,53 @@ function ensureStatusOptionAndSelect(selectEl, status) {
   selectEl.value = status;
 }
 
+// ── Source toggle helpers ──────────────────────────────────────────────────
+function renderSourceToggle(cell, rowId) {
+  const fseOptions = __FSES__.map(f => `<option value="${f}">${f}</option>`).join('');
+  cell.innerHTML = `
+    <div class="d-flex align-items-center gap-1 flex-wrap">
+      <div class="btn-group btn-group-sm" role="group">
+        <input type="radio" class="btn-check source-radio" name="src_${rowId}" id="shelf_${rowId}" value="shelf" checked autocomplete="off">
+        <label class="btn btn-outline-primary py-0 px-2" for="shelf_${rowId}" style="font-size:.8rem">Shelf</label>
+        <input type="radio" class="btn-check source-radio" name="src_${rowId}" id="mini_${rowId}" value="mini" autocomplete="off">
+        <label class="btn btn-outline-warning py-0 px-2" for="mini_${rowId}" style="font-size:.8rem">Mini Stock</label>
+      </div>
+      <select class="form-select form-select-sm fse-select d-none" style="min-width:90px;font-size:.8rem">
+        <option value="">-- FSE --</option>
+        ${fseOptions}
+      </select>
+    </div>`;
+
+  cell.querySelectorAll('.source-radio').forEach(radio => {
+    radio.addEventListener('change', () => {
+      const fseSelect = cell.querySelector('.fse-select');
+      if (radio.value === 'mini' && radio.checked) {
+        fseSelect.classList.remove('d-none');
+      } else if (radio.value === 'shelf' && radio.checked) {
+        fseSelect.classList.add('d-none');
+        fseSelect.value = '';
+      }
+    });
+  });
+}
+
+function getSourceFromCell(cell) {
+  if (!cell) return { fromMiniStock: false, fseName: '' };
+  const miniRadio = cell.querySelector('input[value="mini"]');
+  if (miniRadio && miniRadio.checked) {
+    const fseName = cell.querySelector('.fse-select')?.value || '';
+    return { fromMiniStock: true, fseName };
+  }
+  return { fromMiniStock: false, fseName: '' };
+}
+
 document.addEventListener("DOMContentLoaded", function () {
+  // Load FSE list once
+  fetch('/api/mini-stock/fses')
+    .then(r => r.json())
+    .then(data => { if (Array.isArray(data)) __FSES__ = data; })
+    .catch(() => {});
+
   function updateRemoveButtons() {
     const rows = document.querySelectorAll("table tbody tr");
     const removeButtons = document.querySelectorAll(".remove-row");
@@ -87,6 +135,8 @@ document.addEventListener("DOMContentLoaded", function () {
         el.classList.add(cls || "text-muted");
       });
 
+      const sourceCell = row.querySelector('.source-cell');
+
       if (sku) {
         fetch(`/get-product-details?sku=${encodeURIComponent(sku)}`)
           .then((response) => response.json())
@@ -97,11 +147,26 @@ document.addEventListener("DOMContentLoaded", function () {
               costCell.classList.add("text-dark");
               costCell.textContent =
                 new Intl.NumberFormat().format(data.product.cost) || "ไม่พบข้อมูล";
+
+              // Show source toggle only for inMiniStock SKUs
+              if (sourceCell) {
+                if (data.product.inMiniStock) {
+                  if (!sourceCell.querySelector('.source-radio')) {
+                    const rowId = ++__rowCounter__;
+                    row.dataset.rowId = rowId;
+                    renderSourceToggle(sourceCell, rowId);
+                  }
+                } else {
+                  sourceCell.innerHTML = '';
+                  delete row.dataset.rowId;
+                }
+              }
             } else {
               setDesc("ไม่พบข้อมูล SKU", "text-danger");
               costCell.textContent = "ไม่พบข้อมูล";
               costCell.classList.remove("text-dark");
               costCell.classList.add("text-danger");
+              if (sourceCell) sourceCell.innerHTML = '';
             }
           })
           .catch((error) => {
@@ -109,10 +174,12 @@ document.addEventListener("DOMContentLoaded", function () {
             setDesc("เกิดข้อผิดพลาด", "text-danger");
             costCell.textContent = "เกิดข้อผิดพลาด";
             costCell.classList.add("text-danger");
+            if (sourceCell) sourceCell.innerHTML = '';
           });
       } else {
         setDesc("", null);
         costCell.textContent = "";
+        if (sourceCell) sourceCell.innerHTML = '';
       }
     }
   });
@@ -162,6 +229,7 @@ document.addEventListener("DOMContentLoaded", function () {
           <input type="number" class="form-control text-center" placeholder="จำนวน" name="quantity" value="1" required>
         </td>
         <td class="text-center align-middle cost-cell d-none d-md-table-cell"></td>
+        <td class="source-cell align-middle"></td>
         <td class="text-center align-middle">
           <button type="button" class="btn btn-danger btn-sm remove-row">ลบ</button>
         </td>
@@ -380,17 +448,35 @@ document.addEventListener("DOMContentLoaded", function () {
           const descEl = row.querySelector(".description-cell");
           const qtyEl = row.querySelector('[name="quantity"]');
           const costEl = row.querySelector(".cost-cell");
+          const sourceCell = row.querySelector(".source-cell");
 
           if (!skuEl || !descEl || !qtyEl || !costEl) return null;
+
+          const { fromMiniStock, fseName } = getSourceFromCell(sourceCell);
 
           return {
             sku: skuEl.value.trim().toUpperCase(),
             description: descEl.textContent.trim(),
             quantity: parseInt(qtyEl.value, 10),
             cost: parseFloat(costEl.textContent.replace(/,/g, "")) || 0,
+            fromMiniStock,
+            fseName
           };
         })
         .filter(Boolean);
+
+      // Validate: mini-stock items must have FSE selected
+      const missingFSE = products.filter(p => p.fromMiniStock && !p.fseName);
+      if (missingFSE.length > 0) {
+        submitButton.disabled = false;
+        submitButton.innerHTML = "บันทึกข้อมูล";
+        alertContainer.innerHTML = `
+          <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <strong>กรุณาเลือก FSE</strong> สำหรับรายการ Mini Stock: ${missingFSE.map(p => p.sku).join(", ")}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>`;
+        return;
+      }
 
       fetch("/add_trans-out", {
         method: "POST",
