@@ -150,6 +150,17 @@
       </div>
       <p class="px-3 text-muted small">การใช้ของจาก Mini Stock ให้บันทึกผ่านหน้า <strong>Issue Parts</strong> โดยเลือก Source เป็น "Mini Stock"</p>
 
+      <!-- FSE Filter Pills (global — filters both tabs) -->
+      <div class="fse-pills px-3 mb-3">
+        <button class="fse-pill fse-pill-all active" data-fse="">ทั้งหมด</button>
+        <% fses.forEach(f => { %>
+          <button class="fse-pill" data-fse="<%= f.shortName %>">
+            <span class="fse-dot" data-fse="<%= f.shortName %>"></span>
+            <%= f.shortName %>
+          </button>
+        <% }) %>
+      </div>
+
       <!-- Tabs -->
       <ul class="nav nav-tabs px-3" id="mainTab" role="tablist">
         <li class="nav-item" role="presentation">
@@ -173,16 +184,6 @@
 
         <!-- ── Balance Tab ─────────────────────────────────────── -->
         <div class="tab-pane fade show active" id="balanceTab" role="tabpanel">
-          <div class="fse-pills mb-3">
-            <button class="fse-pill fse-pill-all active" data-fse="">ทั้งหมด</button>
-            <% fses.forEach(f => { %>
-              <button class="fse-pill" data-fse="<%= f.shortName %>">
-                <span class="fse-dot" data-fse="<%= f.shortName %>"></span>
-                <%= f.shortName %>
-              </button>
-            <% }) %>
-          </div>
-
           <% if (balanceRows.length === 0) { %>
             <div class="alert alert-info">ยังไม่มีข้อมูล Mini Stock — เริ่มต้นด้วยการโอนของจาก Shelf</div>
           <% } else { %>
@@ -219,7 +220,7 @@
             <div class="alert alert-success"><i class="bi bi-check-circle me-2"></i>ไม่มีรายการรอ Replenish</div>
           <% } else { %>
           <div class="table-responsive">
-            <table class="table table-bordered table-hover table-sm">
+            <table class="table table-bordered table-hover table-sm" id="pendingTable">
               <thead class="table-dark">
                 <tr>
                   <th class="text-center">วันที่</th>
@@ -353,7 +354,7 @@
         updatePillStyle(this);
 
         const val = this.dataset.fse;
-        document.querySelectorAll('#balanceTable tbody tr').forEach(tr => {
+        document.querySelectorAll('#balanceTable tbody tr, #pendingTable tbody tr').forEach(tr => {
           tr.style.display = (!val || tr.dataset.fse === val) ? '' : 'none';
         });
       });
