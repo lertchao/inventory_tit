@@ -13,6 +13,12 @@
     .table thead th { vertical-align: middle; white-space: nowrap; }
     .fse-tag { display: inline-flex; align-items: center; gap: 5px; font-size: .82rem; font-weight: 500; color: #333; }
     .fse-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .fse-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+    .fse-pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border: 1.5px solid #dee2e6; border-radius: 999px; font-size: .82rem; cursor: pointer; user-select: none; background: #fff; transition: background .15s, border-color .15s; white-space: nowrap; }
+    .fse-pill:hover { border-color: #adb5bd; background: #f8f9fa; }
+    .fse-pill.active { background: #f0f0f0; border-color: #868e96; font-weight: 600; }
+    .fse-pill-all { color: #495057; }
+    .fse-pill-all.active { background: #212529; border-color: #212529; color: #fff; }
     .pending-badge { font-size: .72rem; }
     .shelf-low { color: #dc3545; font-weight: 600; }
     .shelf-ok { color: #198754; }
@@ -167,16 +173,14 @@
 
         <!-- ── Balance Tab ─────────────────────────────────────── -->
         <div class="tab-pane fade show active" id="balanceTab" role="tabpanel">
-          <div class="row g-2 mb-3 align-items-end">
-            <div class="col-md-4 col-12">
-              <label class="form-label small text-muted mb-1">กรอง FSE</label>
-              <select id="fseFilter" class="form-select form-select-sm">
-                <option value="">แสดงทุก FSE</option>
-                <% fses.forEach(f => { %>
-                  <option value="<%= f.shortName %>"><%= f.shortName %></option>
-                <% }) %>
-              </select>
-            </div>
+          <div class="fse-pills mb-3">
+            <button class="fse-pill fse-pill-all active" data-fse="">ทั้งหมด</button>
+            <% fses.forEach(f => { %>
+              <button class="fse-pill" data-fse="<%= f.shortName %>">
+                <span class="fse-dot" data-fse="<%= f.shortName %>"></span>
+                <%= f.shortName %>
+              </button>
+            <% }) %>
           </div>
 
           <% if (balanceRows.length === 0) { %>
@@ -299,13 +303,62 @@
     return data;
   }
 
-  // ── Balance filter ────────────────────────────────────────────
-  document.getElementById('fseFilter').addEventListener('change', function () {
-    const val = this.value;
-    document.querySelectorAll('#balanceTable tbody tr').forEach(tr => {
-      tr.style.display = (!val || tr.dataset.fse === val) ? '' : 'none';
+  // ── FSE dot colors + pill filter ─────────────────────────────
+  (function () {
+    const PALETTE = ['#5b8dee','#e0634a','#3daf7f','#a665c8','#d4903a','#4db8c4','#c45f8a','#7d8f3e'];
+    const fseColorMap = {};
+    let idx = 0;
+
+    // assign color per FSE name
+    document.querySelectorAll('[data-fse]').forEach(el => {
+      const name = el.dataset.fse;
+      if (!name) return;
+      if (!fseColorMap[name]) fseColorMap[name] = PALETTE[idx++ % PALETTE.length];
     });
-  });
+
+    // paint all dots
+    document.querySelectorAll('.fse-dot[data-fse]').forEach(dot => {
+      const c = fseColorMap[dot.dataset.fse];
+      if (c) dot.style.backgroundColor = c;
+    });
+    document.querySelectorAll('.fse-tag .fse-dot').forEach(dot => {
+      const name = dot.closest('.fse-tag')?.dataset.fse;
+      if (name && fseColorMap[name]) dot.style.backgroundColor = fseColorMap[name];
+    });
+
+    // paint active pill border color
+    function updatePillStyle(pill) {
+      const name = pill.dataset.fse;
+      if (pill.classList.contains('fse-pill-all')) return;
+      const c = fseColorMap[name];
+      if (!c) return;
+      if (pill.classList.contains('active')) {
+        pill.style.borderColor = c;
+        pill.style.background = c + '18';
+      } else {
+        pill.style.borderColor = '';
+        pill.style.background = '';
+      }
+    }
+
+    // pill click filter
+    document.querySelectorAll('.fse-pill').forEach(pill => {
+      updatePillStyle(pill);
+      pill.addEventListener('click', function () {
+        document.querySelectorAll('.fse-pill').forEach(p => {
+          p.classList.remove('active');
+          updatePillStyle(p);
+        });
+        this.classList.add('active');
+        updatePillStyle(this);
+
+        const val = this.dataset.fse;
+        document.querySelectorAll('#balanceTable tbody tr').forEach(tr => {
+          tr.style.display = (!val || tr.dataset.fse === val) ? '' : 'none';
+        });
+      });
+    });
+  })();
 
   // ── Transfer: show shelf qty when SKU changes ─────────────────
   document.getElementById('tfSKU').addEventListener('change', function () {
@@ -390,18 +443,6 @@
       _replenishTarget = null;
     }
   });
-
-  // ── FSE dot colors ───────────────────────────────────────────
-  (function () {
-    const PALETTE = ['#5b8dee','#e0634a','#3daf7f','#a665c8','#d4903a','#4db8c4','#c45f8a','#7d8f3e'];
-    const fseColorMap = {};
-    let idx = 0;
-    document.querySelectorAll('.fse-tag').forEach(tag => {
-      const name = tag.dataset.fse;
-      if (!fseColorMap[name]) fseColorMap[name] = PALETTE[idx++ % PALETTE.length];
-      tag.querySelector('.fse-dot').style.backgroundColor = fseColorMap[name];
-    });
-  })();
 
   // ── Reset transfer modal on close ────────────────────────────
   document.getElementById('transferModal').addEventListener('hidden.bs.modal', () => {
