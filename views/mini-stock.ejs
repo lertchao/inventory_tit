@@ -67,57 +67,6 @@
   </div>
 </div>
 
-<!-- ─── Usage Modal ────────────────────────────────────────────── -->
-<div class="modal fade" id="usageModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header bg-warning">
-        <h5 class="modal-title"><i class="bi bi-wrench me-2"></i>บันทึกการใช้งานจาก Mini Stock</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div id="usageAlert"></div>
-        <div class="mb-3">
-          <label class="form-label fw-bold">FSE (ช่าง)</label>
-          <select id="uFSE" class="form-select">
-            <option value="">-- เลือก FSE --</option>
-            <% fses.forEach(f => { %>
-              <option value="<%= f.shortName %>"><%= f.shortName %></option>
-            <% }) %>
-          </select>
-        </div>
-        <div class="mb-3">
-          <label class="form-label fw-bold">SKU</label>
-          <select id="uSKU" class="form-select">
-            <option value="">-- เลือก SKU --</option>
-            <% products.forEach(p => { %>
-              <option value="<%= p.sku %>" data-desc="<%= p.description %>">
-                <%= p.sku %> — <%= p.description.length > 40 ? p.description.substring(0,40)+'…' : p.description %>
-              </option>
-            <% }) %>
-          </select>
-        </div>
-        <div class="mb-3">
-          <label class="form-label fw-bold">จำนวน</label>
-          <input type="number" id="uQty" class="form-control" min="1" value="1">
-        </div>
-        <div class="mb-3">
-          <label class="form-label fw-bold">Work Order ID <span class="text-danger">*</span></label>
-          <input type="text" id="uWorkOrder" class="form-control" placeholder="เช่น RP25/001">
-        </div>
-        <div class="mb-2">
-          <label class="form-label">Note (ไม่จำเป็น)</label>
-          <input type="text" id="uNote" class="form-control" placeholder="หมายเหตุ">
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-        <button class="btn btn-warning" id="btnUsageSave">บันทึก</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- ─── Main Layout ────────────────────────────────────────────── -->
 <div class="container-fluid">
   <div class="row">
@@ -139,10 +88,11 @@
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#transferModal">
           <i class="bi bi-arrow-right-circle me-1"></i> โอนจาก Shelf → FSE
         </button>
-        <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#usageModal">
-          <i class="bi bi-wrench me-1"></i> บันทึกการใช้งาน
-        </button>
+        <a href="/trans-out" class="btn btn-outline-secondary">
+          <i class="bi bi-box-arrow-up me-1"></i> ไปหน้า Issue Parts
+        </a>
       </div>
+      <p class="px-3 text-muted small">การใช้ของจาก Mini Stock ให้บันทึกผ่านหน้า <strong>Issue Parts</strong> โดยเลือก Source เป็น "Mini Stock"</p>
 
       <!-- Tabs -->
       <ul class="nav nav-tabs px-3" id="mainTab" role="tablist">
@@ -190,7 +140,6 @@
                   <th>SKU</th>
                   <th>Description</th>
                   <th class="text-center">Balance</th>
-                  <th class="text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -202,12 +151,6 @@
                     <%= row.description %>
                   </td>
                   <td class="text-center fw-semibold <%= row.qty < 0 ? 'text-danger' : '' %>"><%= row.qty %></td>
-                  <td class="text-center">
-                    <button class="btn btn-sm btn-warning btn-record-usage"
-                      data-fse="<%= row.fse %>" data-sku="<%= row.sku %>">
-                      บันทึกการใช้
-                    </button>
-                  </td>
                 </tr>
                 <% }) %>
               </tbody>
@@ -312,19 +255,6 @@
     });
   });
 
-  // ── Quick-fill usage modal from balance table ─────────────────
-  document.addEventListener('click', function (e) {
-    const btn = e.target.closest('.btn-record-usage');
-    if (!btn) return;
-    document.getElementById('uFSE').value = btn.dataset.fse;
-    document.getElementById('uSKU').value = btn.dataset.sku;
-    document.getElementById('uQty').value = 1;
-    document.getElementById('uWorkOrder').value = '';
-    document.getElementById('uNote').value = '';
-    document.getElementById('usageAlert').innerHTML = '';
-    new bootstrap.Modal('#usageModal').show();
-  });
-
   // ── Transfer: show shelf qty when SKU changes ─────────────────
   document.getElementById('tfSKU').addEventListener('change', function () {
     const opt = this.options[this.selectedIndex];
@@ -364,33 +294,6 @@
     }
   });
 
-  // ── Usage save ────────────────────────────────────────────────
-  document.getElementById('btnUsageSave').addEventListener('click', async function () {
-    const fse = document.getElementById('uFSE').value;
-    const sku = document.getElementById('uSKU').value;
-    const qty = document.getElementById('uQty').value;
-    const workOrderId = document.getElementById('uWorkOrder').value;
-    const note = document.getElementById('uNote').value;
-
-    if (!fse || !sku || !qty || !workOrderId) {
-      return showAlertIn('usageAlert', 'warning', 'กรุณากรอกข้อมูลให้ครบ (รวม Work Order ID)');
-    }
-    this.disabled = true;
-    try {
-      const res = await fetchJSON('/api/mini-stock/usage', {
-        method: 'POST',
-        body: JSON.stringify({ fse, sku, quantity: qty, workOrderId, note })
-      });
-      bootstrap.Modal.getInstance(document.getElementById('usageModal')).hide();
-      showAlert('success', res.message);
-      setTimeout(() => location.reload(), 800);
-    } catch (err) {
-      showAlertIn('usageAlert', 'danger', err.message);
-    } finally {
-      this.disabled = false;
-    }
-  });
-
   // ── Replenish ─────────────────────────────────────────────────
   document.addEventListener('click', async function (e) {
     const btn = e.target.closest('.btn-replenish');
@@ -410,7 +313,7 @@
     }
   });
 
-  // ── Reset modals on close ─────────────────────────────────────
+  // ── Reset transfer modal on close ────────────────────────────
   document.getElementById('transferModal').addEventListener('hidden.bs.modal', () => {
     document.getElementById('tfFSE').value = '';
     document.getElementById('tfSKU').value = '';
@@ -418,14 +321,6 @@
     document.getElementById('tfNote').value = '';
     document.getElementById('tfShelfInfo').textContent = '';
     document.getElementById('transferAlert').innerHTML = '';
-  });
-  document.getElementById('usageModal').addEventListener('hidden.bs.modal', () => {
-    document.getElementById('uFSE').value = '';
-    document.getElementById('uSKU').value = '';
-    document.getElementById('uQty').value = 1;
-    document.getElementById('uWorkOrder').value = '';
-    document.getElementById('uNote').value = '';
-    document.getElementById('usageAlert').innerHTML = '';
   });
 </script>
 </body>
