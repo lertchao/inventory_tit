@@ -9,16 +9,16 @@ const Sequence = require('../models/Sequence');
 const Store = require('../models/store');
 const { isAuthenticated, isAdmin } = require('../middleware/auth');
 
-async function generateMiniStockRequestId(session) {
+async function generateMiniStockRequestId(fse, session) {
   const now = new Date();
   const yyyymm = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const key = `MINI-TRANSFER-${yyyymm}`;
+  const key = `MINI-${fse}-${yyyymm}`;
   const counter = await Sequence.findOneAndUpdate(
     { key },
     { $inc: { seq: 1 } },
     { new: true, upsert: true, session }
   );
-  return `MST-${yyyymm}-${String(counter.seq).padStart(4, '0')}`;
+  return `Mini_${fse}-${yyyymm}-${String(counter.seq).padStart(4, '0')}`;
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -119,7 +119,7 @@ router.post('/api/mini-stock/transfer', isAuthenticated, isAdmin, async (req, re
     await product.save({ session });
 
     const [requestId, store903] = await Promise.all([
-      generateMiniStockRequestId(session),
+      generateMiniStockRequestId(fse, session),
       Store.findOne({ storeId: 903 }).lean()
     ]);
 
