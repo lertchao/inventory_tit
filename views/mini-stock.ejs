@@ -11,7 +11,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
     .table thead th { vertical-align: middle; white-space: nowrap; }
-    .badge-fse { background: #0d6efd; color: #fff; font-size: .72rem; padding: 2px 7px; border-radius: 10px; }
+    .fse-tag { display: inline-flex; align-items: center; gap: 5px; font-size: .82rem; font-weight: 500; color: #333; }
+    .fse-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
     .pending-badge { font-size: .72rem; }
     .shelf-low { color: #dc3545; font-weight: 600; }
     .shelf-ok { color: #198754; }
@@ -194,7 +195,7 @@
               <tbody>
                 <% balanceRows.forEach(row => { %>
                 <tr data-fse="<%= row.fse %>">
-                  <td class="text-center"><span class="badge-fse"><%= row.fse %></span></td>
+                  <td class="text-center"><span class="fse-tag" data-fse="<%= row.fse %>"><span class="fse-dot"></span><%= row.fse %></span></td>
                   <td class="text-start"><%= row.sku %></td>
                   <td class="text-start" style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<%= row.description %>">
                     <%= row.description %>
@@ -235,7 +236,7 @@
                 %>
                 <tr>
                   <td class="text-center text-nowrap small"><%= dateStr %></td>
-                  <td class="text-center"><span class="badge-fse"><%= p.fse %></span></td>
+                  <td class="text-center"><span class="fse-tag" data-fse="<%= p.fse %>"><span class="fse-dot"></span><%= p.fse %></span></td>
                   <td class="text-start text-nowrap"><%= p.sku %></td>
                   <td class="text-start" style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<%= p.description %>">
                     <%= p.description %>
@@ -389,6 +390,18 @@
       _replenishTarget = null;
     }
   });
+
+  // ── FSE dot colors ───────────────────────────────────────────
+  (function () {
+    const PALETTE = ['#5b8dee','#e0634a','#3daf7f','#a665c8','#d4903a','#4db8c4','#c45f8a','#7d8f3e'];
+    const fseColorMap = {};
+    let idx = 0;
+    document.querySelectorAll('.fse-tag').forEach(tag => {
+      const name = tag.dataset.fse;
+      if (!fseColorMap[name]) fseColorMap[name] = PALETTE[idx++ % PALETTE.length];
+      tag.querySelector('.fse-dot').style.backgroundColor = fseColorMap[name];
+    });
+  })();
 
   // ── Reset transfer modal on close ────────────────────────────
   document.getElementById('transferModal').addEventListener('hidden.bs.modal', () => {
