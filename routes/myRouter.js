@@ -1278,7 +1278,13 @@ router.get("/transaction", isAuthenticated, async (req, res) => {
                   $cond: [
                     { $eq: ["$transactionType", "IN"] },
                     "$products.quantity",
-                    { $multiply: ["$products.quantity", -1] }
+                    {
+                      $cond: [
+                        { $eq: ["$products.fromMiniStock", true] },
+                        0,
+                        { $multiply: ["$products.quantity", -1] }
+                      ]
+                    }
                   ]
                 }
               }
@@ -1313,7 +1319,7 @@ router.get("/transaction", isAuthenticated, async (req, res) => {
         const sku = product.sku;
         if (transaction.transactionType === "IN") {
           skuBalances[sku] = (skuBalances[sku] || 0) + product.quantity;
-        } else if (transaction.transactionType === "OUT") {
+        } else if (transaction.transactionType === "OUT" && !product.fromMiniStock) {
           skuBalances[sku] = (skuBalances[sku] || 0) - product.quantity;
         }
         return {
