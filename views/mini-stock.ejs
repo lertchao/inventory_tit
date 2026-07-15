@@ -67,6 +67,55 @@
   </div>
 </div>
 
+<!-- ─── Replenish Confirm Modal ─────────────────────────────────── -->
+<div class="modal fade" id="replenishModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title"><i class="bi bi-arrow-repeat me-2"></i>ยืนยันการ Replenish</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-3 text-muted small">ระบบจะหักสต็อก <strong>Shelf</strong> และโอนกลับเข้า Mini Stock ของ FSE</p>
+        <table class="table table-sm table-bordered mb-0">
+          <tbody>
+            <tr>
+              <th class="table-light text-nowrap" style="width:35%">FSE</th>
+              <td id="rpFSE" class="fw-semibold"></td>
+            </tr>
+            <tr>
+              <th class="table-light">SKU</th>
+              <td id="rpSKU" class="font-monospace"></td>
+            </tr>
+            <tr>
+              <th class="table-light">Description</th>
+              <td id="rpDesc" class="text-muted small"></td>
+            </tr>
+            <tr>
+              <th class="table-light">จำนวน</th>
+              <td><span id="rpQty" class="badge bg-warning text-dark fs-6"></span> ชิ้น</td>
+            </tr>
+            <tr>
+              <th class="table-light">Work Order</th>
+              <td id="rpWO" class="font-monospace small"></td>
+            </tr>
+            <tr>
+              <th class="table-light">On Shelf</th>
+              <td><span id="rpShelf"></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+        <button class="btn btn-success" id="btnReplenishConfirm">
+          <i class="bi bi-check-circle me-1"></i> ยืนยัน Replenish
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ─── Main Layout ────────────────────────────────────────────── -->
 <div class="container-fluid">
   <div class="row">
@@ -204,6 +253,8 @@
                       data-sku="<%= p.sku %>"
                       data-qty="<%= p.quantity %>"
                       data-wo="<%= p.workOrderId || '' %>"
+                      data-desc="<%= (p.description || '').replace(/"/g, '&quot;') %>"
+                      data-shelf="<%= p.shelfQty %>"
                       <%= canReplenish ? '' : 'disabled title="Shelf ไม่พอ"' %>>
                       Replenish
                     </button>
@@ -295,14 +346,37 @@
   });
 
   // ── Replenish ─────────────────────────────────────────────────
-  document.addEventListener('click', async function (e) {
+  let _replenishTarget = null;
+
+  document.addEventListener('click', function (e) {
     const btn = e.target.closest('.btn-replenish');
     if (!btn || btn.disabled) return;
-    const { id, fse, sku, qty, wo } = btn.dataset;
-    const label = `${fse} / ${sku} × ${qty}${wo ? ` (${wo})` : ''}`;
-    if (!confirm(`Replenish: ${label}\nจะหักสต็อก Shelf ${qty} ชิ้น ยืนยัน?`)) return;
 
+    const { id, fse, sku, qty, wo, desc, shelf } = btn.dataset;
+    _replenishTarget = { id, btn };
+
+    document.getElementById('rpFSE').textContent  = fse;
+    document.getElementById('rpSKU').textContent  = sku;
+    document.getElementById('rpDesc').textContent = desc || '-';
+    document.getElementById('rpQty').textContent  = qty;
+    document.getElementById('rpWO').textContent   = wo || '-';
+
+    const shelfNum = parseInt(shelf ?? btn.closest('tr')?.querySelector('.shelf-ok, .shelf-low')?.textContent ?? 0, 10);
+    const shelfEl = document.getElementById('rpShelf');
+    shelfEl.textContent = shelfNum + ' ชิ้น';
+    shelfEl.className = shelfNum >= parseInt(qty, 10) ? 'text-success fw-semibold' : 'text-danger fw-semibold';
+
+    bootstrap.Modal.getOrCreate(document.getElementById('replenishModal')).show();
+  });
+
+  document.getElementById('btnReplenishConfirm').addEventListener('click', async function () {
+    if (!_replenishTarget) return;
+    const { id, btn } = _replenishTarget;
+
+    this.disabled = true;
     btn.disabled = true;
+    bootstrap.Modal.getInstance(document.getElementById('replenishModal')).hide();
+
     try {
       const res = await fetchJSON(`/api/mini-stock/replenish/${id}`, { method: 'POST' });
       showAlert('success', res.message);
@@ -310,6 +384,9 @@
     } catch (err) {
       showAlert('danger', err.message);
       btn.disabled = false;
+    } finally {
+      this.disabled = false;
+      _replenishTarget = null;
     }
   });
 
