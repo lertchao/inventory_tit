@@ -2786,6 +2786,19 @@ router.post('/update', upload.single('image'), isAuthenticated, async (req, res)
 });
 
 
+router.put('/products/:id/toggle-mini-stock', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ success: false });
+    product.inMiniStock = !product.inMiniStock;
+    await product.save();
+    res.json({ success: true, inMiniStock: product.inMiniStock });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false });
+  }
+});
+
 router.put('/products/:id/toggle-active', isAuthenticated, isAdmin, async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);

@@ -83,6 +83,7 @@
                 <th class="text-center">Cost Piece</th>
                 <th class="text-center">สถานะ</th>
                 <th class="col-1 text-center">จัดการสถานะ</th>
+                <th class="text-center">Mini Stock</th>
                 <th class="text-center">แก้ไข</th>
                 <th class="text-center">ลบ</th>
               </tr>
@@ -118,6 +119,20 @@
                         ปิดใช้งาน
                       <% } else { %>
                         เปิดใช้งาน
+                      <% } %>
+                    </button>
+                  </td>
+
+                  <td class="text-center">
+                    <button
+                      class="btn btn-sm toggle-mini-stock-btn <%= item.inMiniStock ? 'btn-primary' : 'btn-outline-secondary' %>"
+                      data-id="<%= item._id %>"
+                      title="<%= item.inMiniStock ? 'อยู่ใน Mini Stock' : 'ไม่ได้อยู่ใน Mini Stock' %>"
+                    >
+                      <% if (item.inMiniStock) { %>
+                        <i class="bi bi-box-seam-fill"></i> Mini
+                      <% } else { %>
+                        <i class="bi bi-box-seam"></i>
                       <% } %>
                     </button>
                   </td>
@@ -211,6 +226,24 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+
+  document.querySelectorAll(".toggle-mini-stock-btn").forEach(btn => {
+    btn.addEventListener("click", async function () {
+      const id = this.dataset.id;
+      try {
+        const res = await fetch(`/products/${id}/toggle-mini-stock`, { method: "PUT" });
+        const data = await res.json();
+        if (data.success) {
+          location.reload();
+        } else {
+          alert("อัพเดต Mini Stock ไม่สำเร็จ");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("เกิด error");
+      }
+    });
+  });
 
   document.querySelectorAll(".toggle-active-btn").forEach(btn => {
     btn.addEventListener("click", async function () {
