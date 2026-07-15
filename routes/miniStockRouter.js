@@ -51,15 +51,28 @@ router.get('/mini-stock', isAuthenticated, isAdmin, async (req, res) => {
     const shelfMap = Object.fromEntries(shelfProducts.map(p => [p.sku, p.quantity]));
     const pendingEnriched = pending.map(p => ({ ...p, shelfQty: shelfMap[p.sku] ?? 0 }));
 
+    // enrich balance rows with cost from product master
+    const balanceSkus = [...new Set(Object.values(balanceMap).map(r => r.sku))];
+    const costProducts = await Product.find({ sku: { $in: balanceSkus } }, 'sku cost').lean();
+    const costMap = Object.fromEntries(costProducts.map(p => [p.sku, p.cost || 0]));
+
     const balanceRows = Object.values(balanceMap)
       .filter(r => r.qty !== 0)
+      .map(r => ({ ...r, cost: costMap[r.sku] || 0, value: (costMap[r.sku] || 0) * r.qty }))
       .sort((a, b) => a.fse.localeCompare(b.fse) || a.sku.localeCompare(b.sku));
+
+    const totalValue = balanceRows.reduce((s, r) => s + r.value, 0);
+    const totalQty   = balanceRows.reduce((s, r) => s + r.qty, 0);
+    const totalSkus  = new Set(balanceRows.map(r => r.sku)).size;
 
     res.render('mini-stock', {
       fses,
       products,
       balanceRows,
       pending: pendingEnriched,
+      totalValue,
+      totalQty,
+      totalSkus,
       user: req.session.user
     });
   } catch (err) {

@@ -152,6 +152,28 @@
       </div>
       <p class="px-3 text-muted small">การใช้ของจาก Mini Stock ให้บันทึกผ่านหน้า <strong>Issue Parts</strong> โดยเลือก Source เป็น "Mini Stock"</p>
 
+      <!-- KPI Cards -->
+      <div class="px-3 mb-3 row g-3">
+        <div class="col-md-4 col-6">
+          <div class="border rounded p-3 text-center">
+            <div class="text-muted small mb-1">มูลค่ารวม Mini Stock</div>
+            <div class="fw-bold fs-5 text-primary"><%= new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totalValue) %> ฿</div>
+          </div>
+        </div>
+        <div class="col-md-4 col-6">
+          <div class="border rounded p-3 text-center">
+            <div class="text-muted small mb-1">จำนวนชิ้นรวม</div>
+            <div class="fw-bold fs-5"><%= new Intl.NumberFormat().format(totalQty) %> ชิ้น</div>
+          </div>
+        </div>
+        <div class="col-md-4 col-6">
+          <div class="border rounded p-3 text-center">
+            <div class="text-muted small mb-1">SKU ที่มีใน Mini Stock</div>
+            <div class="fw-bold fs-5"><%= totalSkus %> รายการ</div>
+          </div>
+        </div>
+      </div>
+
       <!-- FSE Filter Pills (global — filters both tabs) -->
       <div class="fse-pills px-3 mb-3">
         <button class="fse-pill fse-pill-all active" data-fse="">ทั้งหมด</button>
@@ -189,6 +211,9 @@
           <% if (balanceRows.length === 0) { %>
             <div class="alert alert-info">ยังไม่มีข้อมูล Mini Stock — เริ่มต้นด้วยการโอนของจาก Shelf</div>
           <% } else { %>
+          <div class="mb-2">
+            <input type="text" id="balanceSearch" class="form-control form-control-sm" placeholder="ค้นหา SKU หรือ Description…" style="max-width:320px">
+          </div>
           <div class="table-responsive">
             <table class="table table-bordered table-hover table-sm" id="balanceTable">
               <thead class="table-dark">
@@ -197,17 +222,19 @@
                   <th>SKU</th>
                   <th>Description</th>
                   <th class="text-center">Balance</th>
+                  <th class="text-center">มูลค่า (฿)</th>
                 </tr>
               </thead>
               <tbody>
                 <% balanceRows.forEach(row => { %>
-                <tr data-fse="<%= row.fse %>">
+                <tr data-fse="<%= row.fse %>" data-sku="<%= row.sku.toLowerCase() %>" data-desc="<%= row.description.toLowerCase() %>">
                   <td class="text-center"><span class="fse-tag" data-fse="<%= row.fse %>"><span class="fse-dot"></span><%= row.fse %></span></td>
                   <td class="text-start"><%= row.sku %></td>
                   <td class="text-start" style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<%= row.description %>">
                     <%= row.description %>
                   </td>
                   <td class="text-center fw-semibold <%= row.qty < 0 ? 'text-danger' : '' %>"><%= row.qty %></td>
+                  <td class="text-end text-nowrap small"><%= new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(row.value) %></td>
                 </tr>
                 <% }) %>
               </tbody>
@@ -356,9 +383,18 @@
         updatePillStyle(this);
 
         const val = this.dataset.fse;
-        document.querySelectorAll('#balanceTable tbody tr, #pendingTable tbody tr').forEach(tr => {
+        // pending table filter
+        document.querySelectorAll('#pendingTable tbody tr').forEach(tr => {
           tr.style.display = (!val || tr.dataset.fse === val) ? '' : 'none';
         });
+        // balance table: delegate to search filter (handles FSE + text together)
+        if (typeof window.__applyBalanceFilter === 'function') {
+          window.__applyBalanceFilter();
+        } else {
+          document.querySelectorAll('#balanceTable tbody tr').forEach(tr => {
+            tr.style.display = (!val || tr.dataset.fse === val) ? '' : 'none';
+          });
+        }
       });
     });
   })();
@@ -435,6 +471,26 @@
       _replenishTarget = null;
     }
   });
+
+  // ── Balance search ────────────────────────────────────────────
+  (function () {
+    const searchEl = document.getElementById('balanceSearch');
+    if (!searchEl) return;
+    searchEl.addEventListener('input', applyBalanceFilter);
+
+    function applyBalanceFilter() {
+      const q = searchEl.value.toLowerCase().trim();
+      const activeFSE = document.querySelector('.fse-pill.active')?.dataset.fse || '';
+      document.querySelectorAll('#balanceTable tbody tr').forEach(tr => {
+        const fseMatch = !activeFSE || tr.dataset.fse === activeFSE;
+        const textMatch = !q || tr.dataset.sku.includes(q) || tr.dataset.desc.includes(q);
+        tr.style.display = (fseMatch && textMatch) ? '' : 'none';
+      });
+    }
+
+    // expose so FSE pill click can call it too
+    window.__applyBalanceFilter = applyBalanceFilter;
+  })();
 
   // ── Reset transfer modal on close ────────────────────────────
   document.getElementById('transferModal').addEventListener('hidden.bs.modal', () => {
