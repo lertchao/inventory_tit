@@ -239,7 +239,7 @@
                      const dateStr = d.toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric', timeZone:'Asia/Bangkok' });
                      const canReplenish = p.shelfQty >= p.quantity;
                 %>
-                <tr>
+                <tr data-fse="<%= p.fse %>">
                   <td class="text-center text-nowrap small"><%= dateStr %></td>
                   <td class="text-center"><span class="fse-tag" data-fse="<%= p.fse %>"><span class="fse-dot"></span><%= p.fse %></span></td>
                   <td class="text-start text-nowrap"><%= p.sku %></td>
