@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="icon" href="/images/storage.png" sizes="32x32">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
   <style>
     .table thead th { vertical-align: middle; white-space: nowrap; }
     .fse-tag { display: inline-flex; align-items: center; gap: 5px; font-size: .82rem; font-weight: 500; color: #333; }
@@ -362,22 +364,11 @@
   })();
 
   // ── Transfer: show shelf qty when SKU changes ─────────────────
-  document.getElementById('tfSKU').addEventListener('change', function () {
-    const opt = this.options[this.selectedIndex];
-    const shelf = opt.getAttribute('data-shelf');
-    const infoEl = document.getElementById('tfShelfInfo');
-    if (shelf !== null) {
-      infoEl.textContent = `On Shelf: ${shelf} ชิ้น`;
-      infoEl.className = Number(shelf) > 0 ? 'shelf-ok small mb-3' : 'shelf-low small mb-3';
-    } else {
-      infoEl.textContent = '';
-    }
-  });
 
   // ── Transfer save ─────────────────────────────────────────────
   document.getElementById('btnTransferSave').addEventListener('click', async function () {
-    const fse = document.getElementById('tfFSE').value;
-    const sku = document.getElementById('tfSKU').value;
+    const fse = $('#tfFSE').val();
+    const sku = $('#tfSKU').val();
     const qty = document.getElementById('tfQty').value;
     const note = document.getElementById('tfNote').value;
 
@@ -447,13 +438,49 @@
 
   // ── Reset transfer modal on close ────────────────────────────
   document.getElementById('transferModal').addEventListener('hidden.bs.modal', () => {
-    document.getElementById('tfFSE').value = '';
-    document.getElementById('tfSKU').value = '';
+    $('#tfFSE').val(null).trigger('change');
+    $('#tfSKU').val(null).trigger('change');
     document.getElementById('tfQty').value = 1;
     document.getElementById('tfNote').value = '';
     document.getElementById('tfShelfInfo').textContent = '';
     document.getElementById('transferAlert').innerHTML = '';
   });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+$(function () {
+  $('#tfFSE').select2({
+    theme: 'bootstrap-5',
+    placeholder: '-- เลือกหรือพิมพ์ชื่อ FSE --',
+    allowClear: true,
+    width: '100%',
+    dropdownParent: $('#transferModal')
+  });
+
+  $('#tfSKU').select2({
+    theme: 'bootstrap-5',
+    placeholder: '-- เลือกหรือพิมพ์ SKU --',
+    allowClear: true,
+    width: '100%',
+    dropdownParent: $('#transferModal')
+  });
+
+  // shelf info เมื่อเลือก SKU
+  $('#tfSKU').on('change', function () {
+    const opt = this.options[this.selectedIndex];
+    const shelf = opt?.getAttribute('data-shelf');
+    const infoEl = document.getElementById('tfShelfInfo');
+    if (shelf !== null && shelf !== undefined && opt?.value) {
+      infoEl.textContent = `On Shelf: ${shelf} ชิ้น`;
+      infoEl.className = Number(shelf) > 0 ? 'shelf-ok small mb-3' : 'shelf-low small mb-3';
+    } else {
+      infoEl.textContent = '';
+      infoEl.className = 'text-muted small mb-3';
+    }
+  });
+});
 </script>
 </body>
 </html>
