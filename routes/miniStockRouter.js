@@ -6,6 +6,7 @@ const Product = require('../models/products');
 const Requester = require('../models/requester');
 const Transaction = require('../models/transaction');
 const Sequence = require('../models/Sequence');
+const Store = require('../models/store');
 const { isAuthenticated, isAdmin } = require('../middleware/auth');
 
 async function generateMiniStockRequestId(session) {
@@ -117,7 +118,10 @@ router.post('/api/mini-stock/transfer', isAuthenticated, isAdmin, async (req, re
     product.quantity -= qty;
     await product.save({ session });
 
-    const requestId = await generateMiniStockRequestId(session);
+    const [requestId, store903] = await Promise.all([
+      generateMiniStockRequestId(session),
+      Store.findOne({ storeId: 903 }).lean()
+    ]);
 
     await Promise.all([
       MiniStockTx.create([{
@@ -137,7 +141,7 @@ router.post('/api/mini-stock/transfer', isAuthenticated, isAdmin, async (req, re
         workStatus: 'Finish',
         finishDate: new Date(),
         storeId: 903,
-        storename: `Mini_${fse}`,
+        storename: store903?.storename || 'Mini Stock',
         products: [{
           sku,
           quantity: qty,
