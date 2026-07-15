@@ -231,37 +231,15 @@ router.post('/api/mini-stock/replenish/:id', isAuthenticated, isAdmin, async (re
     product.quantity -= usage.quantity;
     await product.save({ session });
 
-    const requestId = await generateMiniStockRequestId(session);
-    const noteText = `Replenish for WO: ${usage.workOrderId}`;
-
-    await Promise.all([
-      MiniStockTx.create([{
-        type: 'TRANSFER',
-        fse: usage.fse,
-        sku: usage.sku,
-        description: usage.description,
-        quantity: usage.quantity,
-        note: noteText,
-        createdBy: req.session.user.username
-      }], { session }),
-
-      Transaction.create([{
-        requesterName: usage.fse,
-        requestId,
-        transactionType: 'OUT',
-        workStatus: 'Finish',
-        finishDate: new Date(),
-        storename: `Mini Stock Replenish → ${usage.fse}`,
-        products: [{
-          sku: usage.sku,
-          quantity: usage.quantity,
-          description: usage.description,
-          fromMiniStock: false,
-          fseName: usage.fse
-        }],
-        username: req.session.user.username
-      }], { session })
-    ]);
+    await MiniStockTx.create([{
+      type: 'TRANSFER',
+      fse: usage.fse,
+      sku: usage.sku,
+      description: usage.description,
+      quantity: usage.quantity,
+      note: `Replenish for WO: ${usage.workOrderId}`,
+      createdBy: req.session.user.username
+    }], { session });
 
     usage.replenished = true;
     usage.replenishedAt = new Date();
@@ -269,7 +247,7 @@ router.post('/api/mini-stock/replenish/:id', isAuthenticated, isAdmin, async (re
     await usage.save({ session });
 
     await session.commitTransaction();
-    res.json({ ok: true, message: `Replenish สำเร็จ (${requestId})` });
+    res.json({ ok: true, message: 'Replenish สำเร็จ' });
   } catch (err) {
     await session.abortTransaction();
     console.error('POST /api/mini-stock/replenish error:', err);
