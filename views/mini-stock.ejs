@@ -366,7 +366,7 @@
     shelfEl.textContent = shelfNum + ' ชิ้น';
     shelfEl.className = shelfNum >= parseInt(qty, 10) ? 'text-success fw-semibold' : 'text-danger fw-semibold';
 
-    bootstrap.Modal.getOrCreate(document.getElementById('replenishModal')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('replenishModal')).show();
   });
 
   document.getElementById('btnReplenishConfirm').addEventListener('click', async function () {
