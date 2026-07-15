@@ -136,7 +136,7 @@ router.post('/api/mini-stock/transfer', isAuthenticated, isAdmin, async (req, re
         transactionType: 'OUT',
         workStatus: 'Finish',
         finishDate: new Date(),
-        storename: `Mini Stock → ${fse}`,
+        storename: `Mini_${fse}`,
         products: [{
           sku,
           quantity: qty,
