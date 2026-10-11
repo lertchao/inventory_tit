@@ -81,14 +81,14 @@ function renderSourceToggle(cell, rowId) {
   ).join('');
 
   cell.innerHTML = `
-    <div class="d-flex align-items-center gap-1 flex-wrap">
-      <div class="btn-group btn-group-sm" role="group">
+    <div class="d-flex flex-column align-items-center gap-1">
+      <div class="btn-group btn-group-sm" role="group" style="width:150px">
         <input type="radio" class="btn-check source-radio" name="src_${rowId}" id="shelf_${rowId}" value="shelf" checked autocomplete="off">
-        <label class="btn btn-outline-primary py-0 px-2" for="shelf_${rowId}" style="font-size:.8rem">Shelf</label>
+        <label class="btn btn-outline-primary py-0 flex-fill" for="shelf_${rowId}" style="font-size:.8rem">Shelf</label>
         <input type="radio" class="btn-check source-radio" name="src_${rowId}" id="mini_${rowId}" value="mini" autocomplete="off">
-        <label class="btn btn-outline-warning py-0 px-2" for="mini_${rowId}" style="font-size:.8rem">Mini Stock</label>
+        <label class="btn btn-outline-warning py-0 flex-fill" for="mini_${rowId}" style="font-size:.8rem">Mini Stock</label>
       </div>
-      <select class="form-select form-select-sm fse-select d-none" style="min-width:90px;font-size:.8rem">
+      <select class="form-select form-select-sm fse-select d-none" style="width:150px;font-size:.8rem">
         <option value="">-- FSE --</option>
         ${fseOptions}
       </select>
@@ -239,16 +239,16 @@ document.addEventListener("DOMContentLoaded", function () {
     const tableBody = document.querySelector("table tbody");
     const newRow = `
       <tr>
-        <td>
+        <td class="align-middle">
           <input type="text" class="form-control sku-input" placeholder="กรอกรหัสสินค้า" name="sku" required style="text-transform:uppercase">
           <small class="description-cell d-block d-md-none text-muted mt-1"></small>
         </td>
         <td class="text-start align-middle description-cell d-none d-md-table-cell"></td>
-        <td>
+        <td class="align-middle">
           <input type="number" class="form-control text-center" placeholder="จำนวน" name="quantity" value="1" required>
         </td>
         <td class="text-center align-middle cost-cell d-none d-md-table-cell"></td>
-        <td class="source-cell align-middle"></td>
+        <td class="source-cell align-middle text-center"></td>
         <td class="text-center align-middle">
           <button type="button" class="btn btn-danger btn-sm remove-row">ลบ</button>
         </td>
@@ -279,7 +279,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const summaryTableBody = document.querySelector("#summary-table tbody");
 
   repairInput.addEventListener("input", async function () {
-    const repair = repairInput.value.trim();
+    const repair = repairInput.value.trim().toUpperCase();
 
     if (!repair) {
       nameInput.value = "";
