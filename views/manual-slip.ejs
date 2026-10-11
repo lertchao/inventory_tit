@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Manual Issue Parts Slip</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Noto+Sans+Thai:wght@300;400;700&display=swap" rel="stylesheet">
   <style>
     @page {
       size: A4 portrait;
@@ -18,7 +20,7 @@
       margin: 0;
       padding: 0;
       color: #000;
-      font-family: Arial, sans-serif;
+      font-family: 'Lato', 'Noto Sans Thai', sans-serif;
       font-size: 12px;
     }
 
@@ -41,7 +43,8 @@
 
     .info {
       margin-bottom: 10px;
-      line-height: 1.6;
+      line-height: 1.8;
+      font-size: 13px;
     }
 
     .info-row {
@@ -78,17 +81,18 @@
       font-weight: bold;
     }
 
+    td {
+      text-align: left;
+    }
+
     td.text-center,
     th.text-center {
       text-align: center;
     }
 
-    .col-no { width: 8%; }
-    .col-sku { width: 15%; }
-    .col-desc { width: 31%; }
-    .col-qty { width: 10%; }
-    .col-cost { width: 16%; }
-    .col-total { width: 20%; }
+    td:nth-child(3) {
+      word-break: break-all;
+    }
 
     .amount-wrap {
       margin-top: 14px;
@@ -186,10 +190,10 @@
           <strong>รหัสสาขา:</strong>
           <%= String(storeId).padStart(3, '0') %>
         </div>
-        <div class="info-col"><strong>ชื่อสาขา:</strong> <%= storeName %></div>
+        <div class="info-col"><strong>สถานะ:</strong> <%= workStatus %></div>
       </div>
       <div class="info-row">
-        <div class="info-col"><strong>สถานะ:</strong> <%= workStatus %></div>
+        <div class="info-col"><strong>ชื่อสาขา:</strong> <%= storeName %></div>
         <div class="info-col">
           <strong>วันที่:</strong>
           <%= new Date(createdAt).toLocaleString('th-TH', {
@@ -204,14 +208,22 @@
     </div>
 
     <table>
+      <colgroup>
+        <col style="width:6%">
+        <col style="width:17%">
+        <col style="width:41%">
+        <col style="width:7%">
+        <col style="width:13%">
+        <col style="width:16%">
+      </colgroup>
       <thead>
         <tr>
-          <th class="text-center col-no">#</th>
-          <th class="text-center col-sku">SKU</th>
-          <th class="col-desc">Description</th>
-          <th class="text-center col-qty">Qty</th>
-          <th class="text-center col-cost">Cost/pcs.</th>
-          <th class="text-center col-total">Total</th>
+          <th class="text-center">#</th>
+          <th class="text-center">SKU</th>
+          <th>Description</th>
+          <th class="text-center">Qty</th>
+          <th class="text-center">Cost/pcs.</th>
+          <th class="text-center">Total</th>
         </tr>
       </thead>
       <tbody>
@@ -224,7 +236,7 @@
         <% items.forEach((item) => { %>
           <tr>
             <td class="text-center"><%= item.no %></td>
-            <td class="text-center"><%= item.sku %></td>
+            <td><%= item.sku %></td>
             <td><%= item.description %></td>
             <td class="text-center"><%= item.quantity %></td>
             <td class="text-center"><%= Number(item.cost || 0).toLocaleString() %></td>
