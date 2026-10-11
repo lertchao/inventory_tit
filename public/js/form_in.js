@@ -200,7 +200,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const summaryTableBody = document.querySelector("#summary-table tbody");
 
   repairInput.addEventListener("input", async function () {
-    const repair = repairInput.value.trim();
+    const repair = repairInput.value.trim().toUpperCase();
 
     if (!repair) {
       nameInput.value = "";

@@ -153,12 +153,12 @@ document.addEventListener("DOMContentLoaded", function () {
     const tableBody = document.querySelector("table tbody");
     const newRow = `
       <tr>
-        <td>
+        <td class="align-middle">
           <input type="text" class="form-control sku-input" placeholder="กรอกรหัสสินค้า" name="sku" required style="text-transform:uppercase">
           <small class="description-cell d-block d-md-none text-muted mt-1"></small>
         </td>
         <td class="text-start align-middle description-cell d-none d-md-table-cell"></td>
-        <td>
+        <td class="align-middle">
           <input type="number" class="form-control text-center" placeholder="จำนวน" name="quantity" value="1" required>
         </td>
         <td class="text-center align-middle cost-cell d-none d-md-table-cell"></td>
@@ -192,7 +192,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const summaryTableBody = document.querySelector("#summary-table tbody");
 
   repairInput.addEventListener("input", async function () {
-    const repair = repairInput.value.trim();
+    const repair = repairInput.value.trim().toUpperCase();
 
     if (!repair) {
       nameInput.value = "";
